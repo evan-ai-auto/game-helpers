@@ -1,3 +1,4 @@
+from .background_session import BackgroundGameSession
 from .children import list_child_windows
 from .diagnostics import WindowDiagnostics, diagnose_window
 from .game_view import GameView, discover_game_views
@@ -9,6 +10,7 @@ from .window import find_window, list_windows
 __all__ = [
     "Action",
     "ActionType",
+    "BackgroundGameSession",
     "GameState",
     "GameView",
     "GameViewManager",
