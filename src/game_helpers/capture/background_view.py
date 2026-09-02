@@ -20,7 +20,7 @@ class BackgroundViewCapture:
         self.capture_backend = WindowsGraphicsCapture()
 
     def capture(self, index: int) -> Frame:
-        """Show one hosted view, capture the parent, then restore child visibility."""
+        """Show one hosted view without activation, capture the parent, then restore."""
         if sys.platform != "win32":
             raise RuntimeError("background hosted-view capture requires Windows")
 
@@ -32,22 +32,32 @@ class BackgroundViewCapture:
 
         user32 = ctypes.windll.user32
         SW_HIDE = 0
-        SW_SHOW = 5
+        SW_SHOWNOACTIVATE = 4
         target = views[index - 1]
         original = {view.hwnd: bool(user32.IsWindowVisible(view.hwnd)) for view in views}
         foreground_before = int(user32.GetForegroundWindow())
 
         try:
+            # SW_SHOWNOACTIVATE is the important distinction from SW_SHOW:
+            # the hosted child becomes the displayed surface without asking
+            # Windows to activate the game window.
             for view in views:
-                user32.ShowWindow(view.hwnd, SW_SHOW if view.hwnd == target.hwnd else SW_HIDE)
+                user32.ShowWindow(
+                    view.hwnd,
+                    SW_SHOWNOACTIVATE if view.hwnd == target.hwnd else SW_HIDE,
+                )
             time.sleep(self.settle_delay)
 
             frame = self.capture_backend.capture(
-                type("CaptureWindow", (), {
-                    "hwnd": self.parent_hwnd,
-                    "bounds": target.window.bounds,
-                    "title": target.window.title,
-                })()
+                type(
+                    "CaptureWindow",
+                    (),
+                    {
+                        "hwnd": self.parent_hwnd,
+                        "bounds": target.window.bounds,
+                        "title": target.window.title,
+                    },
+                )()
             )
 
             foreground_after = int(user32.GetForegroundWindow())
@@ -59,4 +69,4 @@ class BackgroundViewCapture:
             return frame
         finally:
             for hwnd, visible in original.items():
-                user32.ShowWindow(hwnd, SW_SHOW if visible else SW_HIDE)
+                user32.ShowWindow(hwnd, SW_SHOWNOACTIVATE if visible else SW_HIDE)
