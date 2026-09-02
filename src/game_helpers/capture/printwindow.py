@@ -12,12 +12,14 @@ from .models import Frame
 
 
 class PrintWindowCapture:
-    """Capture a top-level window through the Win32 PrintWindow API.
+    """Capture a window through the Win32 PrintWindow API.
 
-    This targets the window handle instead of taking a screen crop, so the
-    source window does not need to be the foreground window. Some GPU-backed
-    applications may return an empty or incomplete frame; those cases will be
-    handled by later capture backends.
+    This targets a window handle instead of taking a screen crop. For ordinary
+    windows this can work without making the window foreground. A tabbed game
+    host is different: its hidden game child may not own an independently
+    rendered surface. In that case PrintWindow can return the currently
+    visible tab's pixels even when called with the hidden child's HWND. The
+    tab-aware capture layer must activate the requested tab before capture.
     """
 
     name = "printwindow"
@@ -84,10 +86,10 @@ class PrintWindowCapture:
             info = BitmapInfo()
             info.bmiHeader.biSize = ctypes.sizeof(BitmapInfoHeader)
             info.bmiHeader.biWidth = width
-            info.bmiHeader.biHeight = -height  # top-down bitmap
+            info.bmiHeader.biHeight = -height
             info.bmiHeader.biPlanes = 1
             info.bmiHeader.biBitCount = 32
-            info.bmiHeader.biCompression = 0  # BI_RGB
+            info.bmiHeader.biCompression = 0
 
             size = width * height * 4
             buffer = (ctypes.c_ubyte * size)()
