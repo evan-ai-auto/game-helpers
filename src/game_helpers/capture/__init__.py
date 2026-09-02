@@ -3,5 +3,6 @@
 from .models import Frame
 from .png import save_png
 from .printwindow import PrintWindowCapture
+from .screen import ScreenCapture
 
-__all__ = ["Frame", "PrintWindowCapture", "save_png"]
+__all__ = ["Frame", "PrintWindowCapture", "ScreenCapture", "save_png"]
