@@ -15,6 +15,48 @@ from .png import save_png
 from .printwindow import PrintWindowCapture
 
 
+def _capture_selected_view(window, view, output: str) -> None:
+    """Capture the tabbed parent and crop the selected 800x600 game surface."""
+    capture = PrintWindowCapture()
+    with GameViewTabSession(window.hwnd, view.hwnd):
+        frame = capture.capture(window)
+
+        parent = window.bounds
+        target = view.window.bounds
+        left = target.left - parent.left
+        top = target.top - parent.top
+        right = target.right - parent.left
+        bottom = target.bottom - parent.top
+        if not (0 <= left < right <= frame.width and 0 <= top < bottom <= frame.height):
+            raise RuntimeError(
+                "selected game view is outside the captured parent window: "
+                f"parent={parent} target={target} frame={frame.width}x{frame.height}"
+            )
+
+        row_bytes = frame.width * 4
+        crop_width = right - left
+        cropped = bytearray()
+        for y in range(top, bottom):
+            start = y * row_bytes + left * 4
+            cropped.extend(frame.data[start : start + crop_width * 4])
+
+        from game_helpers.capture.models import Frame
+
+        cropped_frame = Frame(
+            window=view.window,
+            width=crop_width,
+            height=bottom - top,
+            data=bytes(cropped),
+            captured_at=frame.captured_at,
+            backend=f"{frame.backend}:parent-crop",
+        )
+        save_png(cropped_frame, output)
+        print(
+            f"captured {view.title!r} hwnd={view.hwnd} "
+            f"{cropped_frame.width}x{cropped_frame.height} -> {output}"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Capture or inspect a Windows window")
     parser.add_argument("title", help="full or partial top-level window title")
@@ -28,7 +70,7 @@ def main() -> int:
         "--game-index",
         type=int,
         choices=range(1, 100),
-        help="capture the Nth WSGAME child; its tab is activated during capture",
+        help="capture the Nth WSGAME child by selecting its tab first",
     )
     args = parser.parse_args()
 
@@ -50,36 +92,27 @@ def main() -> int:
             )
         return 0
 
-    capture = PrintWindowCapture()
     if args.game_index is None:
-        frame = capture.capture(window)
-        target = window
-    else:
-        views = discover_game_views(window.hwnd)
-        if args.game_index > len(views):
-            parser.error(
-                f"game view index {args.game_index} not found; "
-                f"discovered {len(views)} WSGAME views"
-            )
-        view = views[args.game_index - 1]
-        target = view.window
+        frame = PrintWindowCapture().capture(window)
+        save_png(frame, args.output)
         print(
-            f"selected game view #{view.index}: hwnd={view.hwnd} "
-            f"active={view.active} bounds={view.window.bounds}"
+            f"captured {window.title!r} hwnd={window.hwnd} "
+            f"{frame.width}x{frame.height} -> {args.output}"
         )
-        # A hidden WSGAME child can render the currently selected tab rather
-        # than its own logical instance. Temporarily selecting the requested
-        # tab makes the application's own tab-switching path render the right
-        # game before PrintWindow reads the pixels. The previous tab is restored
-        # after the frame has been captured.
-        with GameViewTabSession(window.hwnd, target.hwnd):
-            frame = capture.capture(target)
+        return 0
 
-    save_png(frame, args.output)
+    views = discover_game_views(window.hwnd)
+    if args.game_index > len(views):
+        parser.error(
+            f"game view index {args.game_index} not found; "
+            f"discovered {len(views)} WSGAME views"
+        )
+    view = views[args.game_index - 1]
     print(
-        f"captured {target.title!r} hwnd={target.hwnd} "
-        f"{frame.width}x{frame.height} -> {args.output}"
+        f"selected game view #{view.index}: hwnd={view.hwnd} "
+        f"active={view.active} bounds={view.window.bounds}"
     )
+    _capture_selected_view(window, view, args.output)
     return 0
 
 
