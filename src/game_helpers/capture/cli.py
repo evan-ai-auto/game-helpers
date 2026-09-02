@@ -12,9 +12,10 @@ from game_helpers.core import (
     list_child_windows,
 )
 
+from .png import save_png
 from .printwindow import PrintWindowCapture
 from .screen import ScreenCapture
-from .png import save_png
+from .wgc import WindowsGraphicsCapture
 
 
 def _print_diagnostics(hwnd: int, label: str) -> None:
@@ -28,45 +29,59 @@ def _print_diagnostics(hwnd: int, label: str) -> None:
     )
 
 
-def _capture_selected_view(window, view, output: str, *, backend: str) -> None:
-    """Select a tab, capture its pixels, and crop the game surface."""
-    capture = ScreenCapture() if backend == "screen" else PrintWindowCapture()
-    with GameViewTabSession(window.hwnd, view.hwnd):
-        frame = capture.capture(window)
+def _make_capture(backend: str):
+    if backend == "screen":
+        return ScreenCapture()
+    if backend == "wgc":
+        return WindowsGraphicsCapture()
+    return PrintWindowCapture()
 
-        parent = window.bounds
-        target = view.window.bounds
-        left = target.left - parent.left
-        top = target.top - parent.top
-        right = target.right - parent.left
-        bottom = target.bottom - parent.top
-        if not (0 <= left < right <= frame.width and 0 <= top < bottom <= frame.height):
-            raise RuntimeError(
-                "selected game view is outside the captured parent window: "
-                f"parent={parent} target={target} frame={frame.width}x{frame.height}"
+
+def _capture_selected_view(window, view, output: str, *, backend: str) -> None:
+    """Select a tab and capture either the target HWND or the parent crop."""
+    capture = _make_capture(backend)
+    with GameViewTabSession(window.hwnd, view.hwnd):
+        if backend == "wgc":
+            # Capture the actual WSGAME HWND. The WGC backend does not depend
+            # on the desktop or on the top-level host window's composition.
+            frame = capture.capture(view.window)
+        else:
+            frame = capture.capture(window)
+
+            parent = window.bounds
+            target = view.window.bounds
+            left = target.left - parent.left
+            top = target.top - parent.top
+            right = target.right - parent.left
+            bottom = target.bottom - parent.top
+            if not (0 <= left < right <= frame.width and 0 <= top < bottom <= frame.height):
+                raise RuntimeError(
+                    "selected game view is outside the captured parent window: "
+                    f"parent={parent} target={target} frame={frame.width}x{frame.height}"
+                )
+
+            row_bytes = frame.width * 4
+            crop_width = right - left
+            cropped = bytearray()
+            for y in range(top, bottom):
+                start = y * row_bytes + left * 4
+                cropped.extend(frame.data[start : start + crop_width * 4])
+
+            from game_helpers.capture.models import Frame
+
+            frame = Frame(
+                window=view.window,
+                width=crop_width,
+                height=bottom - top,
+                data=bytes(cropped),
+                captured_at=frame.captured_at,
+                backend=f"{frame.backend}:parent-crop",
             )
 
-        row_bytes = frame.width * 4
-        crop_width = right - left
-        cropped = bytearray()
-        for y in range(top, bottom):
-            start = y * row_bytes + left * 4
-            cropped.extend(frame.data[start : start + crop_width * 4])
-
-        from game_helpers.capture.models import Frame
-
-        cropped_frame = Frame(
-            window=view.window,
-            width=crop_width,
-            height=bottom - top,
-            data=bytes(cropped),
-            captured_at=frame.captured_at,
-            backend=f"{frame.backend}:parent-crop",
-        )
-        save_png(cropped_frame, output)
+        save_png(frame, output)
         print(
             f"captured {view.window.title!r} hwnd={view.hwnd} "
-            f"{cropped_frame.width}x{cropped_frame.height} -> {output}"
+            f"{frame.width}x{frame.height} backend={frame.backend} -> {output}"
         )
 
 
@@ -88,9 +103,9 @@ def main() -> int:
     )
     parser.add_argument(
         "--backend",
-        choices=("printwindow", "screen"),
+        choices=("printwindow", "screen", "wgc"),
         default="printwindow",
-        help="capture backend; screen reads the pixels currently visible on the desktop",
+        help="capture backend; wgc targets the selected HWND and does not use desktop pixels",
     )
     args = parser.parse_args()
 
@@ -115,10 +130,13 @@ def main() -> int:
         return 0
 
     if args.game_index is None:
-        capture = ScreenCapture() if args.backend == "screen" else PrintWindowCapture()
+        capture = _make_capture(args.backend)
         frame = capture.capture(window)
         save_png(frame, args.output)
-        print(f"captured {window.title!r} hwnd={window.hwnd} {frame.width}x{frame.height} -> {args.output}")
+        print(
+            f"captured {window.title!r} hwnd={window.hwnd} "
+            f"{frame.width}x{frame.height} backend={frame.backend} -> {args.output}"
+        )
         return 0
 
     views = discover_game_views(window.hwnd)
