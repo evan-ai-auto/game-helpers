@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 
-from game_helpers.core import find_window, list_child_windows
+from game_helpers.core import discover_game_views, find_window, list_child_windows
 
 from .png import save_png
 from .printwindow import PrintWindowCapture
@@ -18,6 +18,12 @@ def main() -> int:
         "--children",
         action="store_true",
         help="list child windows and do not capture",
+    )
+    parser.add_argument(
+        "--game-index",
+        type=int,
+        choices=range(1, 100),
+        help="capture the Nth WSGAME child instead of the top-level window",
     )
     args = parser.parse_args()
 
@@ -39,10 +45,25 @@ def main() -> int:
             )
         return 0
 
-    frame = PrintWindowCapture().capture(window)
+    target = window
+    if args.game_index is not None:
+        views = discover_game_views(window.hwnd)
+        if args.game_index > len(views):
+            parser.error(
+                f"game view index {args.game_index} not found; "
+                f"discovered {len(views)} WSGAME views"
+            )
+        view = views[args.game_index - 1]
+        target = view.window
+        print(
+            f"selected game view #{view.index}: hwnd={view.hwnd} "
+            f"active={view.active} bounds={view.window.bounds}"
+        )
+
+    frame = PrintWindowCapture().capture(target)
     save_png(frame, args.output)
     print(
-        f"captured {window.title!r} hwnd={window.hwnd} "
+        f"captured {target.title!r} hwnd={target.hwnd} "
         f"{frame.width}x{frame.height} -> {args.output}"
     )
     return 0
