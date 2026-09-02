@@ -3,6 +3,7 @@ from .diagnostics import WindowDiagnostics, diagnose_window
 from .game_view import GameView, discover_game_views
 from .models import Action, ActionType, GameState, Point, Rect, WindowInfo
 from .tab import GameViewTabSession, current_tab_index, find_tab_control, select_tab
+from .view_manager import GameViewManager
 from .window import find_window, list_windows
 
 __all__ = [
@@ -10,6 +11,7 @@ __all__ = [
     "ActionType",
     "GameState",
     "GameView",
+    "GameViewManager",
     "GameViewTabSession",
     "Point",
     "Rect",
