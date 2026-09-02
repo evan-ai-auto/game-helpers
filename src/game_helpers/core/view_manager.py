@@ -12,10 +12,11 @@ from .tab import current_tab_index, find_tab_control, select_tab
 class GameViewManager:
     """Switch and inspect game views hosted by one top-level window.
 
-    By default, switching uses the Win32 tab-control API and does not activate
-    the host window. This keeps the game in the background while another
-    application remains foreground. ``activate_before_switch=True`` is kept as
-    an explicit fallback for applications that only respond to Ctrl+Tab.
+    Tab selection and displayed-surface selection are intentionally separate.
+    Some hosts update the native tab index without rebinding the rendered
+    WSGAME surface. ``switch_surface_to`` therefore drives child visibility
+    directly and is the preferred background-safe route for capture/action
+    workflows.
     """
 
     def __init__(
@@ -36,11 +37,19 @@ class GameViewManager:
         return discover_game_views(self.parent_hwnd)
 
     def current_index(self) -> int:
-        """Return the current one-based game-view index."""
+        """Return the current one-based native tab index."""
         return current_tab_index(self._tab_hwnd()) + 1
 
+    def current_surface_index(self) -> int:
+        """Return the one-based WSGAME child that is currently visible."""
+        views = self.views()
+        for index, view in enumerate(views, start=1):
+            if view.visible:
+                return index
+        raise RuntimeError("no visible WSGAME surface was found")
+
     def switch_to(self, index: int) -> GameView:
-        """Switch to a one-based view index without foreground activation by default."""
+        """Switch the native tab to a one-based view index."""
         views = self.views()
         if not 1 <= index <= len(views):
             raise ValueError(f"game view index must be between 1 and {len(views)}")
@@ -53,8 +62,6 @@ class GameViewManager:
             self._activate_parent()
             self._switch_with_ctrl_tab(index, current, len(views))
         else:
-            # Directly drive the native SysTabControl32. No keyboard input and
-            # no foreground-window change are required.
             select_tab(self._tab_hwnd(), index - 1)
 
         deadline = time.monotonic() + self.timeout
@@ -67,8 +74,54 @@ class GameViewManager:
             f"game view did not switch to #{index}; current view is #{self.current_index()}"
         )
 
+    def switch_surface_to(self, index: int) -> GameView:
+        """Display one WSGAME child without activating the host window.
+
+        This is the background-safe route validated by the surface probe: the
+        selected child is shown with ``SW_SHOWNOACTIVATE`` and sibling game
+        children are hidden. It deliberately does not send Ctrl+Tab or call
+        ``SetForegroundWindow``.
+        """
+        if sys.platform != "win32":
+            raise RuntimeError("background surface switching requires Windows")
+
+        views = self.views()
+        if not 1 <= index <= len(views):
+            raise ValueError(f"game view index must be between 1 and {len(views)}")
+
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        foreground_before = int(user32.GetForegroundWindow())
+        SW_HIDE = 0
+        SW_SHOWNOACTIVATE = 4
+        target = views[index - 1]
+
+        for view in views:
+            user32.ShowWindow(
+                view.hwnd,
+                SW_SHOWNOACTIVATE if view.hwnd == target.hwnd else SW_HIDE,
+            )
+
+        deadline = time.monotonic() + self.timeout
+        while time.monotonic() < deadline:
+            if self.current_surface_index() == index:
+                foreground_after = int(user32.GetForegroundWindow())
+                if foreground_after != foreground_before:
+                    raise RuntimeError(
+                        "foreground window changed during background surface switch: "
+                        f"before={foreground_before}, after={foreground_after}"
+                    )
+                return self.views()[index - 1]
+            time.sleep(0.02)
+
+        raise TimeoutError(
+            f"WSGAME surface did not become visible for #{index}; "
+            f"current surface is #{self.current_surface_index()}"
+        )
+
     def switch_next(self) -> GameView:
-        """Advance to the next hosted game view."""
+        """Advance to the next hosted game view using native tab selection."""
         views = self.views()
         if not views:
             raise RuntimeError("no WSGAME views were discovered")
