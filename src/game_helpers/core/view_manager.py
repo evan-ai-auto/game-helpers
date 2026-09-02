@@ -6,9 +6,10 @@ capture backend, while the application exposes ``Ctrl+Tab`` as its native view
 switcher. This manager uses that native shortcut and leaves capture to the
 parent window.
 
-The key shortcut uses ordinary desktop keyboard input. It therefore requires
-the hosted application to be the foreground input target; this module does not
-attempt background input injection or process-level input manipulation.
+The key shortcut uses ordinary desktop keyboard input. The host window is
+brought to the foreground before switching so the shortcut is delivered to the
+application rather than another focused window or overlay. This is still
+foreground input, not background input injection.
 """
 
 from __future__ import annotations
@@ -29,10 +30,12 @@ class GameViewManager:
         *,
         switch_delay: float = 0.15,
         timeout: float = 2.0,
+        activate_before_switch: bool = True,
     ) -> None:
         self.parent_hwnd = parent_hwnd
         self.switch_delay = switch_delay
         self.timeout = timeout
+        self.activate_before_switch = activate_before_switch
 
     def views(self) -> list[GameView]:
         """Return the currently discovered WSGAME views."""
@@ -52,6 +55,9 @@ class GameViewManager:
         current = self.current_index()
         if current == index:
             return views[index - 1]
+
+        if self.activate_before_switch:
+            self._activate_parent()
 
         # Ctrl+Tab advances one view. Repeating it handles more than two views
         # without assuming a particular number of hosted accounts.
@@ -83,6 +89,26 @@ class GameViewManager:
         if tab_hwnd is None:
             raise RuntimeError("SysTabControl32 was not found")
         return tab_hwnd
+
+    def _activate_parent(self) -> None:
+        """Make the hosted application's top-level window the input target."""
+        if sys.platform != "win32":
+            raise RuntimeError("game-view switching requires Windows")
+
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        SW_RESTORE = 9
+        user32.ShowWindow(self.parent_hwnd, SW_RESTORE)
+        user32.SetForegroundWindow(self.parent_hwnd)
+        time.sleep(0.05)
+
+        foreground = int(user32.GetForegroundWindow())
+        if foreground != int(self.parent_hwnd):
+            raise RuntimeError(
+                f"could not activate host window; foreground hwnd={foreground}, "
+                f"expected={self.parent_hwnd}"
+            )
 
     @staticmethod
     def _send_ctrl_tab() -> None:
