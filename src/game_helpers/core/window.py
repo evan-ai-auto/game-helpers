@@ -6,6 +6,7 @@ loaded lazily. This keeps imports and tests usable on non-Windows machines.
 
 from __future__ import annotations
 
+import sys
 from typing import Iterable
 
 from .models import Rect, WindowInfo
@@ -13,7 +14,7 @@ from .models import Rect, WindowInfo
 
 def list_windows(*, visible_only: bool = True) -> list[WindowInfo]:
     """Return top-level windows visible to the current desktop session."""
-    if __import__("sys").platform != "win32":
+    if sys.platform != "win32":
         return []
 
     import ctypes
@@ -22,7 +23,8 @@ def list_windows(*, visible_only: bool = True) -> list[WindowInfo]:
     user32 = ctypes.windll.user32
     result: list[WindowInfo] = []
 
-    @wintypes.BOOL
+    enum_windows_proc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
     def callback(hwnd: int, _lparam: int) -> bool:
         if visible_only and not user32.IsWindowVisible(hwnd):
             return True
@@ -47,7 +49,7 @@ def list_windows(*, visible_only: bool = True) -> list[WindowInfo]:
         )
         return True
 
-    user32.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)(callback), 0)
+    user32.EnumWindows(enum_windows_proc(callback), 0)
     return result
 
 
