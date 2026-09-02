@@ -6,6 +6,7 @@ import argparse
 
 from game_helpers.core import (
     GameViewTabSession,
+    diagnose_window,
     discover_game_views,
     find_window,
     list_child_windows,
@@ -14,6 +15,17 @@ from game_helpers.core import (
 from .printwindow import PrintWindowCapture
 from .screen import ScreenCapture
 from .png import save_png
+
+
+def _print_diagnostics(hwnd: int, label: str) -> None:
+    info = diagnose_window(hwnd)
+    print(
+        f"{label}: hwnd={info.hwnd} parent={info.parent_hwnd} owner={info.owner_hwnd} "
+        f"root={info.root_hwnd} pid={info.process_id} tid={info.thread_id} "
+        f"visible={info.visible} cloaked={info.cloaked} "
+        f"style=0x{info.style:X} exstyle=0x{info.exstyle:X} "
+        f"class={info.class_name!r} title={info.title!r}"
+    )
 
 
 def _capture_selected_view(window, view, output: str, *, backend: str) -> None:
@@ -64,6 +76,11 @@ def main() -> int:
     parser.add_argument("output", nargs="?", default="capture.png", help="output PNG path")
     parser.add_argument("--children", action="store_true", help="list child windows and do not capture")
     parser.add_argument(
+        "--diagnose",
+        action="store_true",
+        help="print Win32 hierarchy/process/style diagnostics and do not capture",
+    )
+    parser.add_argument(
         "--game-index",
         type=int,
         choices=range(1, 100),
@@ -80,6 +97,12 @@ def main() -> int:
     window = find_window(args.title)
     if window is None:
         parser.error(f"window not found: {args.title!r}")
+
+    if args.diagnose:
+        _print_diagnostics(window.hwnd, "top-level")
+        for index, child in enumerate(list_child_windows(window.hwnd), 1):
+            _print_diagnostics(child.hwnd, f"child[{index}]")
+        return 0
 
     if args.children:
         children = list_child_windows(window.hwnd)
