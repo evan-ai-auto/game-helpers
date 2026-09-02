@@ -1,16 +1,4 @@
-"""High-level switching between hosted game views.
-
-The game hosts multiple ``WSGAME`` views inside one top-level frame. Direct
-Windows Graphics Capture of those child HWNDs is not supported by the current
-capture backend, while the application exposes ``Ctrl+Tab`` as its native view
-switcher. This manager uses that native shortcut and leaves capture to the
-parent window.
-
-The key shortcut uses ordinary desktop keyboard input. The host window is
-brought to the foreground before switching so the shortcut is delivered to the
-application rather than another focused window or overlay. This is still
-foreground input, not background input injection.
-"""
+"""High-level switching between hosted game views."""
 
 from __future__ import annotations
 
@@ -18,11 +6,17 @@ import sys
 import time
 
 from .game_view import GameView, discover_game_views
-from .tab import current_tab_index, find_tab_control
+from .tab import current_tab_index, find_tab_control, select_tab
 
 
 class GameViewManager:
-    """Switch and inspect game views hosted by one top-level window."""
+    """Switch and inspect game views hosted by one top-level window.
+
+    By default, switching uses the Win32 tab-control API and does not activate
+    the host window. This keeps the game in the background while another
+    application remains foreground. ``activate_before_switch=True`` is kept as
+    an explicit fallback for applications that only respond to Ctrl+Tab.
+    """
 
     def __init__(
         self,
@@ -30,7 +24,7 @@ class GameViewManager:
         *,
         switch_delay: float = 0.15,
         timeout: float = 2.0,
-        activate_before_switch: bool = True,
+        activate_before_switch: bool = False,
     ) -> None:
         self.parent_hwnd = parent_hwnd
         self.switch_delay = switch_delay
@@ -43,11 +37,10 @@ class GameViewManager:
 
     def current_index(self) -> int:
         """Return the current one-based game-view index."""
-        tab_hwnd = self._tab_hwnd()
-        return current_tab_index(tab_hwnd) + 1
+        return current_tab_index(self._tab_hwnd()) + 1
 
     def switch_to(self, index: int) -> GameView:
-        """Switch to a one-based view index using the application's Ctrl+Tab."""
+        """Switch to a one-based view index without foreground activation by default."""
         views = self.views()
         if not 1 <= index <= len(views):
             raise ValueError(f"game view index must be between 1 and {len(views)}")
@@ -58,13 +51,11 @@ class GameViewManager:
 
         if self.activate_before_switch:
             self._activate_parent()
-
-        # Ctrl+Tab advances one view. Repeating it handles more than two views
-        # without assuming a particular number of hosted accounts.
-        steps = (index - current) % len(views)
-        for _ in range(steps):
-            self._send_ctrl_tab()
-            time.sleep(self.switch_delay)
+            self._switch_with_ctrl_tab(index, current, len(views))
+        else:
+            # Directly drive the native SysTabControl32. No keyboard input and
+            # no foreground-window change are required.
+            select_tab(self._tab_hwnd(), index - 1)
 
         deadline = time.monotonic() + self.timeout
         while time.monotonic() < deadline:
@@ -83,6 +74,12 @@ class GameViewManager:
             raise RuntimeError("no WSGAME views were discovered")
         target = (self.current_index() % len(views)) + 1
         return self.switch_to(target)
+
+    def _switch_with_ctrl_tab(self, index: int, current: int, count: int) -> None:
+        steps = (index - current) % count
+        for _ in range(steps):
+            self._send_ctrl_tab()
+            time.sleep(self.switch_delay)
 
     def _tab_hwnd(self) -> int:
         tab_hwnd = find_tab_control(self.parent_hwnd)
