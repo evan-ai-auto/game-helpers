@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import argparse
 
-from game_helpers.core import discover_game_views, find_window, list_child_windows
+from game_helpers.core import (
+    GameViewTabSession,
+    discover_game_views,
+    find_window,
+    list_child_windows,
+)
 
 from .png import save_png
 from .printwindow import PrintWindowCapture
@@ -23,7 +28,7 @@ def main() -> int:
         "--game-index",
         type=int,
         choices=range(1, 100),
-        help="capture the Nth WSGAME child instead of the top-level window",
+        help="capture the Nth WSGAME child; its tab is activated during capture",
     )
     args = parser.parse_args()
 
@@ -45,8 +50,11 @@ def main() -> int:
             )
         return 0
 
-    target = window
-    if args.game_index is not None:
+    capture = PrintWindowCapture()
+    if args.game_index is None:
+        frame = capture.capture(window)
+        target = window
+    else:
         views = discover_game_views(window.hwnd)
         if args.game_index > len(views):
             parser.error(
@@ -59,8 +67,14 @@ def main() -> int:
             f"selected game view #{view.index}: hwnd={view.hwnd} "
             f"active={view.active} bounds={view.window.bounds}"
         )
+        # A hidden WSGAME child can render the currently selected tab rather
+        # than its own logical instance. Temporarily selecting the requested
+        # tab makes the application's own tab-switching path render the right
+        # game before PrintWindow reads the pixels. The previous tab is restored
+        # after the frame has been captured.
+        with GameViewTabSession(window.hwnd, target.hwnd):
+            frame = capture.capture(target)
 
-    frame = PrintWindowCapture().capture(target)
     save_png(frame, args.output)
     print(
         f"captured {target.title!r} hwnd={target.hwnd} "
