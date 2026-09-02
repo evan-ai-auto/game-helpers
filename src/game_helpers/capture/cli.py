@@ -52,7 +52,7 @@ def _capture_selected_view(window, view, output: str) -> None:
         )
         save_png(cropped_frame, output)
         print(
-            f"captured {view.title!r} hwnd={view.hwnd} "
+            f"captured {view.window.title!r} hwnd={view.hwnd} "
             f"{cropped_frame.width}x{cropped_frame.height} -> {output}"
         )
 
