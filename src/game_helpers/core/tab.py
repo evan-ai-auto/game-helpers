@@ -1,13 +1,4 @@
-"""Win32 tab-control helpers for hosted game views.
-
-The game application uses a standard ``SysTabControl32`` and keeps only the
-selected ``WSGAME`` child visible. A hidden WSGAME child may not have an
-independent rendered surface, so capturing it directly can return the
-currently displayed game's pixels. The safe first implementation therefore
-selects the requested tab through the normal tab-control state/notification
-path, waits for the corresponding child to become visible, and restores the
-original tab on exit.
-"""
+"""Win32 tab-control helpers for hosted game views."""
 
 from __future__ import annotations
 
@@ -41,10 +32,12 @@ def _notify_tab_parent(tab_hwnd: int, code: int) -> int:
     import ctypes
     from ctypes import wintypes
 
+    # UINT_PTR is pointer-sized. ctypes.wintypes does not expose UINT_PTR on
+    # all Python versions, so use c_size_t explicitly.
     class NMHDR(ctypes.Structure):
         _fields_ = [
             ("hwndFrom", wintypes.HWND),
-            ("idFrom", wintypes.UINT_PTR),
+            ("idFrom", ctypes.c_size_t),
             ("code", wintypes.UINT),
         ]
 
@@ -62,13 +55,12 @@ def _notify_tab_parent(tab_hwnd: int, code: int) -> int:
 
 
 def select_tab(tab_hwnd: int, index: int) -> None:
-    """Select a tab through TCM_SETCURSEL and send normal tab notifications.
+    """Select a tab through the standard tab-control message path.
 
-    ``TCM_SETCURSEL`` changes the tab selection but, by design, does not send
-    ``TCN_SELCHANGING``/``TCN_SELCHANGE``. The hosted game appears to use those
-    notifications to switch the visible WSGAME child. Sending mouse messages
-    to the tab control was unreliable here: the tab item rectangle could not
-    be queried, and the attempted click could destabilize the game window.
+    ``TCM_SETCURSEL`` changes the tab selection but does not itself send
+    ``TCN_SELCHANGING``/``TCN_SELCHANGE``. The hosted game may use those
+    notifications to switch the visible WSGAME child, so they are sent to the
+    tab parent explicitly after changing the selection.
     """
     if sys.platform != "win32":
         raise RuntimeError("tab control operations are only available on Windows")
@@ -81,8 +73,6 @@ def select_tab(tab_hwnd: int, index: int) -> None:
     TCN_SELCHANGE = -552
     TCM_SETCURSEL = 0x130C
 
-    # Let the parent veto the transition using the normal tab-control
-    # notification protocol before changing the selection.
     if _notify_tab_parent(tab_hwnd, TCN_SELCHANGING):
         raise RuntimeError(f"tab {index} change was vetoed by the parent")
 
@@ -90,9 +80,6 @@ def select_tab(tab_hwnd: int, index: int) -> None:
     if result == -1:
         raise RuntimeError(f"could not select tab {index}")
 
-    # TCM_SETCURSEL intentionally does not emit TCN_SELCHANGE, so notify the
-    # parent explicitly so applications that switch child pages from this
-    # notification can perform their normal view activation.
     _notify_tab_parent(tab_hwnd, TCN_SELCHANGE)
 
 
