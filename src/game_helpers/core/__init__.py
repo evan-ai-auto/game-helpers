@@ -1,6 +1,7 @@
 from .children import list_child_windows
 from .game_view import GameView, discover_game_views
 from .models import Action, ActionType, GameState, Point, Rect, WindowInfo
+from .tab import GameViewTabSession, current_tab_index, find_tab_control, select_tab
 from .window import find_window, list_windows
 
 __all__ = [
@@ -8,11 +9,15 @@ __all__ = [
     "ActionType",
     "GameState",
     "GameView",
+    "GameViewTabSession",
     "Point",
     "Rect",
     "WindowInfo",
+    "current_tab_index",
     "discover_game_views",
+    "find_tab_control",
     "find_window",
     "list_child_windows",
     "list_windows",
+    "select_tab",
 ]
