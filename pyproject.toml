@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "game-helpers"
+version = "0.1.0"
+description = "Windows game GUI automation core for authorized automation and testing."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{name = "evan-ai-auto"}]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+windows = ["pywin32>=306"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
