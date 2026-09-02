@@ -32,8 +32,6 @@ def _notify_tab_parent(tab_hwnd: int, code: int) -> int:
     import ctypes
     from ctypes import wintypes
 
-    # UINT_PTR is pointer-sized. ctypes.wintypes does not expose UINT_PTR on
-    # all Python versions, so use c_size_t explicitly.
     class NMHDR(ctypes.Structure):
         _fields_ = [
             ("hwndFrom", wintypes.HWND),
@@ -55,13 +53,7 @@ def _notify_tab_parent(tab_hwnd: int, code: int) -> int:
 
 
 def select_tab(tab_hwnd: int, index: int) -> None:
-    """Select a tab through the standard tab-control message path.
-
-    ``TCM_SETCURSEL`` changes the tab selection but does not itself send
-    ``TCN_SELCHANGING``/``TCN_SELCHANGE``. The hosted game may use those
-    notifications to switch the visible WSGAME child, so they are sent to the
-    tab parent explicitly after changing the selection.
-    """
+    """Select a tab without simulating mouse input."""
     if sys.platform != "win32":
         raise RuntimeError("tab control operations are only available on Windows")
     if index < 0:
@@ -95,7 +87,7 @@ def wait_for_game_view(parent_hwnd: int, game_hwnd: int, *, timeout: float = 2.0
 
 
 class GameViewTabSession:
-    """Temporarily activate a game tab and restore the original tab on exit."""
+    """Temporarily select a game tab and restore the original tab on exit."""
 
     def __init__(self, parent_hwnd: int, target_game_hwnd: int, *, timeout: float = 2.0):
         self.parent_hwnd = parent_hwnd
@@ -103,6 +95,7 @@ class GameViewTabSession:
         self.timeout = timeout
         self.tab_hwnd: int | None = None
         self.original_index: int | None = None
+        self.target_index: int | None = None
 
     def __enter__(self) -> "GameViewTabSession":
         self.tab_hwnd = find_tab_control(self.parent_hwnd)
@@ -112,35 +105,41 @@ class GameViewTabSession:
         from .game_view import discover_game_views
 
         views = discover_game_views(self.parent_hwnd)
-        target_index = next((i for i, view in enumerate(views) if view.hwnd == self.target_game_hwnd), None)
-        if target_index is None:
+        self.target_index = next(
+            (i for i, view in enumerate(views) if view.hwnd == self.target_game_hwnd),
+            None,
+        )
+        if self.target_index is None:
             raise RuntimeError(f"game window {self.target_game_hwnd} is not a discovered WSGAME child")
 
         self.original_index = current_tab_index(self.tab_hwnd)
-        if self.original_index != target_index:
-            select_tab(self.tab_hwnd, target_index)
-            if not wait_for_game_view(self.parent_hwnd, self.target_game_hwnd, timeout=self.timeout):
-                raise RuntimeError(f"game view {target_index + 1} did not become visible")
+        if self.original_index != self.target_index:
+            try:
+                select_tab(self.tab_hwnd, self.target_index)
+            except Exception:
+                self._restore_original()
+                raise
+
+            # Some applications update their page asynchronously or do not
+            # toggle child visibility at all. Selection state is the primary
+            # signal; visibility is only diagnostic and must not make us fail
+            # after the tab has actually changed.
+            if current_tab_index(self.tab_hwnd) != self.target_index:
+                self._restore_original()
+                raise RuntimeError(f"tab selection did not reach index {self.target_index}")
+            time.sleep(0.10)
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
+        self._restore_original()
+
+    def _restore_original(self) -> None:
         if self.tab_hwnd is None or self.original_index is None:
             return
-        if current_tab_index(self.tab_hwnd) != self.original_index:
-            try:
+        try:
+            if current_tab_index(self.tab_hwnd) != self.original_index:
                 select_tab(self.tab_hwnd, self.original_index)
-                wait_for_game_view(self.parent_hwnd, self._current_game_hwnd(), timeout=self.timeout)
-            except Exception:
-                # Never mask the original capture/action exception while
-                # attempting best-effort restoration of the previous tab.
-                pass
-
-    def _current_game_hwnd(self) -> int:
-        """Return the WSGAME HWND corresponding to the current tab index."""
-        from .game_view import discover_game_views
-
-        views = discover_game_views(self.parent_hwnd)
-        index = current_tab_index(self.tab_hwnd)  # type: ignore[arg-type]
-        if index < 0 or index >= len(views):
-            return self.target_game_hwnd
-        return views[index].hwnd
+                time.sleep(0.10)
+        except Exception:
+            # Best effort only; do not mask the original capture/action error.
+            pass
