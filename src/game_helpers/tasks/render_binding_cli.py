@@ -69,7 +69,7 @@ def main() -> int:
     _log("6/7 保存选中实例截图")
     frame = WindowsGraphicsCapture().capture(parent.hwnd)
     output = f"diagnostic/render_binding_selected_{selected.view_index}.png"
-    save_png(output, frame)
+    save_png(frame, output)
     print(f"output={output}")
 
     _log("7/7 完成", "请人工确认截图中的角色身份")
