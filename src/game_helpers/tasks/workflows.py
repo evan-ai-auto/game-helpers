@@ -1,20 +1,12 @@
-"""Human-selectable task workflow definitions for 梦幻西游.
-
-This module intentionally contains only workflow metadata. Selecting a workflow
-never performs an action in the game.
-"""
-
+"""Human-selectable task workflow definitions for 梦幻西游."""
 from __future__ import annotations
 
 from dataclasses import dataclass
-
 from .models import TaskCategory, TaskRecipe
 
 
 @dataclass(frozen=True)
 class TaskWorkflow:
-    """A user-facing task workflow entry mapped to a deterministic recipe."""
-
     id: str
     name: str
     recipe: TaskRecipe
@@ -22,8 +14,6 @@ class TaskWorkflow:
 
 
 class TaskWorkflowRegistry:
-    """In-memory registry for the task workflows currently available to the UI."""
-
     def __init__(self, workflows: tuple[TaskWorkflow, ...] | None = None) -> None:
         self._workflows = workflows or default_workflows()
         self._by_id = {workflow.id: workflow for workflow in self._workflows}
@@ -46,21 +36,25 @@ class TaskWorkflowRegistry:
 
 
 def default_workflows() -> tuple[TaskWorkflow, ...]:
-    """Return the initial safe workflow catalog.
-
-    These recipes are intentionally metadata-only placeholders until the game
-    perception layer can diagnose the corresponding task state. They contain
-    no executable actions.
-    """
+    """Return the safe workflow catalog; selection alone never executes a task."""
     return (
+        TaskWorkflow(
+            id="minghun",
+            name="命魂任务",
+            description="命魂任务状态诊断入口；当前阶段只检测是否已领取，不执行领取。",
+            recipe=TaskRecipe(
+                id="minghun",
+                name="命魂任务",
+                category=TaskCategory.GENERAL,
+                metadata={"game": "梦幻西游", "diagnosis_only": True, "status_detector": "soul_task"},
+            ),
+        ),
         TaskWorkflow(
             id="shimen",
             name="师门任务",
             description="师门任务诊断流程（当前仅选择流程，不执行任务）。",
             recipe=TaskRecipe(
-                id="shimen",
-                name="师门任务",
-                category=TaskCategory.GENERAL,
+                id="shimen", name="师门任务", category=TaskCategory.GENERAL,
                 metadata={"game": "梦幻西游", "diagnosis_only": True},
             ),
         ),
@@ -69,9 +63,7 @@ def default_workflows() -> tuple[TaskWorkflow, ...]:
             name="自定义任务流程",
             description="用于后续接入用户自定义任务步骤的诊断入口。",
             recipe=TaskRecipe(
-                id="custom",
-                name="自定义任务流程",
-                category=TaskCategory.GENERAL,
+                id="custom", name="自定义任务流程", category=TaskCategory.GENERAL,
                 metadata={"game": "梦幻西游", "diagnosis_only": True},
             ),
         ),
