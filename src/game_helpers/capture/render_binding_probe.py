@@ -10,7 +10,9 @@ and captures the *parent* window after each switch.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import hashlib
+import os
 import sys
 import time
 
@@ -22,6 +24,13 @@ from .wgc import WindowsGraphicsCapture
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()[:16]
+
+
+def _window_pid(hwnd: int) -> int:
+    """Return the process id that owns a Win32 window."""
+    pid = ctypes.c_ulong(0)
+    ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+    return int(pid.value)
 
 
 def main() -> int:
@@ -57,9 +66,6 @@ def main() -> int:
     manager = GameViewManager(window.hwnd)
     capture = WindowsGraphicsCapture()
 
-    import ctypes
-    import os
-
     user32 = ctypes.windll.user32
     foreground_before = int(user32.GetForegroundWindow())
     original_surface = manager.current_surface_index()
@@ -83,11 +89,11 @@ def main() -> int:
 
             print(f"WSGAME #{index}")
             print(f"  hwnd={view.hwnd}")
-            print(f"  pid={view.window.pid}")
+            print(f"  pid={_window_pid(view.hwnd)}")
             print(f"  title={view.window.title!r}")
             print(f"  bounds={view.window.bounds.width}x{view.window.bounds.height}")
 
-            selected = manager.switch_surface_to(index)
+            manager.switch_surface_to(index)
             time.sleep(max(args.settle_ms, 0) / 1000.0)
 
             foreground_after_switch = int(user32.GetForegroundWindow())
