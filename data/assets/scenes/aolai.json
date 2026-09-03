@@ -1,0 +1,74 @@
+{
+  "scene": {
+    "id": "scene_aolai",
+    "name": "傲来国",
+    "aliases": [],
+    "game": "梦幻西游"
+  },
+  "transport_points": [
+    {
+      "id": "tp_aolai_yizhan_1",
+      "type": "npc_transport",
+      "name": "驿站老板",
+      "position": {"x": 171, "y": 14},
+      "destination": {
+        "type": "scene",
+        "scene_id": "scene_donghaiwan",
+        "scene_name": "东海湾",
+        "known_position": {"x": 85, "y": 23}
+      },
+      "note": "常用传送"
+    },
+    {
+      "id": "tp_aolai_yizhan_2",
+      "type": "npc_transport",
+      "name": "驿站老板",
+      "position": {"x": 57, "y": 96},
+      "destination": {
+        "type": "scene",
+        "scene_id": "scene_changan",
+        "scene_name": "长安城",
+        "known_position": {"x": 363, "y": 82}
+      },
+      "note": "常用传送"
+    },
+    {
+      "id": "tp_aolai_chefufu",
+      "type": "npc_transport",
+      "name": "车夫",
+      "position": {"x": 255, "y": 113},
+      "destination": {
+        "type": "scene",
+        "scene_id": "scene_changan",
+        "scene_name": "长安城",
+        "known_position": {"x": 213, "y": 73}
+      },
+      "note": "另一条回长安的路"
+    },
+    {
+      "id": "tp_aolai_nv_er_village",
+      "type": "scene_entrance",
+      "name": "女儿村入口",
+      "position": {"x": 9, "y": 141},
+      "destination": {
+        "type": "scene",
+        "scene_id": "scene_nvercun",
+        "scene_name": "女儿村"
+      },
+      "note": "女儿村门派入口"
+    },
+    {
+      "id": "tp_aolai_huaguoshan",
+      "type": "scene_entrance",
+      "name": "花果山入口",
+      "position": {"x": 213, "y": 140},
+      "destination": {
+        "type": "scene",
+        "scene_id": "scene_huaguoshan",
+        "scene_name": "花果山"
+      },
+      "note": "花果山门派入口"
+    }
+  ],
+  "source_note": "由用户提供的傲来国传送点表整理。坐标按用户提供的数据原样保存。"
+}
