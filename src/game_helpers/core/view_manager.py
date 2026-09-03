@@ -44,7 +44,7 @@ class GameViewManager:
         """Return the one-based WSGAME child that is currently visible."""
         views = self.views()
         for index, view in enumerate(views, start=1):
-            if view.visible:
+            if view.window.visible:
                 return index
         raise RuntimeError("no visible WSGAME surface was found")
 
