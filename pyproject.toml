@@ -9,7 +9,7 @@ description = "Windows game GUI automation core for authorized automation and te
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{name = "evan-ai-auto"}]
-dependencies = []
+dependencies = ["Pillow>=10.0", "numpy>=1.26"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
