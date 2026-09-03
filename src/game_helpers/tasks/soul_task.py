@@ -68,9 +68,7 @@ class SoulTaskUiProfile:
 
 
 DEFAULT_SOUL_TASK_UI = SoulTaskUiProfile(
-    # Coordinates are normalized against the parent WGC frame (1036x831 in
-    # the user's current environment). The toggle is the small arrow button
-    # at roughly (25, 153) in the supplied screenshot.
+    # Parent WGC frame is 1036x831 in the user's current environment.
     task_entry_toggle=UiPoint(25 / 1036, 153 / 831),
     task_panel_icon=UiPoint(0.10, 0.10),
     claimed_icon_region=UiRect(0.0, 0.0, 0.34, 0.42),
@@ -158,27 +156,48 @@ def detect_soul_task_panel_collapsed(
     *,
     profile: SoulTaskUiProfile = DEFAULT_SOUL_TASK_UI,
 ) -> SoulTaskPanelObservation:
-    """Detect the user's marked collapsed-state toggle."""
+    """Detect panel state from the dedicated toggle region.
+
+    The user's two supplied screenshots show a strong visual distinction:
+    collapsed state has the small pale/grey arrow control, while expanded state
+    has a red square toggle. We intentionally use this local color/shape cue
+    instead of depending on a second generated template asset. This keeps the
+    state detector functional even if an optional asset file is malformed.
+    """
+    if image.width <= 0 or image.height <= 0:
+        return SoulTaskPanelObservation(None, 0.0, None, SoulTaskDetectionReason.IMAGE_INVALID)
     left, top, right, bottom = profile.collapsed_toggle_region.pixel(image.width, image.height)
     left, top = max(0, left), max(0, top)
     right, bottom = min(image.width, right), min(image.height, bottom)
     if right <= left or bottom <= top:
         return SoulTaskPanelObservation(None, 0.0, None, SoulTaskDetectionReason.ROI_INVALID)
-    try:
-        template = _load_template(profile.collapsed_toggle_template_path)
-    except FileNotFoundError:
-        return SoulTaskPanelObservation(None, 0.0, None, SoulTaskDetectionReason.TOGGLE_TEMPLATE_MISSING)
-    except (OSError, ValueError, KeyError, json.JSONDecodeError, binascii.Error):
-        return SoulTaskPanelObservation(None, 0.0, None, SoulTaskDetectionReason.TOGGLE_TEMPLATE_INVALID)
-    roi = np.asarray(image.convert("RGB"), dtype=np.float32)[top:bottom, left:right]
-    score, location = _ncc(roi, template)
-    collapsed = score >= profile.toggle_match_threshold
+    roi = np.asarray(image.convert("RGB"), dtype=np.uint8)[top:bottom, left:right]
+    if roi.size == 0:
+        return SoulTaskPanelObservation(None, 0.0, None, SoulTaskDetectionReason.ROI_INVALID)
+
+    r = roi[..., 0].astype(np.int16)
+    g = roi[..., 1].astype(np.int16)
+    b = roi[..., 2].astype(np.int16)
+    # Expanded toggle is visibly red in the supplied expanded screenshot.
+    red_mask = (r >= 120) & ((r - g) >= 45) & ((r - b) >= 25)
+    red_ratio = float(red_mask.mean())
+    red_pixels = int(red_mask.sum())
+    # A 32x27 local ROI gives enough margin: the expanded red control has a
+    # compact but unmistakable red population; collapsed state has very few.
+    expanded = red_pixels >= 25 and red_ratio >= 0.025
+    confidence = min(1.0, abs(red_ratio - 0.025) / 0.12 + 0.55) if expanded else min(1.0, 0.55 + (0.025 - red_ratio) / 0.05)
+    reason = SoulTaskDetectionReason.PANEL_EXPANDED if expanded else SoulTaskDetectionReason.PANEL_ALREADY_OPEN
+    evidence = (
+        f"toggle red_pixels={red_pixels}",
+        f"toggle red_ratio={red_ratio:.4f}",
+        "expanded toggle is identified by the red control; collapsed state by its absence",
+    )
     return SoulTaskPanelObservation(
-        collapsed=collapsed,
-        confidence=max(0.0, score),
-        match_location=(left + location[0], top + location[1]) if location else None,
-        reason=SoulTaskDetectionReason.PANEL_EXPANDED if not collapsed else SoulTaskDetectionReason.PANEL_ALREADY_OPEN,
-        evidence=(f"collapsed toggle best score={score:.3f}", f"template={_resolve_template_path(profile.collapsed_toggle_template_path)}"),
+        collapsed=not expanded,
+        confidence=max(0.0, min(1.0, confidence)),
+        match_location=(left, top),
+        reason=reason,
+        evidence=evidence,
     )
 
 
