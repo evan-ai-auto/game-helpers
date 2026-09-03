@@ -26,7 +26,8 @@ def main() -> int:
         print(
             f"#{account.view_index} hwnd={account.hwnd} pid={account.process_id} "
             f"status={status} character={account.character_name!r} "
-            f"account={account.account_name!r} title={account.metadata.get('title')!r}"
+            f"account={account.account_name!r} identity={account.identity!r} "
+            f"title={account.metadata.get('title')!r}"
         )
     return 0
 
