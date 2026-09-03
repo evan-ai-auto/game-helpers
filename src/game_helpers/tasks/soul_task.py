@@ -30,6 +30,8 @@ class SoulTaskDetectionReason(str, Enum):
     ICON_NOT_FOUND = "claimed_icon_not_found"
     IMAGE_INVALID = "invalid_image"
     ROI_INVALID = "invalid_detection_region"
+    TEMPLATE_MISSING = "claimed_icon_template_missing"
+    TEMPLATE_INVALID = "claimed_icon_template_invalid"
     CLAIM_VERIFICATION_FAILED = "claim_verification_failed"
 
 
@@ -64,9 +66,6 @@ class SoulTaskUiProfile:
     match_threshold: float = 0.78
 
 
-# Covers the upper-left game UI where the user marked the 命魂 task icon area.
-# It is intentionally configurable so a later client-layout calibration does not
-# require code changes.
 DEFAULT_SOUL_TASK_UI = SoulTaskUiProfile(
     task_entry_toggle=UiPoint(0.047, 0.33),
     task_panel_icon=UiPoint(0.10, 0.10),
@@ -85,9 +84,27 @@ class SoulTaskObservation:
     screenshot_path: str | None = None
 
 
+def _resolve_template_path(path: str | Path) -> Path:
+    """Resolve asset paths independently of the process working directory."""
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return candidate
+    cwd_candidate = Path.cwd() / candidate
+    if cwd_candidate.is_file():
+        return cwd_candidate
+    # soul_task.py -> tasks -> game_helpers -> src -> repository root
+    repo_candidate = Path(__file__).resolve().parents[3] / candidate
+    if repo_candidate.is_file():
+        return repo_candidate
+    return cwd_candidate
+
+
 def _load_template(path: str | Path) -> np.ndarray:
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    raw = base64.b64decode(payload["template_base64"])
+    resolved = _resolve_template_path(path)
+    if not resolved.is_file():
+        raise FileNotFoundError(str(resolved))
+    payload = json.loads(resolved.read_text(encoding="utf-8"))
+    raw = base64.b64decode(payload["template_base64"], validate=True)
     return np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"), dtype=np.float32)
 
 
@@ -129,20 +146,45 @@ def detect_soul_task_claimed_icon(
     right, bottom = min(image.width, right), min(image.height, bottom)
     if right <= left or bottom <= top:
         return SoulTaskObservation(SoulTaskStatus.UNKNOWN, SoulTaskDetectionReason.ROI_INVALID, 0.0, False)
+    resolved_template = _resolve_template_path(template_path or profile.template_path)
     try:
-        template = _load_template(template_path or profile.template_path)
+        template = _load_template(resolved_template)
+    except FileNotFoundError:
+        return SoulTaskObservation(
+            SoulTaskStatus.UNKNOWN,
+            SoulTaskDetectionReason.TEMPLATE_MISSING,
+            0.0,
+            False,
+            evidence=(f"claimed icon template not found: {resolved_template}",),
+        )
     except (OSError, ValueError, KeyError, json.JSONDecodeError, base64.binascii.Error):
-        return SoulTaskObservation(SoulTaskStatus.UNKNOWN, SoulTaskDetectionReason.IMAGE_INVALID, 0.0, False,
-                                   evidence=("claimed icon template could not be loaded",))
+        return SoulTaskObservation(
+            SoulTaskStatus.UNKNOWN,
+            SoulTaskDetectionReason.TEMPLATE_INVALID,
+            0.0,
+            False,
+            evidence=(f"claimed icon template could not be decoded: {resolved_template}",),
+        )
     roi = np.asarray(image.convert("RGB"), dtype=np.float32)[top:bottom, left:right]
     score, location = _ncc(roi, template)
     if score >= profile.match_threshold:
         absolute = (left + location[0], top + location[1]) if location else None
-        return SoulTaskObservation(SoulTaskStatus.CLAIMED, SoulTaskDetectionReason.ICON_FOUND, score, True,
-                                   absolute, (f"claimed icon match score={score:.3f}",))
-    return SoulTaskObservation(SoulTaskStatus.NOT_CLAIMED, SoulTaskDetectionReason.ICON_NOT_FOUND,
-                               max(0.0, score), True, None,
-                               (f"claimed icon not found; best score={score:.3f}",))
+        return SoulTaskObservation(
+            SoulTaskStatus.CLAIMED,
+            SoulTaskDetectionReason.ICON_FOUND,
+            score,
+            True,
+            absolute,
+            (f"claimed icon match score={score:.3f}", f"template={resolved_template}"),
+        )
+    return SoulTaskObservation(
+        SoulTaskStatus.NOT_CLAIMED,
+        SoulTaskDetectionReason.ICON_NOT_FOUND,
+        max(0.0, score),
+        True,
+        None,
+        (f"claimed icon not found; best score={score:.3f}", f"template={resolved_template}"),
+    )
 
 
 def inspect_task_panel_image(path: str | Path, *, profile: SoulTaskUiProfile = DEFAULT_SOUL_TASK_UI) -> SoulTaskObservation:
@@ -150,11 +192,24 @@ def inspect_task_panel_image(path: str | Path, *, profile: SoulTaskUiProfile = D
     try:
         image = Image.open(path)
     except (OSError, ValueError):
-        return SoulTaskObservation(SoulTaskStatus.UNKNOWN, SoulTaskDetectionReason.IMAGE_INVALID, 0.0, False,
-                                   evidence=("unable to load screenshot",), screenshot_path=str(path))
+        return SoulTaskObservation(
+            SoulTaskStatus.UNKNOWN,
+            SoulTaskDetectionReason.IMAGE_INVALID,
+            0.0,
+            False,
+            evidence=("unable to load screenshot",),
+            screenshot_path=str(path),
+        )
     result = detect_soul_task_claimed_icon(image, profile=profile)
-    return SoulTaskObservation(result.status, result.reason, result.confidence, result.panel_detected,
-                               result.match_location, result.evidence, str(path))
+    return SoulTaskObservation(
+        result.status,
+        result.reason,
+        result.confidence,
+        result.panel_detected,
+        result.match_location,
+        result.evidence,
+        str(path),
+    )
 
 
 def claim_verification_result(after: SoulTaskObservation) -> SoulTaskObservation:
