@@ -26,7 +26,8 @@ def main() -> int:
     print(f"parent hwnd={parent.hwnd}")
 
     print("[验证] 2/6 扫描已登录角色")
-    accounts = logged_in_accounts(scan_game_accounts(parent.hwnd))
+    scan = scan_game_accounts(parent.hwnd)
+    accounts = logged_in_accounts(scan)
     print(f"logged_in characters={len(accounts)}")
     if not accounts:
         print("未发现已登录角色，无法创建任务诊断请求。")
@@ -46,7 +47,7 @@ def main() -> int:
     if not 1 <= choice <= len(accounts):
         print(f"角色编号必须在 1 到 {len(accounts)} 之间。")
         return 4
-    selected = select_character(scan_game_accounts(parent.hwnd), accounts[choice - 1].view_index)
+    selected = select_character(scan, accounts[choice - 1].view_index)
     selection = CharacterSelection(
         character_name=selected.character_name,
         view_index=selected.view_index,
