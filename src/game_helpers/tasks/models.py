@@ -91,10 +91,13 @@ class RoutePlan:
 
 @dataclass(frozen=True)
 class AccountCandidate:
+    """Identity information for one 梦幻西游 WSGAME instance."""
+
     view_index: int
     hwnd: int
     process_id: int | None
     character_name: str | None = None
     account_name: str | None = None
+    identity: str | None = None
     logged_in: bool | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
