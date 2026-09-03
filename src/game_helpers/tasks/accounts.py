@@ -22,36 +22,32 @@ class AccountScanResult:
     accounts: tuple[AccountCandidate, ...]
 
 
-def parse_character_title(title: str) -> tuple[str | None, str | None, bool]:
-    """Parse the known 梦幻西游 title convention.
+def parse_character_title(title: str) -> tuple[str | None, str | None, str | None, bool]:
+    """Parse the title while preserving the complete identity payload.
 
-    The plain ``梦幻西游 ONLINE`` title is treated as an unlogged-in view.
-    A logged-in title currently looks like::
-
-        梦幻西游 ONLINE - (区服 - 角色名[角色ID])
-
-    The parser deliberately returns conservative results: an unexpected title
-    shape is not treated as proof that a character is logged in.
+    Returns ``(character_name, account_name, identity, logged_in)``. ``identity``
+    is the exact text inside the title parentheses, e.g.
+    ``北京1区[生日快乐] - 若相遇便不离[24101160]``. The character name is a
+    convenience field; the complete identity is always retained separately.
     """
     normalized = title.strip()
     if normalized == GAME_TITLE:
-        return None, None, False
+        return None, None, None, False
 
     match = _LOGGED_IN_RE.match(normalized)
     if not match:
-        return None, None, False
+        return None, None, None, False
 
-    details = match.group("details").strip()
-    if " - " not in details:
-        return None, None, False
+    identity = match.group("details").strip()
+    if " - " not in identity:
+        return None, None, identity, False
 
-    account_name, character_part = details.rsplit(" - ", 1)
-    character_name = character_part.strip()
-    character_name = re.sub(r"\[[^\[\]]+\]$", "", character_name).strip()
+    account_name, character_part = identity.rsplit(" - ", 1)
+    character_name = re.sub(r"\[[^\[\]]+\]$", "", character_part.strip()).strip()
     account_name = account_name.strip()
     if not character_name:
-        return None, account_name or None, False
-    return character_name, account_name or None, True
+        return None, account_name or None, identity, False
+    return character_name, account_name or None, identity, True
 
 
 def scan_game_accounts(parent_hwnd: int) -> AccountScanResult:
@@ -64,7 +60,7 @@ def scan_game_accounts(parent_hwnd: int) -> AccountScanResult:
     user32 = ctypes.windll.user32
     accounts: list[AccountCandidate] = []
     for index, view in enumerate(discover_game_views(parent_hwnd), start=1):
-        character_name, account_name, logged_in = parse_character_title(view.window.title)
+        character_name, account_name, identity, logged_in = parse_character_title(view.window.title)
         process_id = ctypes.c_ulong()
         user32.GetWindowThreadProcessId(view.hwnd, ctypes.byref(process_id))
         accounts.append(
@@ -74,6 +70,7 @@ def scan_game_accounts(parent_hwnd: int) -> AccountScanResult:
                 process_id=int(process_id.value) or None,
                 character_name=character_name,
                 account_name=account_name,
+                identity=identity,
                 logged_in=logged_in,
                 metadata={"title": view.window.title},
             )
