@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import threading
+import time
 
 from .models import Frame
 
@@ -13,8 +14,21 @@ class WindowsGraphicsCapture:
 
     backend_name = "windows-graphics-capture"
 
-    def capture(self, window, *, timeout: float = 5.0) -> Frame:
-        """Return the first available BGRA frame for a WindowInfo-like object or HWND."""
+    def capture(
+        self,
+        window,
+        *,
+        timeout: float = 5.0,
+        retries: int = 2,
+        retry_delay: float = 0.15,
+    ) -> Frame:
+        """Return the first available BGRA frame for a WindowInfo-like object or HWND.
+
+        WGC can occasionally close or fail to deliver the first frame while a
+        hosted window is being rebound. Retry the complete capture session a
+        small number of times; this does not change the target HWND or bring it
+        to the foreground.
+        """
         if sys.platform != "win32":
             raise RuntimeError("Windows Graphics Capture is only available on Windows")
 
@@ -38,10 +52,26 @@ class WindowsGraphicsCapture:
             window = resolved
         hwnd = int(window.hwnd)
 
+        if retries < 0:
+            raise ValueError("retries must be non-negative")
+
+        last_error: BaseException | None = None
+        for attempt in range(retries + 1):
+            try:
+                return self._capture_once(window, hwnd, WindowsCapture, timeout)
+            except TimeoutError as exc:
+                last_error = exc
+                if attempt >= retries:
+                    raise
+                time.sleep(retry_delay)
+
+        raise RuntimeError(f"Windows Graphics Capture failed for hwnd={hwnd}") from last_error
+
+    def _capture_once(self, window, hwnd: int, windows_capture_type, timeout: float) -> Frame:
         result: dict[str, object] = {}
         ready = threading.Event()
 
-        capture = WindowsCapture(
+        capture = windows_capture_type(
             cursor_capture=False,
             draw_border=False,
             monitor_index=None,
@@ -57,7 +87,7 @@ class WindowsGraphicsCapture:
                     width=int(native_frame.width),
                     height=int(native_frame.height),
                     data=buffer.tobytes(),
-                    captured_at=__import__("time").time(),
+                    captured_at=time.time(),
                     backend=self.backend_name,
                 )
             except BaseException as exc:
@@ -84,7 +114,7 @@ class WindowsGraphicsCapture:
             raise RuntimeError(f"Windows Graphics Capture callback failed: {error}") from error
         frame = result.get("frame")
         if frame is None:
-            raise RuntimeError(
+            raise TimeoutError(
                 f"Windows Graphics Capture closed before producing a frame for hwnd={hwnd}"
             )
         return frame  # type: ignore[return-value]
