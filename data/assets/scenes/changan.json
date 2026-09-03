@@ -1,0 +1,65 @@
+{
+  "scene": {
+    "id": "scene_changan",
+    "name": "长安城",
+    "aliases": ["长安"],
+    "game": "梦幻西游"
+  },
+  "transport_points": [
+    {
+      "id": "tp_changan_yizhan_laoban",
+      "type": "npc_transport",
+      "name": "驿站老板",
+      "position": {"x": 280, "y": 43},
+      "destination": {
+        "type": "scene",
+        "scene_id": "scene_fengdu",
+        "known_position": {"x": 87, "y": 250}
+      },
+      "note": "最常用的传送点之一"
+    },
+    {
+      "id": "tp_changan_bangpai_zhuguan",
+      "type": "npc_transport",
+      "name": "帮派主管",
+      "position": {"x": 384, "y": 270},
+      "destination": {
+        "type": "own_gang"
+      },
+      "note": "传送回自己的帮派"
+    },
+    {
+      "id": "tp_changan_bangpai_jieren",
+      "type": "npc_transport",
+      "name": "帮派接引人",
+      "position": {"x": 513, "y": 225},
+      "destination": {
+        "type": "hostile_gang"
+      },
+      "note": "用于帮派战争等"
+    },
+    {
+      "id": "tp_changan_datang_office",
+      "type": "scene_entrance",
+      "name": "大唐官府光圈",
+      "position": {"x": 311, "y": 278},
+      "destination": {
+        "type": "scene",
+        "scene_id": "scene_datang_guangfu"
+      },
+      "note": "进入大唐官府门派"
+    },
+    {
+      "id": "tp_changan_huasheng_temple",
+      "type": "scene_entrance",
+      "name": "化生寺入口",
+      "position": {"x": 505, "y": 271},
+      "destination": {
+        "type": "scene",
+        "scene_id": "scene_huashengsi"
+      },
+      "note": "进入化生寺门派"
+    }
+  ],
+  "source_note": "由用户提供的长安城传送位置表整理。坐标按用户提供的数据原样保存。"
+}
