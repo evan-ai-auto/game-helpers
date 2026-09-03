@@ -1,4 +1,4 @@
-"""MVP-5b CLI: select a 梦幻西游 character and detect 命魂任务 state."""
+"""MVP-5c CLI: select a 梦幻西游 character and detect 命魂任务 state."""
 from __future__ import annotations
 
 import argparse
@@ -17,7 +17,6 @@ from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
 from .soul_task import (
     DEFAULT_SOUL_TASK_UI,
-    SoulTaskDetectionReason,
     SoulTaskStatus,
     detect_soul_task_claimed_icon,
     detect_soul_task_panel_collapsed,
@@ -36,11 +35,14 @@ def _parent_client_offset(parent, child) -> tuple[int, int]:
 
 
 def _click_soul_task_toggle(parent, selected_view, frame_width: int, frame_height: int) -> tuple[int, int]:
-    """Click the marked toggle using selected WSGAME client coordinates."""
+    """Synchronously click the marked toggle using selected WSGAME client coordinates."""
     sx, sy = DEFAULT_SOUL_TASK_UI.task_entry_toggle.pixel(frame_width, frame_height)
     ox, oy = _parent_client_offset(parent, selected_view)
     local_x, local_y = sx - ox, sy - oy
-    BackgroundInput(selected_view.hwnd).click(local_x, local_y)
+    # The game did not consume the asynchronous PostMessage click in the
+    # previous validation. Use synchronous ordinary Win32 mouse messages here;
+    # this still does not activate the target or move the user's real cursor.
+    BackgroundInput(selected_view.hwnd).click_sync(local_x, local_y)
     return local_x, local_y
 
 
@@ -90,7 +92,6 @@ def main() -> int:
     print(f"selected character={selected.character_name!r} view_index={selected.view_index} hwnd={selected.hwnd} pid={selected.process_id}")
 
     result_code = 0
-    panel_was_open = True
     panel_opened_by_tool = False
     try:
         print("[验证] 5/10 后台切换角色并同步 Surface + Native Tab")
@@ -102,7 +103,6 @@ def main() -> int:
         frame_before = WindowsGraphicsCapture().capture(parent.hwnd)
         image_before = Image.frombytes("RGBA", (frame_before.width, frame_before.height), frame_before.data, "raw", "BGRA").convert("RGB")
         panel = detect_soul_task_panel_collapsed(image_before)
-        panel_was_open = panel.collapsed is False
         print(f"panel_collapsed={panel.collapsed}")
         print(f"panel_confidence={panel.confidence:.3f}")
         print(f"panel_reason={panel.reason.value}")
@@ -112,16 +112,19 @@ def main() -> int:
         if panel.collapsed is None:
             raise RuntimeError("无法可靠判断命魂任务界面展开/折叠状态")
         if panel.collapsed:
-            print("检测到折叠状态，后台点击展开开关。")
-            local_x, local_y = _click_soul_task_toggle(parent, next(v for v in discover_game_views(parent.hwnd) if v.index == selected.view_index), frame_before.width, frame_before.height)
+            print("检测到折叠状态，后台同步点击展开开关。")
+            view = next(v for v in discover_game_views(parent.hwnd) if v.index == selected.view_index)
+            local_x, local_y = _click_soul_task_toggle(parent, view, frame_before.width, frame_before.height)
             panel_opened_by_tool = True
             print(f"toggle_click_client=({local_x},{local_y})")
-            time.sleep(0.45)
+            time.sleep(0.55)
             frame_opened = WindowsGraphicsCapture().capture(parent.hwnd)
             image_opened = Image.frombytes("RGBA", (frame_opened.width, frame_opened.height), frame_opened.data, "raw", "BGRA").convert("RGB")
             panel_after = detect_soul_task_panel_collapsed(image_opened)
             print(f"panel_collapsed_after_open={panel_after.collapsed}")
             print(f"panel_confidence_after_open={panel_after.confidence:.3f}")
+            for evidence in panel_after.evidence:
+                print(f"panel_after_evidence={evidence}")
             if panel_after.collapsed is True:
                 raise RuntimeError("点击展开开关后仍检测为折叠状态")
             if panel_after.collapsed is None:
@@ -167,7 +170,6 @@ def main() -> int:
             try:
                 views = discover_game_views(parent.hwnd)
                 view = next(v for v in views if v.index == selected.view_index)
-                # Use the same toggle point in the restored selected surface.
                 frame_restore = WindowsGraphicsCapture().capture(parent.hwnd)
                 local_x, local_y = _click_soul_task_toggle(parent, view, frame_restore.width, frame_restore.height)
                 time.sleep(0.35)
