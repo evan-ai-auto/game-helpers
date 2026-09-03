@@ -1,0 +1,10 @@
+{
+  "id": "ui_soul_task_claimed_icon",
+  "name": "命魂任务已领取图标",
+  "game": "梦幻西游",
+  "format": "png-base64",
+  "width": 28,
+  "height": 29,
+  "source": "用户提供的命魂任务已领取图标截图，裁剪掉红色标记框。",
+  "template_base64": "iVBORw0KGgoAAAANSUhEUgAAABwAAAAdCAIAAACqF5ZRAAAAAXNSR0IArs4c6QAAABVJREFUSEtjYBgFo2AUjIJRMAoAAAQAAQAAAP//AwC6aQ8AAAAASUVORK5CYII="
+}
