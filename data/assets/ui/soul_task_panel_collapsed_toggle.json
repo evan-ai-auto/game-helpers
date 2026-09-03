@@ -1,0 +1,10 @@
+{
+  "id": "ui_soul_task_panel_collapsed_toggle",
+  "name": "命魂任务入口展开折叠开关-折叠态",
+  "game": "梦幻西游",
+  "format": "png-base64",
+  "width": 32,
+  "height": 27,
+  "source": "用户提供的实际游戏截图 character-1.png；裁取左上角命魂任务入口展开/折叠开关的折叠态样本。",
+  "template_base64": ""+b64+""
+}
