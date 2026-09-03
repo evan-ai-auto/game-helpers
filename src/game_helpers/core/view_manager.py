@@ -12,11 +12,10 @@ from .tab import current_tab_index, find_tab_control, select_tab
 class GameViewManager:
     """Switch and inspect game views hosted by one top-level window.
 
-    Tab selection and displayed-surface selection are intentionally separate.
-    Some hosts update the native tab index without rebinding the rendered
-    WSGAME surface. ``switch_surface_to`` therefore drives child visibility
-    directly and is the preferred background-safe route for capture/action
-    workflows.
+    Tab selection and displayed-surface selection are kept synchronized. The
+    background-safe path updates the native tab selection without activating
+    the host window, then explicitly binds WSGAME child visibility so capture
+    and the UI's selected-tab title describe the same game instance.
     """
 
     def __init__(
@@ -75,12 +74,14 @@ class GameViewManager:
         )
 
     def switch_surface_to(self, index: int) -> GameView:
-        """Display one WSGAME child without activating the host window.
+        """Display one WSGAME child and synchronize its native tab selection.
 
-        This is the background-safe route validated by the surface probe: the
-        selected child is shown with ``SW_SHOWNOACTIVATE`` and sibling game
-        children are hidden. It deliberately does not send Ctrl+Tab or call
-        ``SetForegroundWindow``.
+        This is the background-safe route validated by the surface probe. It
+        selects the corresponding native tab with ``SendMessage`` (no mouse or
+        foreground activation), then explicitly shows the target WSGAME child
+        and hides siblings. Keeping both states synchronized prevents the host
+        UI from showing one character's tab title while rendering another
+        character's game surface.
         """
         if sys.platform != "win32":
             raise RuntimeError("background surface switching requires Windows")
@@ -97,6 +98,9 @@ class GameViewManager:
         SW_SHOWNOACTIVATE = 4
         target = views[index - 1]
 
+        # Keep the host's visible tab/title synchronized with the surface.
+        select_tab(self._tab_hwnd(), index - 1)
+
         for view in views:
             user32.ShowWindow(
                 view.hwnd,
@@ -105,7 +109,9 @@ class GameViewManager:
 
         deadline = time.monotonic() + self.timeout
         while time.monotonic() < deadline:
-            if self.current_surface_index() == index:
+            current_tab = self.current_index()
+            current_surface = self.current_surface_index()
+            if current_tab == index and current_surface == index:
                 foreground_after = int(user32.GetForegroundWindow())
                 if foreground_after != foreground_before:
                     raise RuntimeError(
@@ -116,8 +122,8 @@ class GameViewManager:
             time.sleep(0.02)
 
         raise TimeoutError(
-            f"WSGAME surface did not become visible for #{index}; "
-            f"current surface is #{self.current_surface_index()}"
+            f"WSGAME selection did not synchronize for #{index}; "
+            f"tab=#{self.current_index()}, surface=#{self.current_surface_index()}"
         )
 
     def switch_next(self) -> GameView:
