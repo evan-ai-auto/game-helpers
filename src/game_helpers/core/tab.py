@@ -52,24 +52,8 @@ def _notify_tab_parent(tab_hwnd: int, code: int) -> int:
     return int(ctypes.windll.user32.SendMessageW(parent, WM_NOTIFY, hdr.idFrom, ctypes.byref(hdr)))
 
 
-def _redraw_tab_control(tab_hwnd: int) -> None:
-    """Force the selected-tab visual state to repaint immediately."""
-    import ctypes
-
-    RDW_INVALIDATE = 0x0001
-    RDW_ERASE = 0x0004
-    RDW_UPDATENOW = 0x0100
-    RDW_ALLCHILDREN = 0x0080
-    flags = RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW | RDW_ALLCHILDREN
-    ctypes.windll.user32.RedrawWindow(tab_hwnd, None, None, flags)
-
-    parent = int(ctypes.windll.user32.GetParent(tab_hwnd))
-    if parent:
-        ctypes.windll.user32.RedrawWindow(parent, None, None, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN)
-
-
 def select_tab(tab_hwnd: int, index: int) -> None:
-    """Select a tab without simulating mouse input and repaint its selection state."""
+    """Select a tab without simulating mouse input."""
     if sys.platform != "win32":
         raise RuntimeError("tab control operations are only available on Windows")
     if index < 0:
@@ -89,7 +73,6 @@ def select_tab(tab_hwnd: int, index: int) -> None:
         raise RuntimeError(f"could not select tab {index}")
 
     _notify_tab_parent(tab_hwnd, TCN_SELCHANGE)
-    _redraw_tab_control(tab_hwnd)
 
 
 def wait_for_game_view(parent_hwnd: int, game_hwnd: int, *, timeout: float = 2.0) -> bool:
