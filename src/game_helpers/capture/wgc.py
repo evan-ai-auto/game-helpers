@@ -9,17 +9,12 @@ from .models import Frame
 
 
 class WindowsGraphicsCapture:
-    """Capture one HWND through the Windows Graphics Capture API.
-
-    The implementation uses the optional ``windows-capture`` package, which
-    exposes an explicit ``window_hwnd`` target. No foreground activation or
-    desktop BitBlt is used.
-    """
+    """Capture one HWND through the Windows Graphics Capture API."""
 
     backend_name = "windows-graphics-capture"
 
     def capture(self, window, *, timeout: float = 5.0) -> Frame:
-        """Return the first available BGRA frame for ``window``."""
+        """Return the first available BGRA frame for a WindowInfo-like object or HWND."""
         if sys.platform != "win32":
             raise RuntimeError("Windows Graphics Capture is only available on Windows")
 
@@ -31,6 +26,18 @@ class WindowsGraphicsCapture:
                 "install the Windows extras with: pip install -e '.[windows]'"
             ) from exc
 
+        # Keep the capture API tolerant of callers that naturally have an HWND.
+        # Frame.window still needs a WindowInfo, so resolve an integer HWND first.
+        if isinstance(window, int):
+            from game_helpers.core.window import list_windows
+
+            hwnd = int(window)
+            resolved = next((item for item in list_windows() if item.hwnd == hwnd), None)
+            if resolved is None:
+                raise ValueError(f"could not resolve WindowInfo for hwnd={hwnd}")
+            window = resolved
+        hwnd = int(window.hwnd)
+
         result: dict[str, object] = {}
         ready = threading.Event()
 
@@ -38,7 +45,7 @@ class WindowsGraphicsCapture:
             cursor_capture=False,
             draw_border=False,
             monitor_index=None,
-            window_hwnd=int(window.hwnd),
+            window_hwnd=hwnd,
         )
 
         @capture.event
@@ -53,7 +60,7 @@ class WindowsGraphicsCapture:
                     captured_at=__import__("time").time(),
                     backend=self.backend_name,
                 )
-            except BaseException as exc:  # surface callback failures to caller
+            except BaseException as exc:
                 result["error"] = exc
             finally:
                 ready.set()
@@ -68,7 +75,7 @@ class WindowsGraphicsCapture:
             control.stop()
             control.wait()
             raise TimeoutError(
-                f"timed out waiting for Windows Graphics Capture frame from hwnd={window.hwnd}"
+                f"timed out waiting for Windows Graphics Capture frame from hwnd={hwnd}"
             )
 
         control.wait()
@@ -78,6 +85,6 @@ class WindowsGraphicsCapture:
         frame = result.get("frame")
         if frame is None:
             raise RuntimeError(
-                f"Windows Graphics Capture closed before producing a frame for hwnd={window.hwnd}"
+                f"Windows Graphics Capture closed before producing a frame for hwnd={hwnd}"
             )
         return frame  # type: ignore[return-value]
