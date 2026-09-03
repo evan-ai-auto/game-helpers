@@ -1,4 +1,4 @@
-"""Task, asset, route planning, diagnosis, and progress primitives."""
+"""Task, asset, route planning, diagnosis, progress, and render binding primitives."""
 
 from .diagnosis import (
     CharacterSelection,
@@ -22,14 +22,17 @@ from .models import (
     TravelEdge,
 )
 from .progress import LiveTaskEvidence, ResumeDecision, TaskProgress, TaskProgressStore, reconcile_progress
+from .render_binding import BindingStatus, RenderBinding, verify_render_binding
 
 __all__ = [
     "AccountCandidate",
+    "BindingStatus",
     "CharacterSelection",
     "DiagnosisStatus",
     "ItemAsset",
     "LiveTaskEvidence",
     "NpcAsset",
+    "RenderBinding",
     "ResumeDecision",
     "RoutePlan",
     "SceneAsset",
@@ -46,4 +49,5 @@ __all__ = [
     "TaskStep",
     "TravelEdge",
     "reconcile_progress",
+    "verify_render_binding",
 ]
