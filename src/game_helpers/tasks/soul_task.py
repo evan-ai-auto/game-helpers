@@ -64,12 +64,13 @@ class SoulTaskUiProfile:
     match_threshold: float = 0.78
 
 
-# The user's red-box detection area is intentionally a configuration value.
-# It can be recalibrated without changing detection code when the client layout changes.
+# Covers the upper-left game UI where the user marked the 命魂 task icon area.
+# It is intentionally configurable so a later client-layout calibration does not
+# require code changes.
 DEFAULT_SOUL_TASK_UI = SoulTaskUiProfile(
     task_entry_toggle=UiPoint(0.047, 0.33),
     task_panel_icon=UiPoint(0.10, 0.10),
-    claimed_icon_region=UiRect(0.0, 0.0, 0.23, 0.42),
+    claimed_icon_region=UiRect(0.0, 0.0, 0.40, 0.55),
 )
 
 
