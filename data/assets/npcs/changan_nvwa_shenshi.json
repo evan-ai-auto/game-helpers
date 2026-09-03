@@ -1,0 +1,14 @@
+{
+  "id": "npc_nvwa_shenshi",
+  "name": "女娲神使",
+  "game": "梦幻西游",
+  "locations": [
+    {
+      "scene_id": "scene_changan",
+      "scene_name": "长安城",
+      "position": {"x": 129, "y": 193}
+    }
+  ],
+  "functions": ["领取命魂任务"],
+  "source_note": "由用户提供的命魂任务领取 NPC 信息整理。"
+}
