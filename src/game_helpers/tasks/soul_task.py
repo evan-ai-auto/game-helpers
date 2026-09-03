@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import io
 import json
 from dataclasses import dataclass
@@ -69,7 +70,10 @@ class SoulTaskUiProfile:
 DEFAULT_SOUL_TASK_UI = SoulTaskUiProfile(
     task_entry_toggle=UiPoint(0.047, 0.33),
     task_panel_icon=UiPoint(0.10, 0.10),
-    claimed_icon_region=UiRect(0.0, 0.0, 0.40, 0.55),
+    # The user's marked red rectangle is the detection region. Keep this
+    # deliberately on the upper-left utility-icon panel rather than scanning
+    # the whole game frame.
+    claimed_icon_region=UiRect(0.0, 0.0, 0.34, 0.42),
 )
 
 
@@ -85,14 +89,12 @@ class SoulTaskObservation:
 
 
 def _resolve_template_path(path: str | Path) -> Path:
-    """Resolve asset paths independently of the process working directory."""
     candidate = Path(path)
     if candidate.is_absolute():
         return candidate
     cwd_candidate = Path.cwd() / candidate
     if cwd_candidate.is_file():
         return cwd_candidate
-    # soul_task.py -> tasks -> game_helpers -> src -> repository root
     repo_candidate = Path(__file__).resolve().parents[3] / candidate
     if repo_candidate.is_file():
         return repo_candidate
@@ -100,10 +102,25 @@ def _resolve_template_path(path: str | Path) -> Path:
 
 
 def _load_template(path: str | Path) -> np.ndarray:
+    """Load a template from the project's asset JSON format.
+
+    GitHub's file-content API exposes file text inside a ``content`` field when
+    inspected through the connector. Some exported asset files therefore carry
+    either the template object directly or that wrapper. Accept both forms so
+    the local checkout can use the same committed asset without manual edits.
+    """
     resolved = _resolve_template_path(path)
     if not resolved.is_file():
         raise FileNotFoundError(str(resolved))
-    payload = json.loads(resolved.read_text(encoding="utf-8"))
+    raw_json = json.loads(resolved.read_text(encoding="utf-8"))
+    payload = raw_json
+    if isinstance(payload, dict) and isinstance(payload.get("content"), str):
+        try:
+            payload = json.loads(payload["content"])
+        except json.JSONDecodeError:
+            pass
+    if not isinstance(payload, dict) or "template_base64" not in payload:
+        raise ValueError("template_base64 missing")
     raw = base64.b64decode(payload["template_base64"], validate=True)
     return np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"), dtype=np.float32)
 
@@ -119,14 +136,20 @@ def _ncc(roi: np.ndarray, template: np.ndarray) -> tuple[float, tuple[int, int] 
     if t_norm <= 1e-6:
         return 0.0, None
     best, best_xy = -1.0, None
+    # Use grayscale correlation for the small icon. This avoids three Python
+    # loops over RGB channels while keeping the detector dependency-light.
+    t_gray = 0.299 * t[..., 0] + 0.587 * t[..., 1] + 0.114 * t[..., 2]
+    t_gray -= t_gray.mean()
+    t_norm = float(np.sqrt((t_gray * t_gray).sum()))
+    roi_gray = 0.299 * roi[..., 0] + 0.587 * roi[..., 1] + 0.114 * roi[..., 2]
     for y in range(rh - h + 1):
         for x in range(rw - w + 1):
-            patch = roi[y:y + h, x:x + w]
-            p = patch - patch.mean(axis=(0, 1), keepdims=True)
+            patch = roi_gray[y:y + h, x:x + w]
+            p = patch - patch.mean()
             denom = float(np.sqrt((p * p).sum()) * t_norm)
             if denom <= 1e-6:
                 continue
-            score = float((p * t).sum() / denom)
+            score = float((p * t_gray).sum() / denom)
             if score > best:
                 best, best_xy = score, (x, y)
     return best, best_xy
@@ -157,7 +180,7 @@ def detect_soul_task_claimed_icon(
             False,
             evidence=(f"claimed icon template not found: {resolved_template}",),
         )
-    except (OSError, ValueError, KeyError, json.JSONDecodeError, base64.binascii.Error):
+    except (OSError, ValueError, KeyError, json.JSONDecodeError, binascii.Error):
         return SoulTaskObservation(
             SoulTaskStatus.UNKNOWN,
             SoulTaskDetectionReason.TEMPLATE_INVALID,
