@@ -1,4 +1,3 @@
-from .background_session import BackgroundGameSession
 from .children import list_child_windows
 from .diagnostics import WindowDiagnostics, diagnose_window
 from .game_view import GameView, discover_game_views
@@ -10,7 +9,6 @@ from .window import find_window, list_windows
 __all__ = [
     "Action",
     "ActionType",
-    "BackgroundGameSession",
     "GameState",
     "GameView",
     "GameViewManager",
@@ -28,3 +26,12 @@ __all__ = [
     "list_windows",
     "select_tab",
 ]
+
+
+def __getattr__(name: str):
+    """Lazy-load the high-level session to avoid core/capture import cycles."""
+    if name == "BackgroundGameSession":
+        from .background_session import BackgroundGameSession
+
+        return BackgroundGameSession
+    raise AttributeError(name)
