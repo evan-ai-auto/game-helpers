@@ -20,19 +20,27 @@ def _state(manager: GameViewManager, tab_hwnd: int) -> tuple[int, int]:
     return manager.current_surface_index(), current_tab_index(tab_hwnd) + 1
 
 
+def _select_tab_safely(tab_hwnd: int, index: int) -> None:
+    select_tab(tab_hwnd, index - 1)
+    observed = current_tab_index(tab_hwnd) + 1
+    if observed != index:
+        raise RuntimeError(f"native Tab did not reach #{index}; current=#{observed}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("title", help="top-level game window title")
     parser.add_argument("--game-index", type=int, default=2)
+    parser.add_argument("--baseline-index", type=int, default=1)
     args = parser.parse_args()
 
-    print("[验证] 1/6 查找游戏主窗口")
+    print("[验证] 1/7 查找游戏主窗口")
     parent = find_window(args.title)
     if parent is None:
         print(f"找不到游戏主窗口: {args.title}")
         return 2
 
-    print("[验证] 2/6 扫描 WSGAME 与原生 Tab")
+    print("[验证] 2/7 扫描 WSGAME 与原生 Tab")
     manager = GameViewManager(parent.hwnd, timeout=2.0)
     views = discover_game_views(parent.hwnd)
     tab_hwnd = find_tab_control(parent.hwnd)
@@ -42,6 +50,9 @@ def main() -> int:
     if not 1 <= args.game_index <= len(views):
         print(f"game-index 必须在 1..{len(views)}")
         return 2
+    if not 1 <= args.baseline_index <= len(views):
+        print(f"baseline-index 必须在 1..{len(views)}")
+        return 2
 
     original_surface, original_tab = _state(manager, tab_hwnd)
     foreground_before = _foreground()
@@ -50,15 +61,25 @@ def main() -> int:
     print(f"original_tab={original_tab}")
     print(f"foreground_before={foreground_before}")
 
-    print(f"[验证] 3/6 建立已验证基线：后台切换 Surface #{args.game_index}")
+    print(f"[验证] 3/7 建立反例起点：Surface #{args.baseline_index} + Tab #{args.baseline_index}")
+    manager.switch_surface_to(args.baseline_index)
+    _select_tab_safely(tab_hwnd, args.baseline_index)
+    time.sleep(0.20)
+    baseline_surface, baseline_tab = _state(manager, tab_hwnd)
+    print(f"baseline_surface={baseline_surface}")
+    print(f"baseline_tab={baseline_tab}")
+
+    print(f"[验证] 4/7 只后台切换 Surface → #{args.game_index}")
     manager.switch_surface_to(args.game_index)
     time.sleep(0.25)
     surface_before_tab, tab_before_tab = _state(manager, tab_hwnd)
+    foreground_before_tab = _foreground()
     print(f"surface_before_tab={surface_before_tab}")
     print(f"tab_before_tab={tab_before_tab}")
+    print(f"foreground_before_tab={foreground_before_tab}")
 
-    print(f"[验证] 4/6 仅修改原生 Tab → #{args.game_index}")
-    select_tab(tab_hwnd, args.game_index - 1)
+    print(f"[验证] 5/7 只同步原生 Tab → #{args.game_index}")
+    _select_tab_safely(tab_hwnd, args.game_index)
     time.sleep(0.25)
     surface_after_tab, tab_after_tab = _state(manager, tab_hwnd)
     foreground_after_tab = _foreground()
@@ -66,10 +87,10 @@ def main() -> int:
     print(f"tab_after_tab={tab_after_tab}")
     print(f"foreground_after_tab={foreground_after_tab}")
 
-    print("[验证] 5/6 恢复原始 Surface 与 Tab")
+    print("[验证] 6/7 恢复原始 Surface 与 Tab")
     manager.switch_surface_to(original_surface)
     time.sleep(0.15)
-    select_tab(tab_hwnd, original_tab - 1)
+    _select_tab_safely(tab_hwnd, original_tab)
     time.sleep(0.15)
     restored_surface, restored_tab = _state(manager, tab_hwnd)
     foreground_final = _foreground()
@@ -77,16 +98,21 @@ def main() -> int:
     print(f"restored_tab={restored_tab}")
     print(f"foreground_final={foreground_final}")
 
-    print("[验证] 6/6 结果")
+    print("[验证] 7/7 结果")
+    print(f"surface_reached_target={surface_before_tab == args.game_index}")
     print(f"surface_preserved_after_tab={surface_after_tab == args.game_index}")
     print(f"tab_reached_target={tab_after_tab == args.game_index}")
     print(f"foreground_unchanged={foreground_final == foreground_before}")
     print(f"restored={restored_surface == original_surface and restored_tab == original_tab}")
 
     success = (
-        surface_before_tab == args.game_index
+        baseline_surface == args.baseline_index
+        and baseline_tab == args.baseline_index
+        and surface_before_tab == args.game_index
         and surface_after_tab == args.game_index
         and tab_after_tab == args.game_index
+        and foreground_before_tab == foreground_before
+        and foreground_after_tab == foreground_before
         and foreground_final == foreground_before
         and restored_surface == original_surface
         and restored_tab == original_tab
