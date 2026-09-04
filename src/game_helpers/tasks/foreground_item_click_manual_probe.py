@@ -19,11 +19,11 @@ from ..core.window import find_window
 from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
 
-# Center of the red toolbox/item icon measured from the supplied 1036x831
-# capture. The WSGAME client is 1024x768 and starts around screenshot (6,57),
-# giving a client target of approximately (703,749).
-TARGET_X_RATIO = 703 / 1024
-TARGET_Y_RATIO = 749 / 768
+# The supplied 1036x831 capture places the center of the red item/toolbox icon
+# around screenshot (693, 806). The selected WSGAME client begins around
+# screenshot (6, 57), so use client coordinates near (687, 749).
+TARGET_X_RATIO = 687 / 1024
+TARGET_Y_RATIO = 750 / 768
 
 
 class POINT(ctypes.Structure):
