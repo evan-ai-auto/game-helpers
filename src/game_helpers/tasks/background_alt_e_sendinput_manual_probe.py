@@ -15,6 +15,17 @@ from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
 
 
+class MOUSEINPUT(ctypes.Structure):
+    _fields_ = [
+        ("dx", wintypes.LONG),
+        ("dy", wintypes.LONG),
+        ("mouseData", wintypes.DWORD),
+        ("dwFlags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", ctypes.c_size_t),
+    ]
+
+
 class KEYBDINPUT(ctypes.Structure):
     _fields_ = [
         ("wVk", wintypes.WORD),
@@ -26,7 +37,9 @@ class KEYBDINPUT(ctypes.Structure):
 
 
 class INPUTUNION(ctypes.Union):
-    _fields_ = [("ki", KEYBDINPUT)]
+    # INPUT's union must include MOUSEINPUT so sizeof(INPUT) matches the
+    # Win32 ABI on both x86 and x64. SendInput rejects an undersized cbSize.
+    _fields_ = [("mi", MOUSEINPUT), ("ki", KEYBDINPUT)]
 
 
 class INPUT(ctypes.Structure):
@@ -73,6 +86,7 @@ def _sendinput_alt_e() -> int:
     events[3].type = INPUT_KEYBOARD
     events[3].ki = KEYBDINPUT(VK_MENU, SCANCODE_LALT, KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP, 0, 0)
 
+    print(f"sendinput_input_size={ctypes.sizeof(INPUT)}")
     sent = int(send_input(len(events), events, ctypes.sizeof(INPUT)))
     if sent != len(events):
         raise ctypes.WinError(ctypes.get_last_error())
