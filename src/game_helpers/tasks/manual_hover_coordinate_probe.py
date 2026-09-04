@@ -1,10 +1,10 @@
-"""Manual probe for recording the real screen/client coordinate of a hovered UI item.
+"""Manual probe for recording and calibrating a hovered UI item's coordinates.
 
-The probe does not click or send keyboard/mouse messages to the game. It selects a
+The probe does not click or send mouse messages to the game. It selects a
 character, temporarily makes the game foreground, then lets the user move the
-real mouse over a UI element. Press F8 while the tooltip is visible to record the
-current cursor position, WSGAME client coordinates, hit-test HWND and ancestor
-chain, plus a screenshot.
+real mouse over a UI element. Press F8 while the tooltip is visible to record
+screen/client coordinates, capture geometry, hit-test HWND information, and a
+calibration screenshot with the measured points drawn onto the captured frame.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from ctypes import wintypes
 from pathlib import Path
 
 from ..capture import WindowsGraphicsCapture, save_png
+from ..capture.models import Frame
 from ..core.view_manager import GameViewManager
 from ..core.window import find_window
 from .accounts import scan_game_accounts
@@ -23,7 +24,6 @@ from .character_selection import logged_in_accounts, select_character, sync_sele
 
 VK_F8 = 0x77
 SW_RESTORE = 9
-GA_PARENT = 1
 GA_ROOT = 2
 
 
@@ -45,6 +45,13 @@ def _cursor_pos() -> tuple[int, int]:
 def _screen_to_client(hwnd: int, screen_x: int, screen_y: int) -> tuple[int, int]:
     point = POINT(screen_x, screen_y)
     if not ctypes.windll.user32.ScreenToClient(hwnd, ctypes.byref(point)):
+        raise ctypes.WinError()
+    return int(point.x), int(point.y)
+
+
+def _client_to_screen(hwnd: int, client_x: int = 0, client_y: int = 0) -> tuple[int, int]:
+    point = POINT(client_x, client_y)
+    if not ctypes.windll.user32.ClientToScreen(hwnd, ctypes.byref(point)):
         raise ctypes.WinError()
     return int(point.x), int(point.y)
 
@@ -97,6 +104,14 @@ def _describe(hwnd: int) -> str:
     )
 
 
+def _window_dpi(hwnd: int) -> int | None:
+    try:
+        value = int(ctypes.windll.user32.GetDpiForWindow(hwnd))
+    except AttributeError:
+        return None
+    return value or None
+
+
 def _set_foreground(hwnd: int) -> None:
     user32 = ctypes.windll.user32
     current_fg = _foreground_hwnd()
@@ -131,17 +146,103 @@ def _f8_pressed() -> bool:
     return bool(ctypes.windll.user32.GetAsyncKeyState(VK_F8) & 0x0001)
 
 
-def _record_mark(capture: WindowsGraphicsCapture, parent_hwnd: int, selected_hwnd: int, output_dir: Path, index: int) -> None:
+def _draw_crosshair(frame: Frame, x: int, y: int, *, radius: int = 9) -> Frame:
+    """Return a copy of the frame with a visible BGRA crosshair at (x, y)."""
+    data = bytearray(frame.data)
+    x = max(0, min(frame.width - 1, x))
+    y = max(0, min(frame.height - 1, y))
+
+    # Red crosshair in BGRA; diagnostic-only overlay.
+    bgr = (0, 0, 255, 255)
+    for offset in range(-radius, radius + 1):
+        for px, py in ((x + offset, y), (x, y + offset)):
+            if 0 <= px < frame.width and 0 <= py < frame.height:
+                index = (py * frame.width + px) * 4
+                data[index : index + 4] = bytes(bgr)
+    return Frame(
+        window=frame.window,
+        width=frame.width,
+        height=frame.height,
+        data=bytes(data),
+        captured_at=frame.captured_at,
+        backend=frame.backend,
+    )
+
+
+def _screen_to_capture(
+    screen_x: int,
+    screen_y: int,
+    parent_screen_origin: tuple[int, int],
+    parent_client_size: tuple[int, int],
+    capture_size: tuple[int, int],
+) -> tuple[float, float]:
+    """Map physical screen pixels to capture pixels, accounting for size differences."""
+    parent_x = screen_x - parent_screen_origin[0]
+    parent_y = screen_y - parent_screen_origin[1]
+    parent_w, parent_h = parent_client_size
+    capture_w, capture_h = capture_size
+    if parent_w <= 0 or parent_h <= 0:
+        raise ValueError("invalid parent client size")
+    return (
+        parent_x * capture_w / parent_w,
+        parent_y * capture_h / parent_h,
+    )
+
+
+def _record_mark(
+    capture: WindowsGraphicsCapture,
+    parent_hwnd: int,
+    selected_hwnd: int,
+    output_dir: Path,
+    index: int,
+) -> None:
     screen_x, screen_y = _cursor_pos()
-    client_x, client_y = _screen_to_client(selected_hwnd, screen_x, screen_y)
-    width, height = _client_size(selected_hwnd)
+    selected_x, selected_y = _screen_to_client(selected_hwnd, screen_x, screen_y)
+    selected_w, selected_h = _client_size(selected_hwnd)
+    parent_w, parent_h = _client_size(parent_hwnd)
+    parent_origin = _client_to_screen(parent_hwnd)
+    selected_origin = _client_to_screen(selected_hwnd)
+    selected_in_parent = (
+        selected_origin[0] - parent_origin[0],
+        selected_origin[1] - parent_origin[1],
+    )
     hit = int(ctypes.windll.user32.WindowFromPoint(POINT(screen_x, screen_y)))
+
+    frame = capture.capture(parent_hwnd)
+    capture_w, capture_h = frame.width, frame.height
+    capture_from_screen = _screen_to_capture(
+        screen_x,
+        screen_y,
+        parent_origin,
+        (parent_w, parent_h),
+        (capture_w, capture_h),
+    )
+    capture_from_selected = (
+        (selected_in_parent[0] + selected_x) * capture_w / parent_w,
+        (selected_in_parent[1] + selected_y) * capture_h / parent_h,
+    )
 
     print(f"\nMARK #{index}")
     print(f"cursor_screen=({screen_x},{screen_y})")
-    print(f"selected_client=({client_x},{client_y})")
-    print(f"selected_client_size=({width},{height})")
-    print(f"selected_ratio=({client_x / width:.6f},{client_y / height:.6f})")
+    print(f"parent_client_origin_screen={parent_origin}")
+    print(f"parent_client_size=({parent_w},{parent_h})")
+    print(f"selected_client_origin_screen={selected_origin}")
+    print(f"selected_origin_in_parent_client={selected_in_parent}")
+    print(f"selected_client=({selected_x},{selected_y})")
+    print(f"selected_client_size=({selected_w},{selected_h})")
+    print(f"selected_ratio=({selected_x / selected_w:.6f},{selected_y / selected_h:.6f})")
+    print(f"capture_size=({capture_w},{capture_h})")
+    print(
+        f"capture_from_screen=({capture_from_screen[0]:.3f},{capture_from_screen[1]:.3f})"
+    )
+    print(
+        f"capture_from_selected=({capture_from_selected[0]:.3f},{capture_from_selected[1]:.3f})"
+    )
+    delta_x = capture_from_screen[0] - capture_from_selected[0]
+    delta_y = capture_from_screen[1] - capture_from_selected[1]
+    print(f"capture_mapping_delta=({delta_x:.3f},{delta_y:.3f})")
+    print(f"parent_dpi={_window_dpi(parent_hwnd)}")
+    print(f"selected_dpi={_window_dpi(selected_hwnd)}")
     print(f"hit_test={_describe(hit)}")
     print(f"hit_root_is_game_parent={_root(hit) == parent_hwnd}")
     print(f"hit_is_selected={hit == selected_hwnd}")
@@ -149,9 +250,25 @@ def _record_mark(capture: WindowsGraphicsCapture, parent_hwnd: int, selected_hwn
     for level, hwnd in enumerate(_ancestor_chain(hit), 1):
         print(f"  [{level}] {_describe(hwnd)}")
 
-    path = output_dir / f"mark-{index:02d}-screen-{screen_x}-{screen_y}.png"
-    save_png(capture.capture(parent_hwnd), str(path))
-    print(f"screenshot={path}")
+    screen_point = (
+        round(capture_from_screen[0]),
+        round(capture_from_screen[1]),
+    )
+    selected_point = (
+        round(capture_from_selected[0]),
+        round(capture_from_selected[1]),
+    )
+    marked = _draw_crosshair(frame, *screen_point)
+    marked = _draw_crosshair(marked, *selected_point)
+
+    raw_path = output_dir / f"mark-{index:02d}-raw-screen-{screen_x}-{screen_y}.png"
+    marked_path = output_dir / f"mark-{index:02d}-calibrated-screen-{screen_x}-{screen_y}.png"
+    save_png(frame, str(raw_path))
+    save_png(marked, str(marked_path))
+    print(f"raw_screenshot={raw_path}")
+    print(f"calibrated_screenshot={marked_path}")
+    print("校准图中会在 screen→capture 和 WSGAME→capture 两个推导位置分别画十字；")
+    print("如果两条十字重合，说明映射一致；如果不重合，差值就是待排查的坐标偏移。")
 
 
 def main() -> int:
@@ -196,7 +313,7 @@ def main() -> int:
     print(f"original_foreground={original_foreground}")
     print("\n本探针不会点击游戏，也不会发送后台鼠标消息。")
     print("程序会暂时让游戏前台，然后请你用真实鼠标移动到目标图标。")
-    print("当目标 tooltip 已经显示时，按一次 F8，程序会记录当前鼠标屏幕坐标、WSGAME client 坐标、命中 HWND 和父链。")
+    print("当目标 tooltip 已经显示时，按一次 F8，程序会记录 screen/client/capture 三套坐标并生成校准图。")
     print("可以连续记录多个位置；按 ESC 退出。")
 
     result_code = 0
