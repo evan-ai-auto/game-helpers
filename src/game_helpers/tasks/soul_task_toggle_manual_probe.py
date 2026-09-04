@@ -25,21 +25,37 @@ def _foreground_hwnd() -> int:
     return int(ctypes.windll.user32.GetForegroundWindow())
 
 
-def _window_origin_in_parent(parent_hwnd: int, child_hwnd: int) -> tuple[int, int]:
-    """Return child top-left relative to the parent client origin."""
+def _screen_point_from_parent_client(parent_hwnd: int, x: int, y: int) -> tuple[int, int]:
     user32 = ctypes.windll.user32
-    rect = wintypes.RECT()
-    if not user32.GetWindowRect(parent_hwnd, ctypes.byref(rect)):
+    point = wintypes.POINT(int(x), int(y))
+    if not user32.ClientToScreen(parent_hwnd, ctypes.byref(point)):
         raise ctypes.WinError()
-    parent_point = wintypes.POINT(rect.left, rect.top)
-    if not user32.ScreenToClient(parent_hwnd, ctypes.byref(parent_point)):
+    return point.x, point.y
+
+
+def _resolve_toggle_target(parent_hwnd: int, selected_hwnd: int, x: int, y: int) -> tuple[int, tuple[int, int], str]:
+    """Resolve the real Win32 child under the visual toggle point.
+
+    The toggle is drawn inside the game surface but may be owned by a nested
+    child window. Sending mouse messages to the WSGAME parent is not guaranteed
+    to reach the actual control, so use WindowFromPoint first and fall back to
+    WSGAME only when the hit target is outside the selected game view.
+    """
+    user32 = ctypes.windll.user32
+    screen_x, screen_y = _screen_point_from_parent_client(parent_hwnd, x, y)
+    hit_hwnd = int(user32.WindowFromPoint(wintypes.POINT(screen_x, screen_y)))
+    if not hit_hwnd:
+        return selected_hwnd, (x, y), "WindowFromPoint returned null; fallback to WSGAME"
+
+    if hit_hwnd != selected_hwnd and not user32.IsChild(selected_hwnd, hit_hwnd):
+        return selected_hwnd, (x, y), f"hit hwnd={hit_hwnd} is outside selected WSGAME; fallback to WSGAME"
+
+    client = wintypes.POINT(screen_x, screen_y)
+    if not user32.ScreenToClient(hit_hwnd, ctypes.byref(client)):
         raise ctypes.WinError()
-    if not user32.GetWindowRect(child_hwnd, ctypes.byref(rect)):
-        raise ctypes.WinError()
-    child_point = wintypes.POINT(rect.left, rect.top)
-    if not user32.ScreenToClient(parent_hwnd, ctypes.byref(child_point)):
-        raise ctypes.WinError()
-    return child_point.x - parent_point.x, child_point.y - parent_point.y
+    class_name = ctypes.create_unicode_buffer(256)
+    user32.GetClassNameW(hit_hwnd, class_name, len(class_name))
+    return hit_hwnd, (client.x, client.y), f"hit hwnd={hit_hwnd} class={class_name.value!r}"
 
 
 def _restore_context(manager: GameViewManager, original_surface: int | None, original_tab: int | None) -> None:
@@ -121,14 +137,15 @@ def main() -> int:
             return 1
 
         point = DEFAULT_SOUL_TASK_UI.task_entry_toggle.pixel(frame_before.width, frame_before.height)
-        origin_x, origin_y = _window_origin_in_parent(parent.hwnd, selected.hwnd)
-        local_x = point[0] - origin_x
-        local_y = point[1] - origin_y
         print(f"parent_toggle_pixel={point}")
-        print(f"child_origin_in_parent=({origin_x},{origin_y})")
-        print(f"toggle_click_client=({local_x},{local_y})")
+        hit_hwnd, hit_client, hit_evidence = _resolve_toggle_target(
+            parent.hwnd, selected.hwnd, point[0], point[1]
+        )
+        print(f"toggle_target_hwnd={hit_hwnd}")
+        print(f"toggle_target_client={hit_client}")
+        print(f"toggle_target_evidence={hit_evidence}")
         print("后台点击执行中……")
-        BackgroundInput(selected.hwnd).click_sync(local_x, local_y)
+        BackgroundInput(hit_hwnd).click_sync(hit_client[0], hit_client[1])
         panel_state_changed = True
         time.sleep(0.8)
 
