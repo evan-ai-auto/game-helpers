@@ -1,8 +1,7 @@
 """Manual bidirectional probe for the soul-task expand/collapse toggle.
 
-This probe intentionally leaves the UI in the post-click state so the user can
-visually verify that background input changed the game UI. It does not perform
-semantic post-click detection and does not restore Surface/Tab/panel state.
+The probe leaves the UI in the post-click state for visual verification and
+intentionally does not restore Surface, Tab, or panel state.
 """
 
 from __future__ import annotations
@@ -11,10 +10,12 @@ import ctypes
 import sys
 import time
 from ctypes import wintypes
+from pathlib import Path
 
 from ..actions.background_input import BackgroundInput
-from ..capture.wgc import WindowsGraphicsCapture
+from ..capture import WindowsGraphicsCapture, save_png
 from ..core.view_manager import GameViewManager
+from ..core.window import find_window
 from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
 from .soul_task import DEFAULT_SOUL_TASK_UI, detect_soul_task_panel_collapsed
@@ -41,20 +42,20 @@ def _window_origin_in_parent(parent_hwnd: int, child_hwnd: int) -> tuple[int, in
     return child_point.x - parent_point.x, child_point.y - parent_point.y
 
 
-def _capture(parent_hwnd: int):
-    return WindowsGraphicsCapture().capture(parent_hwnd)
-
-
 def main() -> int:
     if sys.platform != "win32":
         print("本探针仅支持 Windows。")
         return 2
 
     title = sys.argv[1] if len(sys.argv) > 1 else "梦幻西游 ONLINE"
-    manager = GameViewManager.find_parent(title)
-    print(f"parent hwnd={manager.parent_hwnd}")
+    parent = find_window(title)
+    if parent is None:
+        print(f"parent window not found: {title!r}")
+        return 2
+    manager = GameViewManager(parent.hwnd, timeout=2.0)
+    print(f"parent hwnd={parent.hwnd}")
 
-    result = scan_game_accounts(manager.parent_hwnd)
+    result = scan_game_accounts(parent.hwnd)
     accounts = logged_in_accounts(result)
     print(f"logged_in characters={len(accounts)}")
     for i, account in enumerate(accounts, 1):
@@ -65,9 +66,12 @@ def main() -> int:
     if not accounts:
         return 1
 
-    print("\n请选择角色编号：", end="", flush=True)
-    choice = int(input().strip())
-    if choice < 1 or choice > len(accounts):
+    try:
+        choice = int(input("\n请选择角色编号：").strip())
+    except (EOFError, ValueError):
+        print("角色编号无效。")
+        return 1
+    if not 1 <= choice <= len(accounts):
         print("角色编号无效。")
         return 1
 
@@ -80,13 +84,18 @@ def main() -> int:
     print(f"original_tab={original_tab}")
     print(f"foreground_before={foreground_before}")
 
-    sync_selected_character(manager.parent_hwnd, selected)
+    sync_selected_character(parent.hwnd, selected)
     time.sleep(0.3)
-    frame_before = _capture(manager.parent_hwnd)
+    capture = WindowsGraphicsCapture()
+    frame_before = capture.capture(parent.hwnd)
     panel_before = detect_soul_task_panel_collapsed(frame_before)
     print(f"panel_before_collapsed={panel_before.collapsed}")
     print(f"panel_before_confidence={panel_before.confidence:.3f}")
     print(f"before_evidence={panel_before.evidence}")
+
+    output_dir = Path("diagnostic/soul_task_toggle_manual")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    save_png(frame_before, str(output_dir / f"before-character-{selected.view_index}.png"))
 
     direction = input("执行 [e] 展开 / [c] 折叠（输入 e/c）：").strip().lower()
     if direction not in {"e", "c"}:
@@ -100,7 +109,7 @@ def main() -> int:
         return 1
 
     point = DEFAULT_SOUL_TASK_UI.task_entry_toggle.pixel(frame_before.width, frame_before.height)
-    origin_x, origin_y = _window_origin_in_parent(manager.parent_hwnd, selected.hwnd)
+    origin_x, origin_y = _window_origin_in_parent(parent.hwnd, selected.hwnd)
     local_x = point[0] - origin_x
     local_y = point[1] - origin_y
     print(f"parent_toggle_pixel={point}")
@@ -110,14 +119,15 @@ def main() -> int:
     BackgroundInput(selected.hwnd).click_sync(local_x, local_y)
     time.sleep(0.8)
 
-    # Capture only for manual inspection. Do not infer success from this frame.
-    _capture(manager.parent_hwnd)
+    frame_after = capture.capture(parent.hwnd)
+    save_png(frame_after, str(output_dir / f"after-character-{selected.view_index}.png"))
     foreground_after = _foreground_hwnd()
     print(f"foreground_after={foreground_after}")
     print(f"foreground_unchanged={foreground_after == foreground_before}")
+    print(f"screenshot_after={output_dir / f'after-character-{selected.view_index}.png'}")
     print("\n点击已经完成。")
     print("本探针故意不恢复 Surface、Tab 或面板状态。")
-    print("请直接观察游戏画面：面板是否从折叠→展开，或展开→折叠。")
+    print("请直接观察游戏画面：面板是否发生预期的展开/折叠。")
     print("本探针不使用 panel_after 自动判定，人工观察结果为准。")
     return 0
 
