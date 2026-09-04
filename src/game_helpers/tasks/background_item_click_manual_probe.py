@@ -1,10 +1,4 @@
-"""Manual probe for clicking the in-game item-bar icon in the background.
-
-This probe intentionally tests the mouse path rather than Alt+E. The target is
-based on the normalized location of the larger "道具 (Alt+E)" toolbar icon seen
-in the supplied game screenshots. The probe does not activate the game and
-restores Surface/native Tab afterwards.
-"""
+"""Manual probe for clicking the in-game item-bar icon in the background."""
 
 from __future__ import annotations
 
@@ -21,9 +15,6 @@ from ..core.window import find_window
 from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
 
-
-# The supplied screenshots show the larger 道具 toolbar icon around this
-# normalized client location. Normalization tolerates small size differences.
 TARGET_X_RATIO = 0.680
 TARGET_Y_RATIO = 0.970
 
@@ -66,7 +57,7 @@ def _window_from_point(x: int, y: int) -> int:
 
 
 def _root_ancestor(hwnd: int) -> int:
-    return int(ctypes.windll.user32.GetAncestor(hwnd, 2))
+    return int(ctypes.windll.user32.GetAncestor(hwnd, 2)) if hwnd else 0
 
 
 def _ancestor_chain(hwnd: int, limit: int = 8) -> list[int]:
@@ -84,8 +75,7 @@ def _print_window(label: str, hwnd: int) -> None:
         print(f"{label}=0")
         return
     class_name, title, parent = _window_info(hwnd)
-    root = _root_ancestor(hwnd)
-    print(f"{label}={hwnd} class={class_name!r} title={title!r} parent={parent} root={root}")
+    print(f"{label}={hwnd} class={class_name!r} title={title!r} parent={parent} root={_root_ancestor(hwnd)}")
 
 
 def _screen_to_client(hwnd: int, x: int, y: int) -> tuple[int, int]:
@@ -146,7 +136,7 @@ def main() -> int:
     print(f"foreground_before={foreground_before}")
     print("\n目标：底部快捷栏较大的「道具 (Alt+E)」图标。")
     print(f"target_ratio=({TARGET_X_RATIO:.3f},{TARGET_Y_RATIO:.3f})")
-    print("本实验只发送后台鼠标消息，不激活游戏；请确保其他应用/电影保持前台。")
+    print("本实验使用 PostMessageW 后台鼠标消息，不激活游戏；请确保其他应用/电影保持前台。")
 
     result_code = 1
     try:
@@ -178,28 +168,22 @@ def main() -> int:
         frame_before = capture.capture(parent.hwnd)
         save_png(frame_before, str(before_path))
 
-        # WindowFromPoint is only meaningful for the currently visible screen
-        # surface. When the game is deliberately backgrounded, the same screen
-        # coordinate may belong to the foreground application. The target is
-        # nevertheless a known point inside the selected WSGAME client, so for
-        # this diagnostic we intentionally route the click to WSGAME itself.
-        hit_client_x, hit_client_y = _screen_to_client(selected.hwnd, target_screen_x, target_screen_y)
+        click_x, click_y = _screen_to_client(selected.hwnd, target_screen_x, target_screen_y)
         print(f"click_target_hwnd={selected.hwnd} (WSGAME)")
-        print(f"click_target_client=({hit_client_x},{hit_client_y})")
-        print("后台点击道具图标执行中……")
-        BackgroundInput(selected.hwnd).click_sync(hit_client_x, hit_client_y)
-        time.sleep(1.0)
+        print(f"click_target_client=({click_x},{click_y})")
+        print("后台 PostMessageW 点击道具图标执行中……")
+        BackgroundInput(selected.hwnd).click(click_x, click_y)
+        time.sleep(1.5)
 
         foreground_after = _foreground_hwnd()
         frame_after = capture.capture(parent.hwnd)
         save_png(frame_after, str(after_path))
-
         print(f"foreground_after={foreground_after}")
         print(f"foreground_unchanged={foreground_after == foreground_before}")
         print(f"screenshot_before={before_path}")
         print(f"screenshot_after={after_path}")
         print("请人工确认：道具栏是否由关变开（或由开变关）。")
-        print("注意：本次验证刻意不使用 WindowFromPoint 的前台命中结果，而直接向后台 WSGAME 发送点击。")
+        print("注意：本次验证使用的是 PostMessageW，而不是 SendMessageW。")
         result_code = 0
     except Exception as exc:
         print(f"probe_error={exc}")
