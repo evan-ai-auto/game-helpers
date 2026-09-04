@@ -49,7 +49,19 @@ def _notify_tab_parent(tab_hwnd: int, code: int) -> int:
         idFrom=ctypes.windll.user32.GetDlgCtrlID(tab_hwnd),
         code=code,
     )
-    return int(ctypes.windll.user32.SendMessageW(parent, WM_NOTIFY, hdr.idFrom, ctypes.byref(hdr)))
+
+    send_message = ctypes.windll.user32.SendMessageW
+    send_message.argtypes = [
+        wintypes.HWND,
+        wintypes.UINT,
+        wintypes.WPARAM,
+        wintypes.LPARAM,
+    ]
+    send_message.restype = ctypes.c_ssize_t
+    # LPARAM is the integer value of the NMHDR pointer. Passing byref(hdr)
+    # directly is not portable across ctypes/Windows builds and caused the
+    # manual probe's context restoration to fail with a CArgObject TypeError.
+    return int(send_message(parent, WM_NOTIFY, hdr.idFrom, ctypes.addressof(hdr)))
 
 
 def select_tab(tab_hwnd: int, index: int) -> None:
