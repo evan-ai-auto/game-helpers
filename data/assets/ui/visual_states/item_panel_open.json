@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "name": "item_panel_open",
+  "description": "道具栏打开状态：使用用户提供样本中的稳定底部边框/页签结构作为标志，不依赖物品内容；整帧任意位置搜索。",
+  "anchors": [
+    {
+      "name": "item_panel_bottom_frame",
+      "image": "../../item_panel_bottom.png",
+      "offset_x": 0,
+      "offset_y": 0,
+      "threshold": 0.985,
+      "search_step": 1
+    }
+  ],
+  "consecutive_frames": 2
+}
