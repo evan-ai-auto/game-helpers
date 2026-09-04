@@ -4,7 +4,28 @@ from __future__ import annotations
 
 import ctypes
 import sys
+import time
+from dataclasses import dataclass
 from ctypes import wintypes
+from typing import Callable, TypeVar
+
+
+T = TypeVar("T")
+
+
+@dataclass(frozen=True)
+class BackgroundClickVerification:
+    """Outcome of a background click followed by bounded verification."""
+
+    dispatched: bool
+    verified: bool
+    elapsed: float
+    timeout: float
+    value: T | None = None
+
+    @property
+    def timed_out(self) -> bool:
+        return self.dispatched and not self.verified
 
 
 class BackgroundInput:
@@ -66,6 +87,56 @@ class BackgroundInput:
         self._post(self.WM_MOUSEMOVE, 0, lparam)
         self._post(self.WM_LBUTTONDOWN, self.MK_LBUTTON, lparam)
         self._post(self.WM_LBUTTONUP, 0, lparam)
+
+    def click_and_verify(
+        self,
+        x: int,
+        y: int,
+        verifier: Callable[[], T | bool | None],
+        *,
+        timeout: float = 3.0,
+        poll_interval: float = 0.10,
+    ) -> BackgroundClickVerification[T]:
+        """Post a background click and poll a caller-supplied state verifier.
+
+        The click itself is considered dispatched once all three mouse
+        messages are queued successfully. Verification is deliberately kept
+        outside this adapter: callers decide what observable state proves that
+        their action succeeded. This prevents a stale/background capture frame
+        from being treated as a failed click.
+
+        The verifier is never allowed to run past ``timeout``. A return value
+        of ``True`` (or any non-False/non-None value) is considered success and
+        is preserved in ``value``. Exceptions from the verifier propagate so a
+        real capture/detector error is not silently converted into a timeout.
+        """
+        if timeout < 0:
+            raise ValueError("timeout must be >= 0")
+        if poll_interval <= 0:
+            raise ValueError("poll_interval must be > 0")
+
+        started = time.monotonic()
+        self.click(x, y)
+        while True:
+            value = verifier()
+            if value is not None and value is not False:
+                return BackgroundClickVerification(
+                    dispatched=True,
+                    verified=True,
+                    elapsed=time.monotonic() - started,
+                    timeout=float(timeout),
+                    value=value,
+                )
+            elapsed = time.monotonic() - started
+            if elapsed >= timeout:
+                return BackgroundClickVerification(
+                    dispatched=True,
+                    verified=False,
+                    elapsed=elapsed,
+                    timeout=float(timeout),
+                    value=None,
+                )
+            time.sleep(min(float(poll_interval), max(0.0, timeout - elapsed)))
 
     def click_sync(self, x: int, y: int) -> None:
         """Synchronously deliver a left click without activating the window."""
