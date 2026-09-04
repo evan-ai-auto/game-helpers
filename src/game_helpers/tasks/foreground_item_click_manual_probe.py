@@ -48,9 +48,10 @@ class INPUT(ctypes.Structure):
 
 
 INPUT_MOUSE = 0
-MOUSEEVENTF_MOVE = 0x0001
 MOUSEEVENTF_LEFTDOWN = 0x0002
 MOUSEEVENTF_LEFTUP = 0x0004
+SW_RESTORE = 9
+ATTACH_THREAD_INPUT = 0x0001
 
 
 def _foreground_hwnd() -> int:
@@ -79,17 +80,37 @@ def _cursor_pos() -> tuple[int, int]:
 
 
 def _set_foreground(hwnd: int) -> None:
+    """Give a top-level window foreground ownership for this control probe.
+
+    SetForegroundWindow can be rejected by Windows' foreground-lock rules when
+    this probe is launched from PowerShell while another application owns the
+    foreground. Temporarily attaching the caller and target GUI threads is the
+    standard Win32 way to perform this controlled foreground hand-off.
+    """
     user32 = ctypes.windll.user32
-    if not user32.ShowWindow(hwnd, 9):  # SW_RESTORE; harmless when already restored.
-        pass
-    user32.BringWindowToTop(hwnd)
-    if not user32.SetForegroundWindow(hwnd):
-        raise ctypes.WinError()
-    deadline = time.monotonic() + 2.0
-    while _foreground_hwnd() != hwnd and time.monotonic() < deadline:
-        time.sleep(0.02)
-    if _foreground_hwnd() != hwnd:
-        raise RuntimeError(f"failed to make foreground: hwnd={hwnd}")
+    kernel32 = ctypes.windll.kernel32
+    current_fg = _foreground_hwnd()
+    current_thread = int(user32.GetWindowThreadProcessId(current_fg, None)) if current_fg else 0
+    target_thread = int(user32.GetWindowThreadProcessId(hwnd, None))
+    attached = False
+    if current_thread and target_thread and current_thread != target_thread:
+        if not user32.AttachThreadInput(current_thread, target_thread, True):
+            raise ctypes.WinError()
+        attached = True
+    try:
+        user32.ShowWindow(hwnd, SW_RESTORE)
+        user32.BringWindowToTop(hwnd)
+        if not user32.SetForegroundWindow(hwnd):
+            err = kernel32.GetLastError()
+            raise ctypes.WinError(err)
+        deadline = time.monotonic() + 2.0
+        while _foreground_hwnd() != hwnd and time.monotonic() < deadline:
+            time.sleep(0.02)
+        if _foreground_hwnd() != hwnd:
+            raise RuntimeError(f"failed to make foreground: hwnd={hwnd}, current={_foreground_hwnd()}")
+    finally:
+        if attached:
+            user32.AttachThreadInput(current_thread, target_thread, False)
 
 
 def _send_mouse_click(screen_x: int, screen_y: int) -> None:
