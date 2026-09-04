@@ -33,29 +33,48 @@ def _screen_point_from_parent_client(parent_hwnd: int, x: int, y: int) -> tuple[
     return point.x, point.y
 
 
-def _resolve_toggle_target(parent_hwnd: int, selected_hwnd: int, x: int, y: int) -> tuple[int, tuple[int, int], str]:
-    """Resolve the real Win32 child under the visual toggle point.
+def _window_metadata(hwnd: int) -> tuple[str, str, int, int]:
+    user32 = ctypes.windll.user32
+    title_length = user32.GetWindowTextLengthW(hwnd)
+    title_buffer = ctypes.create_unicode_buffer(title_length + 1)
+    user32.GetWindowTextW(hwnd, title_buffer, title_length + 1)
+    class_buffer = ctypes.create_unicode_buffer(256)
+    user32.GetClassNameW(hwnd, class_buffer, len(class_buffer))
+    parent_hwnd = int(user32.GetParent(hwnd))
+    root_hwnd = int(user32.GetAncestor(hwnd, 2))  # GA_ROOT
+    return class_buffer.value, title_buffer.value, parent_hwnd, root_hwnd
 
-    The toggle is drawn inside the game surface but may be owned by a nested
-    child window. Sending mouse messages to the WSGAME parent is not guaranteed
-    to reach the actual control, so use WindowFromPoint first and fall back to
-    WSGAME only when the hit target is outside the selected game view.
+
+def _resolve_toggle_target(parent_hwnd: int, selected_hwnd: int, x: int, y: int) -> tuple[int, tuple[int, int], str]:
+    """Resolve the actual window under the visual toggle point.
+
+    WindowFromPoint is authoritative for the visual target. We only accept a
+    hit that belongs to the host parent; we never silently redirect an in-host
+    hit back to WSGAME. This makes a bad HWND/coordinate diagnosis explicit.
     """
     user32 = ctypes.windll.user32
     screen_x, screen_y = _screen_point_from_parent_client(parent_hwnd, x, y)
-    hit_hwnd = int(user32.WindowFromPoint(wintypes.POINT(screen_x, screen_y)))
+    point = wintypes.POINT(screen_x, screen_y)
+    hit_hwnd = int(user32.WindowFromPoint(point))
     if not hit_hwnd:
-        return selected_hwnd, (x, y), "WindowFromPoint returned null; fallback to WSGAME"
+        raise RuntimeError("WindowFromPoint returned null")
 
-    if hit_hwnd != selected_hwnd and not user32.IsChild(selected_hwnd, hit_hwnd):
-        return selected_hwnd, (x, y), f"hit hwnd={hit_hwnd} is outside selected WSGAME; fallback to WSGAME"
+    belongs_to_parent = bool(user32.IsChild(parent_hwnd, hit_hwnd) or hit_hwnd == parent_hwnd)
+    class_name, title, direct_parent, root_hwnd = _window_metadata(hit_hwnd)
+    if not belongs_to_parent:
+        raise RuntimeError(
+            f"visual toggle point hit hwnd={hit_hwnd}, but it is outside host parent={parent_hwnd}; "
+            f"class={class_name!r}, title={title!r}, root={root_hwnd}"
+        )
 
     client = wintypes.POINT(screen_x, screen_y)
     if not user32.ScreenToClient(hit_hwnd, ctypes.byref(client)):
         raise ctypes.WinError()
-    class_name = ctypes.create_unicode_buffer(256)
-    user32.GetClassNameW(hit_hwnd, class_name, len(class_name))
-    return hit_hwnd, (client.x, client.y), f"hit hwnd={hit_hwnd} class={class_name.value!r}"
+    evidence = (
+        f"hit hwnd={hit_hwnd} class={class_name!r} title={title!r} "
+        f"parent={direct_parent} root={root_hwnd} selected={selected_hwnd}"
+    )
+    return hit_hwnd, (client.x, client.y), evidence
 
 
 def _restore_context(manager: GameViewManager, original_surface: int | None, original_tab: int | None) -> None:
@@ -156,10 +175,10 @@ def main() -> int:
         print(f"foreground_after_click={foreground_after_click}")
         print(f"foreground_unchanged_after_click={foreground_unchanged}")
         print(f"screenshot_after={output_dir / f'after-character-{selected.view_index}.png'}")
-        print("\n点击已经完成。")
+        print("\n后台输入消息已发送。")
+        print("是否真正触发游戏控件，需要通过面板状态/截图人工确认。")
         print("本探针只保留命魂任务面板的展开/折叠变化。")
         print("Surface、Tab 将恢复到测试前状态；Foreground 不应发生变化。")
-        print("本探针不使用 panel_after 自动判定，人工观察结果为准。")
         result_code = 0
     finally:
         restore_error = None
