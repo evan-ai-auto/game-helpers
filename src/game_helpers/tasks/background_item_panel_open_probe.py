@@ -6,6 +6,12 @@ posts the click to the selected WSGAME child, then uses the generic visual
 state detector to search the complete captured parent frame for
 ``item_panel_open``. The panel may appear anywhere in the frame.
 
+If the click changes the game state but the background WGC surface does not
+repaint immediately, the probe performs a background-safe surface refresh
+(when another WSGAME view exists) and retries visual verification. A remaining
+visual timeout is reported as ``pending_visual`` rather than as a click
+failure.
+
 The probe intentionally leaves the item panel in the resulting state.
 """
 
@@ -104,6 +110,53 @@ def _restore_context(manager: GameViewManager, surface: int | None, tab: int | N
         manager.switch_to(tab)
 
 
+def _verify_visual_state(capture: WindowsGraphicsCapture, profile, *, timeout: float, poll_interval: float):
+    """Poll a visual-state verifier without dispatching another click."""
+    verifier = make_visual_state_verifier(lambda: capture.capture(capture._last_hwnd), profile)
+    deadline = time.monotonic() + timeout
+    while True:
+        value = verifier()
+        if value is not None:
+            return value
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None
+        time.sleep(min(poll_interval, remaining))
+
+
+def _verify_capture(capture, hwnd: int, profile, *, timeout: float, poll_interval: float):
+    """Poll visual state against one known capture target without clicking."""
+    verifier = make_visual_state_verifier(lambda: capture.capture(hwnd), profile)
+    deadline = time.monotonic() + timeout
+    while True:
+        value = verifier()
+        if value is not None:
+            return value
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None
+        time.sleep(min(poll_interval, remaining))
+
+
+def _refresh_surface_for_capture(manager: GameViewManager, selected_view_index: int, original_foreground: int) -> bool:
+    """Force a background-safe WSGAME repaint by switching away and back."""
+    views = manager.views()
+    if len(views) <= 1:
+        return False
+
+    refresh_index = next(index for index in range(1, len(views) + 1) if index != selected_view_index)
+    manager.switch_surface_to(refresh_index)
+    manager.switch_surface_to(selected_view_index)
+
+    foreground = _foreground_hwnd()
+    if foreground != original_foreground:
+        raise RuntimeError(
+            "foreground window changed during visual refresh: "
+            f"before={original_foreground}, after={foreground}"
+        )
+    return True
+
+
 def main() -> int:
     if sys.platform != "win32":
         print("本探针仅支持 Windows。")
@@ -152,6 +205,7 @@ def main() -> int:
         output_dir.mkdir(parents=True, exist_ok=True)
         before_path = output_dir / f"before-character-{selected.view_index}.png"
         after_path = output_dir / f"after-character-{selected.view_index}.png"
+        refresh_path = output_dir / f"after-refresh-character-{selected.view_index}.png"
         save_png(capture.capture(parent.hwnd), str(before_path))
 
         _set_foreground(parent.hwnd)
@@ -187,7 +241,6 @@ def main() -> int:
         print(f"verification_state={profile.name}")
         print(f"verification_timeout={timeout:.1f}s")
         print(f"verification_poll_interval={poll_interval:.2f}s")
-        started = time.monotonic()
         outcome = BackgroundInput(selected.hwnd).click_and_verify(
             client_x,
             client_y,
@@ -206,20 +259,40 @@ def main() -> int:
         print(f"screenshot_before={before_path}")
         print(f"screenshot_after={after_path}")
 
-        if outcome.verified and outcome.value is not None:
-            observation = outcome.value
+        observation = outcome.value if outcome.verified else None
+        refresh_attempted = False
+        if observation is None and outcome.timed_out:
+            print("\n视觉验证超时：不重发点击，先尝试后台安全的 Surface 刷新。")
+            refresh_attempted = _refresh_surface_for_capture(manager, selected.view_index, original_foreground)
+            print(f"visual_refresh_attempted={refresh_attempted}")
+            if refresh_attempted:
+                save_png(capture.capture(parent.hwnd), str(refresh_path))
+                observation = _verify_capture(
+                    capture,
+                    parent.hwnd,
+                    profile,
+                    timeout=2.0,
+                    poll_interval=poll_interval,
+                )
+                print(f"visual_refresh_screenshot={refresh_path}")
+                print(f"verification_after_refresh={observation is not None}")
+
+        if observation is not None:
             print(f"visual_state={observation.state}")
             print(f"visual_status={observation.status}")
             print(f"visual_confidence={observation.confidence:.4f}")
             print(f"visual_origin={observation.origin}")
             print(f"visual_anchor_scores={observation.anchor_scores}")
-            print("结果：道具栏已打开（视觉特征连续确认）。")
+            print("verification_result=verified")
+            print("结果：道具栏已打开（视觉特征确认）。")
             result_code = 0
         elif outcome.timed_out:
-            print("结果：后台点击已发送，但在指定时限内未检测到道具栏打开标志。")
-            print("这只表示视觉确认超时，不把它强行解释成后台点击一定失败。")
+            print("verification_result=pending_visual")
+            print("结果：后台点击已发送，但后台画面仍未提供可确认的道具栏打开标志。")
+            print("这表示视觉确认仍处于 pending，不把它解释成后台点击失败。")
             result_code = 1
         else:
+            print("verification_result=incomplete")
             print("结果：后台点击验证未完成。")
             result_code = 1
     except Exception as exc:
