@@ -7,8 +7,10 @@ semantic post-click detection and does not restore Surface/Tab/panel state.
 
 from __future__ import annotations
 
+import ctypes
 import sys
 import time
+from ctypes import wintypes
 
 from ..actions.background_input import BackgroundInput
 from ..capture.wgc import WindowsGraphicsCapture
@@ -16,7 +18,27 @@ from ..core.view_manager import GameViewManager
 from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
 from .soul_task import DEFAULT_SOUL_TASK_UI, detect_soul_task_panel_collapsed
-from .game_state_snapshot import _foreground_hwnd, _window_origin_in_parent
+
+
+def _foreground_hwnd() -> int:
+    return int(ctypes.windll.user32.GetForegroundWindow())
+
+
+def _window_origin_in_parent(parent_hwnd: int, child_hwnd: int) -> tuple[int, int]:
+    """Return child top-left relative to the parent client origin."""
+    user32 = ctypes.windll.user32
+    rect = wintypes.RECT()
+    if not user32.GetWindowRect(parent_hwnd, ctypes.byref(rect)):
+        raise ctypes.WinError()
+    parent_point = wintypes.POINT(rect.left, rect.top)
+    if not user32.ScreenToClient(parent_hwnd, ctypes.byref(parent_point)):
+        raise ctypes.WinError()
+    if not user32.GetWindowRect(child_hwnd, ctypes.byref(rect)):
+        raise ctypes.WinError()
+    child_point = wintypes.POINT(rect.left, rect.top)
+    if not user32.ScreenToClient(parent_hwnd, ctypes.byref(child_point)):
+        raise ctypes.WinError()
+    return child_point.x - parent_point.x, child_point.y - parent_point.y
 
 
 def _capture(parent_hwnd: int):
@@ -88,14 +110,15 @@ def main() -> int:
     BackgroundInput(selected.hwnd).click_sync(local_x, local_y)
     time.sleep(0.8)
 
-    frame_after = _capture(manager.parent_hwnd)
+    # Capture only for manual inspection. Do not infer success from this frame.
+    _capture(manager.parent_hwnd)
     foreground_after = _foreground_hwnd()
     print(f"foreground_after={foreground_after}")
     print(f"foreground_unchanged={foreground_after == foreground_before}")
     print("\n点击已经完成。")
     print("本探针故意不恢复 Surface、Tab 或面板状态。")
     print("请直接观察游戏画面：面板是否从折叠→展开，或展开→折叠。")
-    print("截图已捕获，可用外部方式检查点击前后的画面。")
+    print("本探针不使用 panel_after 自动判定，人工观察结果为准。")
     return 0
 
 
