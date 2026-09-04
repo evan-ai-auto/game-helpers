@@ -28,17 +28,10 @@ class BackgroundInput:
             raise RuntimeError("BackgroundInput requires Windows")
         self.hwnd = int(hwnd)
         self.user32 = ctypes.windll.user32
-        # ctypes.wintypes does not define LRESULT on all Python/Windows builds.
-        # LRESULT is pointer-sized signed integer on Win64.
         lresult = ctypes.c_ssize_t
         for name in ("PostMessageW", "SendMessageW"):
             fn = getattr(self.user32, name)
-            fn.argtypes = [
-                wintypes.HWND,
-                wintypes.UINT,
-                wintypes.WPARAM,
-                wintypes.LPARAM,
-            ]
+            fn.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
             fn.restype = lresult
 
     @staticmethod
@@ -49,12 +42,15 @@ class BackgroundInput:
         return x16 | (y16 << 16)
 
     @staticmethod
-    def _key_lparam(*, repeat: int = 1, scan_code: int = 0, extended: bool = False, previous: bool = False, transition: bool = False) -> int:
-        """Build the standard keyboard message LPARAM bit fields."""
+    def _key_lparam(*, repeat: int = 1, scan_code: int = 0, extended: bool = False,
+                    context: bool = False, previous: bool = False, transition: bool = False) -> int:
+        """Build the standard keyboard-message LPARAM bit fields."""
         value = int(repeat) & 0xFFFF
         value |= (int(scan_code) & 0xFF) << 16
         if extended:
             value |= 1 << 24
+        if context:
+            value |= 1 << 29
         if previous:
             value |= 1 << 30
         if transition:
@@ -79,19 +75,23 @@ class BackgroundInput:
         self._send(self.WM_LBUTTONUP, 0, lparam)
 
     def key_sync(self, virtual_key: int, *, alt: bool = False, scan_code: int = 0) -> None:
-        """Synchronously deliver one ordinary key, optionally with Alt held."""
+        """Synchronously deliver one key, optionally with the Alt context."""
         vk = int(virtual_key)
         if alt:
+            # Left Alt down: WM_SYSKEYDOWN with scan code 0x38, context=0.
             self._send(self.WM_SYSKEYDOWN, self.VK_MENU, self._key_lparam(scan_code=0x38))
-        message_down = self.WM_SYSKEYDOWN if alt else self.WM_KEYDOWN
-        message_up = self.WM_SYSKEYUP if alt else self.WM_KEYUP
-        self._send(message_down, vk, self._key_lparam(scan_code=scan_code))
-        self._send(message_up, vk, self._key_lparam(scan_code=scan_code, previous=True, transition=True))
-        if alt:
+            # A real Alt+key WM_SYSKEYDOWN carries context code bit 29 = 1.
+            self._send(self.WM_SYSKEYDOWN, vk, self._key_lparam(scan_code=scan_code, context=True))
+            self._send(self.WM_SYSKEYUP, vk, self._key_lparam(scan_code=scan_code, context=True, previous=True, transition=True))
+            # Release left Alt. For a focused keyboard path, context is 0 here.
             self._send(self.WM_SYSKEYUP, self.VK_MENU, self._key_lparam(scan_code=0x38, previous=True, transition=True))
+            return
+
+        self._send(self.WM_KEYDOWN, vk, self._key_lparam(scan_code=scan_code))
+        self._send(self.WM_KEYUP, vk, self._key_lparam(scan_code=scan_code, previous=True, transition=True))
 
     def alt_e_sync(self) -> None:
-        """Synchronously send the Alt+E system-key sequence to this HWND."""
+        """Synchronously send a correctly shaped Alt+E system-key sequence."""
         self.key_sync(self.VK_E, alt=True, scan_code=0x12)
 
     def _post(self, message: int, wparam: int, lparam: int) -> None:
