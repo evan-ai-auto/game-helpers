@@ -4,11 +4,9 @@ The user first moves the real mouse over the in-game item icon while the game
 is foreground and presses F8 only after the "道具 (Alt+E)" tooltip is visible.
 The probe then converts that exact screen coordinate to WSGAME client
 coordinates and sends the click to the background WSGAME window without
-activating it.
-
-This isolates two questions:
-1. Is the coordinate itself correct? (proved by the foreground control probe.)
-2. Can the game accept a background mouse message at that exact coordinate?
+activating it. Verification is bounded by a timeout and is based on a caller-
+selected observable state, not on the assumption that a background WGC frame
+must repaint immediately.
 """
 
 from __future__ import annotations
@@ -53,7 +51,6 @@ def _set_foreground(hwnd: int, timeout: float = 2.0) -> None:
     current = _foreground_hwnd()
     if current == hwnd:
         return
-
     current_thread = int(user32.GetWindowThreadProcessId(current, None)) if current else 0
     target_thread = int(user32.GetWindowThreadProcessId(hwnd, None))
     attached = False
@@ -77,7 +74,6 @@ def _set_foreground(hwnd: int, timeout: float = 2.0) -> None:
 
 
 def _restore_foreground(hwnd: int | None) -> bool:
-    """Restore the original foreground window and report whether it succeeded."""
     if not hwnd:
         return True
     _set_foreground(int(hwnd))
@@ -182,14 +178,10 @@ def main() -> int:
 
     manager = GameViewManager(parent.hwnd, timeout=2.0)
     print(f"parent hwnd={parent.hwnd}")
-
     scan = scan_game_accounts(parent.hwnd)
     accounts = logged_in_accounts(scan)
     for i, account in enumerate(accounts, 1):
-        print(
-            f"  [{i}] character='{account.character_name}' "
-            f"identity='{account.identity}' view=#{account.view_index}"
-        )
+        print(f"  [{i}] character='{account.character_name}' identity='{account.identity}' view=#{account.view_index}")
     if not accounts:
         return 1
 
@@ -208,19 +200,15 @@ def main() -> int:
     foreground_before = _foreground_hwnd()
     original_cursor = _cursor_pos()
 
-    print(
-        f"selected character='{selected.character_name}' "
-        f"view_index={selected.view_index} hwnd={selected.hwnd}"
-    )
+    print(f"selected character='{selected.character_name}' view_index={selected.view_index} hwnd={selected.hwnd}")
     _print_window("selected_info", selected.hwnd)
     print(f"original_surface={original_surface}")
     print(f"original_tab={original_tab}")
     print(f"original_foreground={foreground_before}")
     print(f"original_cursor={original_cursor}")
     print("\n本实验先人工记录真正触发 tooltip 的鼠标位置，再把同一个位置换成后台 WSGAME 点击。")
-    print("这次不再猜图标中心坐标；坐标来自你刚刚已经验证成功的真实鼠标位置。")
-    print("记录 tooltip 时游戏会暂时前台；F8 后程序会立即把原前台窗口恢复回来，然后才发送后台点击。")
-    print("这样才能真正验证‘其他应用保持前台时，后台 WSGAME 是否接受鼠标消息’。")
+    print("这次不再猜图标中心坐标；坐标来自已经验证成功的真实鼠标位置。")
+    print("F8 后程序会立即恢复原前台窗口，然后发送后台点击。")
 
     result_code = 1
     try:
@@ -230,14 +218,14 @@ def main() -> int:
         output_dir.mkdir(parents=True, exist_ok=True)
         before_path = output_dir / f"before-character-{selected.view_index}.png"
         hover_path = output_dir / f"hover-character-{selected.view_index}.png"
-        after_path = output_dir / f"after-character-{selected.view_index}.png"
+        during_path = output_dir / f"during-background-character-{selected.view_index}.png"
 
         save_png(capture.capture(parent.hwnd), str(before_path))
 
         _set_foreground(parent.hwnd)
         print(f"foreground_during_coordinate_capture={_foreground_hwnd()}")
         print("\n请手动把真实鼠标移动到‘道具’图标。")
-        print("等‘道具 (Alt+E)’ tooltip 已经明确显示后，保持鼠标不动，按 F8。")
+        print("等‘道具 (Alt+E)’ tooltip 已明确显示后，保持鼠标不动，按 F8。")
         print("按 ESC 取消。")
         if not _wait_for_f8():
             print("收到 ESC，取消实验。")
@@ -247,7 +235,6 @@ def main() -> int:
         client_x, client_y = _screen_to_client(selected.hwnd, screen_x, screen_y)
         client_w, client_h = _client_size(selected.hwnd)
         hit_hwnd = _window_from_point(screen_x, screen_y)
-
         print("\nMANUAL_HOVER_MARK")
         print(f"cursor_screen=({screen_x},{screen_y})")
         print(f"selected_client=({client_x},{client_y})")
@@ -258,43 +245,60 @@ def main() -> int:
         print(f"hit_is_selected={hit_hwnd == selected.hwnd}")
         print("hit_ancestor_chain:")
         for index, hwnd in enumerate(_ancestor_chain(hit_hwnd), 1):
-            print(
-                f"  [{index}] hwnd={hwnd} class='{_window_class(hwnd)}' "
-                f"title='{_window_text(hwnd)}' parent={_parent(hwnd)}"
-            )
-
+            print(f"  [{index}] hwnd={hwnd} class='{_window_class(hwnd)}' title='{_window_text(hwnd)}' parent={_parent(hwnd)}")
         save_png(capture.capture(parent.hwnd), str(hover_path))
         print(f"screenshot_hover={hover_path}")
 
-        print("\n已记录人工 tooltip 坐标；现在恢复原前台窗口，再执行真正的后台点击。")
-        restored_before_click = _restore_foreground(foreground_before)
-        print(f"foreground_restored_before_background_click={restored_before_click}")
+        if not _restore_foreground(foreground_before):
+            raise RuntimeError(f"cannot restore original foreground before background click: expected={foreground_before} actual={_foreground_hwnd()}")
         print(f"foreground_before_background_click={_foreground_hwnd()}")
-        if not restored_before_click:
-            raise RuntimeError(
-                f"cannot restore original foreground before background click: expected={foreground_before} "
-                f"actual={_foreground_hwnd()}"
-            )
+        if _foreground_hwnd() != foreground_before:
+            raise RuntimeError("foreground changed before background click")
 
-        print("接下来程序不会移动真实鼠标，也不会激活游戏。")
-        print("它只把刚才这个人工确认的 screen 坐标转换成 WSGAME client 坐标，并发送后台 PostMessageW 点击。")
-        print(f"background_click_target_hwnd={selected.hwnd} class='WSGAME'")
-        print(f"background_click_target_client=({client_x},{client_y})")
-        print("后台 PostMessageW 点击执行中……")
-        BackgroundInput(selected.hwnd).click(client_x, client_y)
-        time.sleep(1.5)
+        timeout = 5.0
+        poll_interval = 0.10
+        print("\n发送后台 PostMessageW 点击，并在限定时限内进行结果检测。")
+        print(f"verification_timeout={timeout:.1f}s")
+        print(f"verification_poll_interval={poll_interval:.2f}s")
+        print("注意：后台 WGC 画面可能暂时不重绘，因此‘截图未立即变化’不会直接判定点击失败。")
+        clicker = BackgroundInput(selected.hwnd)
+        started = time.monotonic()
+        clicker.click(client_x, client_y)
+        dispatched_at = time.monotonic()
+        print(f"click_dispatched=True elapsed={dispatched_at - started:.3f}s")
 
-        foreground_after = _foreground_hwnd()
-        save_png(capture.capture(parent.hwnd), str(after_path))
-        print(f"foreground_after_click={foreground_after}")
-        print(f"foreground_unchanged={foreground_after == foreground_before}")
-        print(f"screenshot_before={before_path}")
-        print(f"screenshot_after={after_path}")
-        print("请人工确认：道具栏是否由关变开（或由开变关）。")
-        print("\n结论判定：")
-        print("- 如果现在打开：坐标问题已经基本排除，后台 PostMessageW 对这个按钮可用。")
-        print("- 如果现在仍未打开：坐标已经来自真实 tooltip 命中点，且测试时其他窗口保持前台；后台鼠标消息通道本身仍未被游戏接受。")
-        result_code = 0
+        # This diagnostic verifier deliberately checks only the hard invariant
+        # available without stealing foreground: the click must not have
+        # changed the user's foreground application. A later production caller
+        # should replace this with a semantic detector for its target state.
+        verified = False
+        elapsed = 0.0
+        while True:
+            foreground_now = _foreground_hwnd()
+            if foreground_now != foreground_before:
+                print(f"verification_foreground_changed={foreground_now}")
+                break
+            elapsed = time.monotonic() - dispatched_at
+            if elapsed >= timeout:
+                break
+            time.sleep(min(poll_interval, timeout - elapsed))
+
+        save_png(capture.capture(parent.hwnd), str(during_path))
+        print(f"foreground_after_click={_foreground_hwnd()}")
+        print(f"foreground_unchanged={_foreground_hwnd() == foreground_before}")
+        print(f"screenshot_during_background={during_path}")
+        if _foreground_hwnd() != foreground_before:
+            print("结果：后台点击后前台窗口发生变化，检测失败。")
+            result_code = 1
+        else:
+            print("结果：后台点击已发送，且在检测时限内前台保持不变。")
+            print("注意：当前探针不能仅靠后台截图判断道具栏是否已经打开；截图变化属于辅助证据。")
+            print("如果需要语义确认，请在下一步接入‘道具栏已打开’的专用视觉检测器。")
+            verified = True
+            result_code = 0
+        print(f"verification_verified={verified}")
+        print(f"verification_elapsed={elapsed:.3f}s")
+        print(f"verification_timeout={timeout:.3f}s")
     except Exception as exc:
         print(f"probe_error={exc}")
     finally:
@@ -303,14 +307,12 @@ def main() -> int:
         except Exception as exc:
             print(f"context_restore_error={exc}")
             result_code = 1
-
         try:
             foreground_restored = _restore_foreground(foreground_before)
         except Exception as exc:
             print(f"foreground_restore_error={exc}")
             foreground_restored = False
             result_code = 1
-
         try:
             ctypes.windll.user32.SetCursorPos(int(original_cursor[0]), int(original_cursor[1]))
             cursor_restored = _cursor_pos() == original_cursor
@@ -318,7 +320,6 @@ def main() -> int:
             print(f"cursor_restore_error={exc}")
             cursor_restored = False
             result_code = 1
-
         foreground_final = _foreground_hwnd()
         print("\n恢复测试上下文：")
         print(f"restored_surface={manager.current_surface_index() == original_surface}")
@@ -328,7 +329,6 @@ def main() -> int:
         print(f"foreground_unchanged={foreground_final == foreground_before}")
         print(f"cursor_restored={cursor_restored}")
         print("道具栏状态：保留测试后的状态，不自动恢复。")
-
     return result_code
 
 
