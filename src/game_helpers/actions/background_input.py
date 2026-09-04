@@ -1,9 +1,4 @@
-"""Background input adapter for Win32 child windows.
-
-This adapter uses ordinary window messages. It does not move the real cursor and
-does not activate the target window. Whether a particular game accepts these
-messages is application-specific; many games use Raw Input or other input paths.
-"""
+"""Background input adapter for Win32 child windows."""
 
 from __future__ import annotations
 
@@ -13,7 +8,7 @@ from ctypes import wintypes
 
 
 class BackgroundInput:
-    """Send mouse messages directly to a target Win32 window."""
+    """Send ordinary mouse messages directly to a target Win32 window."""
 
     WM_MOUSEMOVE = 0x0200
     WM_LBUTTONDOWN = 0x0201
@@ -25,6 +20,9 @@ class BackgroundInput:
             raise RuntimeError("BackgroundInput requires Windows")
         self.hwnd = int(hwnd)
         self.user32 = ctypes.windll.user32
+        # ctypes.wintypes does not define LRESULT on all Python/Windows builds.
+        # LRESULT is pointer-sized signed integer on Win64.
+        lresult = ctypes.c_ssize_t
         for name in ("PostMessageW", "SendMessageW"):
             fn = getattr(self.user32, name)
             fn.argtypes = [
@@ -33,11 +31,11 @@ class BackgroundInput:
                 wintypes.WPARAM,
                 wintypes.LPARAM,
             ]
-            fn.restype = wintypes.LRESULT
+            fn.restype = lresult
 
     @staticmethod
     def _lparam(x: int, y: int) -> int:
-        # Mouse coordinates in LPARAM are signed 16-bit client coordinates.
+        """Pack signed 16-bit client coordinates into LPARAM."""
         x16 = ctypes.c_short(int(x)).value & 0xFFFF
         y16 = ctypes.c_short(int(y)).value & 0xFFFF
         return x16 | (y16 << 16)
@@ -53,13 +51,7 @@ class BackgroundInput:
         self._post(self.WM_LBUTTONUP, 0, lparam)
 
     def click_sync(self, x: int, y: int) -> None:
-        """Synchronously deliver a left click without activating the window.
-
-        Some Win32 applications do not reliably consume posted mouse messages
-        from their background message queue. SendMessageW gives the target
-        window a synchronous opportunity to process the same ordinary mouse
-        messages while still leaving the user's foreground window unchanged.
-        """
+        """Synchronously deliver a left click without activating the window."""
         lparam = self._lparam(x, y)
         self._send(self.WM_MOUSEMOVE, 0, lparam)
         self._send(self.WM_LBUTTONDOWN, self.MK_LBUTTON, lparam)
