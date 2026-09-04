@@ -29,7 +29,7 @@ from ..core.view_manager import GameViewManager
 from ..core.window import find_window
 from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
-from .visual_state import load_visual_state, make_visual_state_verifier
+from .visual_state import detect_visual_state, load_visual_state, make_visual_state_verifier
 
 VK_F8 = 0x77
 VK_ESCAPE = 0x1B
@@ -110,20 +110,6 @@ def _restore_context(manager: GameViewManager, surface: int | None, tab: int | N
         manager.switch_to(tab)
 
 
-def _verify_visual_state(capture: WindowsGraphicsCapture, profile, *, timeout: float, poll_interval: float):
-    """Poll a visual-state verifier without dispatching another click."""
-    verifier = make_visual_state_verifier(lambda: capture.capture(capture._last_hwnd), profile)
-    deadline = time.monotonic() + timeout
-    while True:
-        value = verifier()
-        if value is not None:
-            return value
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            return None
-        time.sleep(min(poll_interval, remaining))
-
-
 def _verify_capture(capture, hwnd: int, profile, *, timeout: float, poll_interval: float):
     """Poll visual state against one known capture target without clicking."""
     verifier = make_visual_state_verifier(lambda: capture.capture(hwnd), profile)
@@ -155,6 +141,16 @@ def _refresh_surface_for_capture(manager: GameViewManager, selected_view_index: 
             f"before={original_foreground}, after={foreground}"
         )
     return True
+
+
+def _print_visual_diagnostic(label: str, frame, profile) -> None:
+    """Print one-shot detector evidence so false negatives are distinguishable."""
+    observation = detect_visual_state(frame, profile)
+    print(f"visual_diagnostic_{label}_status={observation.status}")
+    print(f"visual_diagnostic_{label}_confidence={observation.confidence:.6f}")
+    print(f"visual_diagnostic_{label}_origin={observation.origin}")
+    print(f"visual_diagnostic_{label}_anchor_scores={observation.anchor_scores}")
+    print(f"visual_diagnostic_{label}_evidence={observation.evidence}")
 
 
 def main() -> int:
@@ -249,7 +245,8 @@ def main() -> int:
             poll_interval=poll_interval,
         )
 
-        save_png(capture.capture(parent.hwnd), str(after_path))
+        after_frame = capture.capture(parent.hwnd)
+        save_png(after_frame, str(after_path))
         print(f"click_dispatched={outcome.dispatched}")
         print(f"verification_verified={outcome.verified}")
         print(f"verification_timed_out={outcome.timed_out}")
@@ -258,6 +255,7 @@ def main() -> int:
         print(f"foreground_unchanged={_foreground_hwnd() == original_foreground}")
         print(f"screenshot_before={before_path}")
         print(f"screenshot_after={after_path}")
+        _print_visual_diagnostic("after", after_frame, profile)
 
         observation = outcome.value if outcome.verified else None
         refresh_attempted = False
@@ -266,7 +264,8 @@ def main() -> int:
             refresh_attempted = _refresh_surface_for_capture(manager, selected.view_index, original_foreground)
             print(f"visual_refresh_attempted={refresh_attempted}")
             if refresh_attempted:
-                save_png(capture.capture(parent.hwnd), str(refresh_path))
+                refresh_frame = capture.capture(parent.hwnd)
+                save_png(refresh_frame, str(refresh_path))
                 observation = _verify_capture(
                     capture,
                     parent.hwnd,
@@ -276,6 +275,7 @@ def main() -> int:
                 )
                 print(f"visual_refresh_screenshot={refresh_path}")
                 print(f"verification_after_refresh={observation is not None}")
+                _print_visual_diagnostic("after_refresh", refresh_frame, profile)
 
         if observation is not None:
             print(f"visual_state={observation.state}")
