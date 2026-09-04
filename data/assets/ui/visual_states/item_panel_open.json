@@ -8,7 +8,7 @@
       "image": "../item_panel_bottom.png",
       "offset_x": 0,
       "offset_y": 0,
-      "threshold": 0.985,
+      "threshold": 0.95,
       "search_step": 1
     }
   ],
