@@ -5,7 +5,7 @@
   "anchors": [
     {
       "name": "item_panel_bottom_frame",
-      "image": "../../item_panel_bottom.png",
+      "image": "../item_panel_bottom.png",
       "offset_x": 0,
       "offset_y": 0,
       "threshold": 0.985,
