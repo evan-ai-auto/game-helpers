@@ -19,8 +19,11 @@ from ..core.window import find_window
 from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
 
-TARGET_X_RATIO = 0.680
-TARGET_Y_RATIO = 0.970
+# Center of the red toolbox/item icon measured from the supplied 1036x831
+# capture. The WSGAME client is 1024x768 and starts around screenshot (6,57),
+# giving a client target of approximately (703,749).
+TARGET_X_RATIO = 703 / 1024
+TARGET_Y_RATIO = 749 / 768
 
 
 class POINT(ctypes.Structure):
@@ -51,7 +54,6 @@ INPUT_MOUSE = 0
 MOUSEEVENTF_LEFTDOWN = 0x0002
 MOUSEEVENTF_LEFTUP = 0x0004
 SW_RESTORE = 9
-ATTACH_THREAD_INPUT = 0x0001
 
 
 def _foreground_hwnd() -> int:
@@ -80,15 +82,7 @@ def _cursor_pos() -> tuple[int, int]:
 
 
 def _set_foreground(hwnd: int) -> None:
-    """Give a top-level window foreground ownership for this control probe.
-
-    SetForegroundWindow can be rejected by Windows' foreground-lock rules when
-    this probe is launched from PowerShell while another application owns the
-    foreground. Temporarily attaching the caller and target GUI threads is the
-    standard Win32 way to perform this controlled foreground hand-off.
-    """
     user32 = ctypes.windll.user32
-    kernel32 = ctypes.windll.kernel32
     current_fg = _foreground_hwnd()
     current_thread = int(user32.GetWindowThreadProcessId(current_fg, None)) if current_fg else 0
     target_thread = int(user32.GetWindowThreadProcessId(hwnd, None))
@@ -100,9 +94,7 @@ def _set_foreground(hwnd: int) -> None:
     try:
         user32.ShowWindow(hwnd, SW_RESTORE)
         user32.BringWindowToTop(hwnd)
-        if not user32.SetForegroundWindow(hwnd):
-            err = kernel32.GetLastError()
-            raise ctypes.WinError(err)
+        user32.SetForegroundWindow(hwnd)
         deadline = time.monotonic() + 2.0
         while _foreground_hwnd() != hwnd and time.monotonic() < deadline:
             time.sleep(0.02)
@@ -160,7 +152,6 @@ def main() -> int:
     result = scan_game_accounts(parent.hwnd)
     accounts = logged_in_accounts(result)
     print(f"parent hwnd={parent.hwnd}")
-    print(f"logged_in characters={len(accounts)}")
     for i, account in enumerate(accounts, 1):
         print(f"  [{i}] character='{account.character_name}' identity='{account.identity}' view=#{account.view_index}")
     if not accounts:
@@ -186,8 +177,8 @@ def main() -> int:
     print(f"original_tab={original_tab}")
     print(f"original_foreground={original_foreground}")
     print(f"original_cursor={original_cursor}")
-    print("\n控制实验：暂时让游戏获得前台输入焦点，再用真实系统鼠标输入点击道具图标。")
-    print("这不是后台方案；目的只是验证坐标/UI本身是否正确。")
+    print("\n控制实验：暂时让游戏获得前台输入焦点，再用真实系统鼠标点击精确定位的道具图标。")
+    print("这不是后台方案；目的只是验证图标坐标/UI点击本身是否正确。")
 
     result_code = 1
     try:
@@ -205,6 +196,7 @@ def main() -> int:
         output_dir = Path("diagnostic/foreground_item_click_manual")
         output_dir.mkdir(parents=True, exist_ok=True)
         before_path = output_dir / f"before-character-{selected.view_index}.png"
+        hover_path = output_dir / f"hover-character-{selected.view_index}.png"
         after_path = output_dir / f"after-character-{selected.view_index}.png"
         save_png(capture.capture(parent.hwnd), str(before_path))
 
@@ -212,6 +204,17 @@ def main() -> int:
         _set_foreground(parent.hwnd)
         print(f"foreground_during_test={_foreground_hwnd()}")
         time.sleep(0.3)
+
+        user32 = ctypes.windll.user32
+        if not user32.SetCursorPos(screen_x, screen_y):
+            raise ctypes.WinError()
+        print(f"cursor_after_move={_cursor_pos()}")
+        print("鼠标已移动到道具图标中心，停留 1 秒以观察悬浮提示……")
+        time.sleep(1.0)
+        save_png(capture.capture(parent.hwnd), str(hover_path))
+        print(f"screenshot_hover={hover_path}")
+        print("如果此时出现“道具 (Alt+E)”提示，说明坐标已经得到视觉确认。")
+
         print("真实系统鼠标点击执行中……")
         _send_mouse_click(screen_x, screen_y)
         time.sleep(1.0)
