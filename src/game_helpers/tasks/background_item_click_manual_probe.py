@@ -1,8 +1,8 @@
 """Manual probe for clicking the in-game item-bar icon in the background.
 
-This probe intentionally tests the mouse path rather than Alt+E.  The target is
+This probe intentionally tests the mouse path rather than Alt+E. The target is
 based on the normalized location of the larger "道具 (Alt+E)" toolbar icon seen
-in the supplied game screenshots.  The probe does not activate the game and
+in the supplied game screenshots. The probe does not activate the game and
 restores Surface/native Tab afterwards.
 """
 
@@ -23,8 +23,7 @@ from .character_selection import logged_in_accounts, select_character, sync_sele
 
 
 # The supplied screenshots show the larger 道具 toolbar icon around this
-# normalized parent-client location.  Normalization makes the probe tolerant
-# of the small screenshot-size difference (1025x775 vs the usual 1036x831).
+# normalized client location. Normalization tolerates small size differences.
 TARGET_X_RATIO = 0.680
 TARGET_Y_RATIO = 0.970
 
@@ -67,8 +66,7 @@ def _window_from_point(x: int, y: int) -> int:
 
 
 def _root_ancestor(hwnd: int) -> int:
-    GA_ROOT = 2
-    return int(ctypes.windll.user32.GetAncestor(hwnd, GA_ROOT))
+    return int(ctypes.windll.user32.GetAncestor(hwnd, 2))
 
 
 def _ancestor_chain(hwnd: int, limit: int = 8) -> list[int]:
@@ -88,6 +86,13 @@ def _print_window(label: str, hwnd: int) -> None:
     class_name, title, parent = _window_info(hwnd)
     root = _root_ancestor(hwnd)
     print(f"{label}={hwnd} class={class_name!r} title={title!r} parent={parent} root={root}")
+
+
+def _screen_to_client(hwnd: int, x: int, y: int) -> tuple[int, int]:
+    point = POINT(int(x), int(y))
+    if not ctypes.windll.user32.ScreenToClient(hwnd, ctypes.byref(point)):
+        raise ctypes.WinError()
+    return int(point.x), int(point.y)
 
 
 def _restore_context(manager: GameViewManager, original_surface: int | None, original_tab: int | None) -> None:
@@ -151,25 +156,19 @@ def main() -> int:
         width, height = _client_size(selected.hwnd)
         target_client_x = round(width * TARGET_X_RATIO)
         target_client_y = round(height * TARGET_Y_RATIO)
-        target_screen_x, target_screen_y = _client_to_screen(
-            selected.hwnd, target_client_x, target_client_y
-        )
+        target_screen_x, target_screen_y = _client_to_screen(selected.hwnd, target_client_x, target_client_y)
         hit_hwnd = _window_from_point(target_screen_x, target_screen_y)
-        root_hwnd = _root_ancestor(hit_hwnd) if hit_hwnd else 0
 
         print(f"selected_client_size=({width},{height})")
         print(f"target_client=({target_client_x},{target_client_y})")
         print(f"target_screen=({target_screen_x},{target_screen_y})")
         _print_window("hit_test", hit_hwnd)
-        print(f"hit_root_is_parent={root_hwnd == parent.hwnd}")
+        print(f"hit_root_is_parent={_root_ancestor(hit_hwnd) == parent.hwnd if hit_hwnd else False}")
         print(f"hit_is_selected={hit_hwnd == selected.hwnd}")
         print("hit_ancestor_chain:")
         for index, hwnd in enumerate(_ancestor_chain(hit_hwnd), 1):
             class_name, title_text, direct_parent = _window_info(hwnd)
-            print(
-                f"  [{index}] hwnd={hwnd} class={class_name!r} "
-                f"title={title_text!r} parent={direct_parent}"
-            )
+            print(f"  [{index}] hwnd={hwnd} class={class_name!r} title={title_text!r} parent={direct_parent}")
 
         capture = WindowsGraphicsCapture()
         output_dir = Path("diagnostic/background_item_click_manual")
@@ -179,16 +178,16 @@ def main() -> int:
         frame_before = capture.capture(parent.hwnd)
         save_png(frame_before, str(before_path))
 
-        if not hit_hwnd or root_hwnd != parent.hwnd:
-            raise RuntimeError(
-                "target hit-test HWND is not inside the game parent hierarchy; "
-                "refusing to click an unrelated window"
-            )
-
-        hit_client_x, hit_client_y = _screen_to_client(hit_hwnd, target_screen_x, target_screen_y)
-        print(f"hit_client=({hit_client_x},{hit_client_y})")
+        # WindowFromPoint is only meaningful for the currently visible screen
+        # surface. When the game is deliberately backgrounded, the same screen
+        # coordinate may belong to the foreground application. The target is
+        # nevertheless a known point inside the selected WSGAME client, so for
+        # this diagnostic we intentionally route the click to WSGAME itself.
+        hit_client_x, hit_client_y = _screen_to_client(selected.hwnd, target_screen_x, target_screen_y)
+        print(f"click_target_hwnd={selected.hwnd} (WSGAME)")
+        print(f"click_target_client=({hit_client_x},{hit_client_y})")
         print("后台点击道具图标执行中……")
-        BackgroundInput(hit_hwnd).click_sync(hit_client_x, hit_client_y)
+        BackgroundInput(selected.hwnd).click_sync(hit_client_x, hit_client_y)
         time.sleep(1.0)
 
         foreground_after = _foreground_hwnd()
@@ -200,7 +199,7 @@ def main() -> int:
         print(f"screenshot_before={before_path}")
         print(f"screenshot_after={after_path}")
         print("请人工确认：道具栏是否由关变开（或由开变关）。")
-        print("注意：后台鼠标消息执行成功只代表消息已发送，不代表游戏 UI 一定接受了点击。")
+        print("注意：本次验证刻意不使用 WindowFromPoint 的前台命中结果，而直接向后台 WSGAME 发送点击。")
         result_code = 0
     except Exception as exc:
         print(f"probe_error={exc}")
@@ -222,13 +221,6 @@ def main() -> int:
         print("道具栏状态：保留测试后的状态，不自动恢复。")
 
     return result_code
-
-
-def _screen_to_client(hwnd: int, x: int, y: int) -> tuple[int, int]:
-    point = POINT(int(x), int(y))
-    if not ctypes.windll.user32.ScreenToClient(hwnd, ctypes.byref(point)):
-        raise ctypes.WinError()
-    return int(point.x), int(point.y)
 
 
 if __name__ == "__main__":
