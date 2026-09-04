@@ -45,6 +45,45 @@ def _cursor_pos() -> tuple[int, int]:
     return int(point.x), int(point.y)
 
 
+def _set_foreground(hwnd: int, timeout: float = 2.0) -> None:
+    """Best-effort foreground handoff used only by this diagnostic probe."""
+    if not hwnd:
+        return
+    user32 = ctypes.windll.user32
+    current = _foreground_hwnd()
+    if current == hwnd:
+        return
+
+    current_thread = int(user32.GetWindowThreadProcessId(current, None)) if current else 0
+    target_thread = int(user32.GetWindowThreadProcessId(hwnd, None))
+    attached = False
+    try:
+        if current_thread and target_thread and current_thread != target_thread:
+            if not user32.AttachThreadInput(current_thread, target_thread, True):
+                raise ctypes.WinError()
+            attached = True
+        user32.BringWindowToTop(hwnd)
+        user32.SetForegroundWindow(hwnd)
+        deadline = time.monotonic() + timeout
+        while _foreground_hwnd() != hwnd and time.monotonic() < deadline:
+            time.sleep(0.02)
+        if _foreground_hwnd() != hwnd:
+            raise RuntimeError(
+                f"failed to make foreground hwnd={hwnd}: current={_foreground_hwnd()}"
+            )
+    finally:
+        if attached:
+            user32.AttachThreadInput(current_thread, target_thread, False)
+
+
+def _restore_foreground(hwnd: int | None) -> bool:
+    """Restore the original foreground window and report whether it succeeded."""
+    if not hwnd:
+        return True
+    _set_foreground(int(hwnd))
+    return _foreground_hwnd() == int(hwnd)
+
+
 def _screen_to_client(hwnd: int, x: int, y: int) -> tuple[int, int]:
     point = POINT(int(x), int(y))
     if not ctypes.windll.user32.ScreenToClient(hwnd, ctypes.byref(point)):
@@ -167,6 +206,7 @@ def main() -> int:
     original_surface = manager.current_surface_index()
     original_tab = manager.current_index()
     foreground_before = _foreground_hwnd()
+    original_cursor = _cursor_pos()
 
     print(
         f"selected character='{selected.character_name}' "
@@ -176,9 +216,11 @@ def main() -> int:
     print(f"original_surface={original_surface}")
     print(f"original_tab={original_tab}")
     print(f"original_foreground={foreground_before}")
+    print(f"original_cursor={original_cursor}")
     print("\n本实验先人工记录真正触发 tooltip 的鼠标位置，再把同一个位置换成后台 WSGAME 点击。")
     print("这次不再猜图标中心坐标；坐标来自你刚刚已经验证成功的真实鼠标位置。")
-    print("本实验不会激活游戏；记录完成后会立即恢复其他窗口到前台。")
+    print("记录 tooltip 时游戏会暂时前台；F8 后程序会立即把原前台窗口恢复回来，然后才发送后台点击。")
+    print("这样才能真正验证‘其他应用保持前台时，后台 WSGAME 是否接受鼠标消息’。")
 
     result_code = 1
     try:
@@ -192,30 +234,7 @@ def main() -> int:
 
         save_png(capture.capture(parent.hwnd), str(before_path))
 
-        # Foreground is required only for the manual coordinate acquisition.
-        user32 = ctypes.windll.user32
-        current = _foreground_hwnd()
-        current_thread = int(user32.GetWindowThreadProcessId(current, None)) if current else 0
-        target_thread = int(user32.GetWindowThreadProcessId(parent.hwnd, None))
-        attached = False
-        try:
-            if current_thread and target_thread and current_thread != target_thread:
-                if not user32.AttachThreadInput(current_thread, target_thread, True):
-                    raise ctypes.WinError()
-                attached = True
-            user32.BringWindowToTop(parent.hwnd)
-            user32.SetForegroundWindow(parent.hwnd)
-            deadline = time.monotonic() + 2.0
-            while _foreground_hwnd() != parent.hwnd and time.monotonic() < deadline:
-                time.sleep(0.02)
-            if _foreground_hwnd() != parent.hwnd:
-                raise RuntimeError(
-                    f"failed to make game foreground: current={_foreground_hwnd()} target={parent.hwnd}"
-                )
-        finally:
-            if attached:
-                user32.AttachThreadInput(current_thread, target_thread, False)
-
+        _set_foreground(parent.hwnd)
         print(f"foreground_during_coordinate_capture={_foreground_hwnd()}")
         print("\n请手动把真实鼠标移动到‘道具’图标。")
         print("等‘道具 (Alt+E)’ tooltip 已经明确显示后，保持鼠标不动，按 F8。")
@@ -246,7 +265,18 @@ def main() -> int:
 
         save_png(capture.capture(parent.hwnd), str(hover_path))
         print(f"screenshot_hover={hover_path}")
-        print("\n接下来程序不会移动真实鼠标，也不会激活游戏。")
+
+        print("\n已记录人工 tooltip 坐标；现在恢复原前台窗口，再执行真正的后台点击。")
+        restored_before_click = _restore_foreground(foreground_before)
+        print(f"foreground_restored_before_background_click={restored_before_click}")
+        print(f"foreground_before_background_click={_foreground_hwnd()}")
+        if not restored_before_click:
+            raise RuntimeError(
+                f"cannot restore original foreground before background click: expected={foreground_before} "
+                f"actual={_foreground_hwnd()}"
+            )
+
+        print("接下来程序不会移动真实鼠标，也不会激活游戏。")
         print("它只把刚才这个人工确认的 screen 坐标转换成 WSGAME client 坐标，并发送后台 PostMessageW 点击。")
         print(f"background_click_target_hwnd={selected.hwnd} class='WSGAME'")
         print(f"background_click_target_client=({client_x},{client_y})")
@@ -262,8 +292,8 @@ def main() -> int:
         print(f"screenshot_after={after_path}")
         print("请人工确认：道具栏是否由关变开（或由开变关）。")
         print("\n结论判定：")
-        print("- 如果现在打开：此前失败主要是坐标计算错误；后台鼠标通道至少对这个按钮可用。")
-        print("- 如果现在仍未打开：坐标问题基本排除，后台输入通道本身仍未被游戏接受。")
+        print("- 如果现在打开：坐标问题已经基本排除，后台 PostMessageW 对这个按钮可用。")
+        print("- 如果现在仍未打开：坐标已经来自真实 tooltip 命中点，且测试时其他窗口保持前台；后台鼠标消息通道本身仍未被游戏接受。")
         result_code = 0
     except Exception as exc:
         print(f"probe_error={exc}")
@@ -273,12 +303,30 @@ def main() -> int:
         except Exception as exc:
             print(f"context_restore_error={exc}")
             result_code = 1
+
+        try:
+            foreground_restored = _restore_foreground(foreground_before)
+        except Exception as exc:
+            print(f"foreground_restore_error={exc}")
+            foreground_restored = False
+            result_code = 1
+
+        try:
+            ctypes.windll.user32.SetCursorPos(int(original_cursor[0]), int(original_cursor[1]))
+            cursor_restored = _cursor_pos() == original_cursor
+        except Exception as exc:
+            print(f"cursor_restore_error={exc}")
+            cursor_restored = False
+            result_code = 1
+
         foreground_final = _foreground_hwnd()
         print("\n恢复测试上下文：")
         print(f"restored_surface={manager.current_surface_index() == original_surface}")
         print(f"restored_tab={manager.current_index() == original_tab}")
+        print(f"foreground_restore_ok={foreground_restored}")
         print(f"foreground_final={foreground_final}")
         print(f"foreground_unchanged={foreground_final == foreground_before}")
+        print(f"cursor_restored={cursor_restored}")
         print("道具栏状态：保留测试后的状态，不自动恢复。")
 
     return result_code
