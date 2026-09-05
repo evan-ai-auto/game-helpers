@@ -11,6 +11,10 @@ from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
 from .soul_task import DEFAULT_SOUL_TASK_UI, detect_soul_task_panel_collapsed
 
+CWP_SKIPINVISIBLE = 0x0001
+CWP_SKIPDISABLED = 0x0002
+CWP_SKIPTRANSPARENT = 0x0004
+
 
 def _fg() -> int: return int(ctypes.windll.user32.GetForegroundWindow())
 
@@ -21,6 +25,25 @@ def _parent_to_child(parent: int, child: int, x: int, y: int) -> tuple[int, int]
     if not u.ClientToScreen(parent, ctypes.byref(p)) or not u.ScreenToClient(child, ctypes.byref(p)):
         raise ctypes.WinError()
     return int(p.x), int(p.y)
+
+
+def _deepest_child_at(hwnd: int, x: int, y: int) -> int:
+    """Resolve a point only through descendants of the selected WSGAME surface."""
+    user32 = ctypes.windll.user32
+    current = hwnd
+    current_x, current_y = int(x), int(y)
+    while True:
+        point = wintypes.POINT(current_x, current_y)
+        child = int(user32.ChildWindowFromPointEx(current, point, CWP_SKIPINVISIBLE | CWP_SKIPDISABLED | CWP_SKIPTRANSPARENT))
+        if not child or child == current:
+            return current
+        screen = point
+        if not user32.ClientToScreen(current, ctypes.byref(screen)):
+            return current
+        if not user32.ScreenToClient(child, ctypes.byref(screen)):
+            return current
+        current = child
+        current_x, current_y = int(screen.x), int(screen.y)
 
 
 def run(parent_title: str, selected, manager: GameViewManager) -> int:
@@ -63,8 +86,9 @@ def run(parent_title: str, selected, manager: GameViewManager) -> int:
         after_obs = obs
         for dx, dy in offsets:
             candidate = (base_child_xy[0] + dx, base_child_xy[1] + dy)
-            print(f"toggle_candidate_client={candidate}")
-            BackgroundInput(selected.hwnd).click_sync(*candidate)
+            target_hwnd = _deepest_child_at(selected.hwnd, *candidate)
+            print(f"toggle_candidate_client={candidate} target_hwnd={target_hwnd}")
+            BackgroundInput(target_hwnd).click_sync(*candidate)
             time.sleep(.45)
             after = cap.capture(parent_window.hwnd)
             after_obs = detect_soul_task_panel_collapsed(after)
