@@ -1,2 +1,0 @@
-github write permission test
-created by automation check
