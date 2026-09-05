@@ -1,14 +1,16 @@
 """Diagnostic-only sampler for measuring hosted WSGAME surface transitions.
 
 This probe intentionally does not modify GameViewManager, VerificationSession,
-or any production workflow. It repeatedly captures the host window after a
-background surface switch and records timing, geometry, and frame-to-frame
-visual convergence so we can estimate 806x606 <-> 1024x768 transition latency.
+or any production workflow. It discovers the current WSGAME instances first,
+records their client geometry, then automatically samples both directions
+between two selected instances. The size labels are observations, not
+identity: no view number or login state is treated as inherently small/large.
 """
 from __future__ import annotations
 
 import argparse
 import csv
+import ctypes
 import sys
 import time
 from pathlib import Path
@@ -16,16 +18,17 @@ from pathlib import Path
 import numpy as np
 
 from ..capture import WindowsGraphicsCapture, save_png
+from ..core.surface import query_surface_geometry
 from ..core.view_manager import GameViewManager
 from ..core.window import find_window
+from .accounts import scan_game_accounts
 
 
 def _frame_signature(frame) -> tuple[int, int]:
     return int(frame.width), int(frame.height)
 
 
-def _small_gray(frame, size: int = 48) -> np.ndarray:
-    """Return a tiny grayscale fingerprint; diagnostic only, not workflow logic."""
+def _fingerprint(frame, size: int = 48) -> np.ndarray:
     width, height = int(frame.width), int(frame.height)
     raw = np.frombuffer(frame.data, dtype=np.uint8)
     expected = width * height * 4
@@ -37,8 +40,6 @@ def _small_gray(frame, size: int = 48) -> np.ndarray:
         + 0.587 * bgra[:, :, 1]
         + 0.299 * bgra[:, :, 2]
     ).astype(np.float32)
-
-    # Nearest-neighbour downsample keeps this probe dependency-free.
     ys = np.linspace(0, height - 1, size).astype(np.int32)
     xs = np.linspace(0, width - 1, size).astype(np.int32)
     return gray[np.ix_(ys, xs)]
@@ -65,8 +66,45 @@ def _stable_run(values: list[float | None], threshold: float, consecutive: int) 
 def _capture(cap: WindowsGraphicsCapture, parent_hwnd: int):
     started = time.perf_counter()
     frame = cap.capture(parent_hwnd)
-    elapsed = time.perf_counter() - started
-    return frame, elapsed
+    return frame, (time.perf_counter() - started) * 1000.0
+
+
+def _measure_stable_baseline(
+    cap: WindowsGraphicsCapture,
+    parent_hwnd: int,
+    *,
+    interval: float,
+    samples: int,
+    settle_threshold: float,
+    settle_consecutive: int,
+) -> tuple[tuple[int, int], float | None]:
+    """Observe one already-selected surface until its capture size is stable."""
+    previous: np.ndarray | None = None
+    deltas: list[float | None] = []
+    last_size: tuple[int, int] | None = None
+    size_run = 0
+    first_stable_ms: float | None = None
+    started = time.perf_counter()
+    for _ in range(samples):
+        frame, _ = _capture(cap, parent_hwnd)
+        size = _frame_signature(frame)
+        if size == last_size:
+            size_run += 1
+        else:
+            last_size = size
+            size_run = 1
+        fp = _fingerprint(frame)
+        delta = _fingerprint_delta(previous, fp)
+        deltas.append(delta)
+        previous = fp
+        if first_stable_ms is None and size_run >= settle_consecutive:
+            stable_index = _stable_run(deltas, settle_threshold, settle_consecutive)
+            if stable_index is not None:
+                first_stable_ms = (time.perf_counter() - started) * 1000.0
+        time.sleep(interval)
+    if last_size is None:
+        raise RuntimeError("no baseline frame captured")
+    return last_size, first_stable_ms
 
 
 def _sample_transition(
@@ -83,19 +121,41 @@ def _sample_transition(
     out_dir: Path,
     round_no: int,
 ) -> dict[str, object]:
-    source = manager.views()[source_index - 1]
-    target = manager.views()[target_index - 1]
-    source_size = (source.window.width, source.window.height)
-    target_size = (target.window.width, target.window.height)
+    views = manager.views()
+    source = views[source_index - 1]
+    target = views[target_index - 1]
+    source_client = (source.window.width, source.window.height)
+    target_client = (target.window.width, target.window.height)
 
-    # Establish the pre-switch state without touching foreground activation.
-    pre_frames = []
-    for _ in range(3):
-        frame, _ = _capture(cap, parent_hwnd)
-        pre_frames.append(frame)
-        time.sleep(interval)
+    source_frame_size, _ = _measure_stable_baseline(
+        cap, parent_hwnd, interval=interval, samples=max(4, settle_consecutive + 1),
+        settle_threshold=settle_threshold, settle_consecutive=settle_consecutive,
+    )
 
-    transition_dir = f"view{source_index}_{source_size[0]}x{source_size[1]}__to__view{target_index}_{target_size[0]}x{target_size[1]}"
+    direction = (
+        "小切大" if source_frame_size[0] * source_frame_size[1] < 1 else "未知"
+    )
+    # Direction is resolved from the actual stable source/target capture sizes
+    # after the target has also been observed; no view number is used.
+    manager.switch_surface_to(target_index)
+    target_frame_size, _ = _measure_stable_baseline(
+        cap, parent_hwnd, interval=interval, samples=max(4, settle_consecutive + 1),
+        settle_threshold=settle_threshold, settle_consecutive=settle_consecutive,
+    )
+    manager.switch_surface_to(source_index)
+    source_frame_size, _ = _measure_stable_baseline(
+        cap, parent_hwnd, interval=interval, samples=max(4, settle_consecutive + 1),
+        settle_threshold=settle_threshold, settle_consecutive=settle_consecutive,
+    )
+    if source_frame_size == target_frame_size:
+        direction = "同尺寸切换"
+    elif source_frame_size[0] * source_frame_size[1] < target_frame_size[0] * target_frame_size[1]:
+        direction = "小切大"
+    else:
+        direction = "大切小"
+
+    # The actual timed transition begins from a confirmed source baseline.
+    transition_dir = f"view{source_index}__{source_frame_size[0]}x{source_frame_size[1]}__to__view{target_index}__{target_frame_size[0]}x{target_frame_size[1]}"
     transition_dir_path = out_dir / f"round-{round_no:02d}-{transition_dir}"
     transition_dir_path.mkdir(parents=True, exist_ok=True)
 
@@ -104,11 +164,11 @@ def _sample_transition(
     switch_return_ms = (time.perf_counter() - switch_started) * 1000.0
 
     rows: list[dict[str, object]] = []
-    fingerprints: list[np.ndarray] = []
     previous_fp: np.ndarray | None = None
-    first_target_geometry_ms: float | None = None
     stable_values: list[float | None] = []
-    first_capture_ms: float | None = None
+    first_target_size_ms: float | None = None
+    stable_index: int | None = None
+    stable_size_run = 0
 
     for sample_index in range(samples):
         if sample_index:
@@ -118,38 +178,39 @@ def _sample_transition(
         capture_finished = time.perf_counter()
         since_switch_ms = (capture_finished - switch_started) * 1000.0
         capture_ms = (capture_finished - capture_started) * 1000.0
-        if first_capture_ms is None:
-            first_capture_ms = since_switch_ms
+        geometry = _frame_signature(frame)
+        if geometry == target_frame_size and first_target_size_ms is None:
+            first_target_size_ms = since_switch_ms
 
-        fp = _small_gray(frame)
+        if geometry == target_frame_size:
+            stable_size_run += 1
+        else:
+            stable_size_run = 0
+
+        fp = _fingerprint(frame)
         delta = _fingerprint_delta(previous_fp, fp)
         previous_fp = fp
-        fingerprints.append(fp)
         stable_values.append(delta)
-
-        geometry = _frame_signature(frame)
-        is_target_geometry = geometry == _frame_signature(pre_frames[-1]) or geometry == target_size
-        # The two common stable states are explicitly recorded; no state is
-        # rejected by this diagnostic probe.
-        if geometry == target_size and first_target_geometry_ms is None:
-            first_target_geometry_ms = since_switch_ms
+        if stable_index is None and stable_size_run >= settle_consecutive:
+            candidate = _stable_run(stable_values, settle_threshold, settle_consecutive)
+            if candidate is not None:
+                stable_index = candidate
 
         save_png(frame, str(transition_dir_path / f"frame-{sample_index:03d}-{since_switch_ms:08.1f}ms.png"))
-        rows.append(
-            {
-                "sample": sample_index,
-                "since_switch_ms": round(since_switch_ms, 3),
-                "capture_ms": round(capture_ms, 3),
-                "frame_width": geometry[0],
-                "frame_height": geometry[1],
-                "target_client_width": target_size[0],
-                "target_client_height": target_size[1],
-                "target_geometry": is_target_geometry,
-                "adjacent_fingerprint_delta": "" if delta is None else round(delta, 4),
-            }
-        )
+        rows.append({
+            "sample": sample_index,
+            "since_switch_ms": round(since_switch_ms, 3),
+            "capture_ms": round(capture_ms, 3),
+            "frame_width": geometry[0],
+            "frame_height": geometry[1],
+            "source_frame_width": source_frame_size[0],
+            "source_frame_height": source_frame_size[1],
+            "target_frame_width": target_frame_size[0],
+            "target_frame_height": target_frame_size[1],
+            "target_geometry": geometry == target_frame_size,
+            "adjacent_fingerprint_delta": "" if delta is None else round(delta, 4),
+        })
 
-    stable_index = _stable_run(stable_values, settle_threshold, settle_consecutive)
     first_visual_stable_ms = None
     if stable_index is not None and stable_index < len(rows):
         first_visual_stable_ms = float(rows[stable_index]["since_switch_ms"])
@@ -161,14 +222,15 @@ def _sample_transition(
         writer.writerows(rows)
 
     return {
-        "direction": transition_dir,
+        "direction": direction,
         "source_view": source_index,
         "target_view": target_index,
-        "source_client_size": f"{source_size[0]}x{source_size[1]}",
-        "target_client_size": f"{target_size[0]}x{target_size[1]}",
+        "source_client_size": f"{source_client[0]}x{source_client[1]}",
+        "target_client_size": f"{target_client[0]}x{target_client[1]}",
+        "source_capture_size": f"{source_frame_size[0]}x{source_frame_size[1]}",
+        "target_capture_size": f"{target_frame_size[0]}x{target_frame_size[1]}",
         "switch_return_ms": round(switch_return_ms, 3),
-        "first_capture_ms": None if first_capture_ms is None else round(first_capture_ms, 3),
-        "first_target_geometry_ms": None if first_target_geometry_ms is None else round(first_target_geometry_ms, 3),
+        "first_target_capture_size_ms": None if first_target_size_ms is None else round(first_target_size_ms, 3),
         "first_visual_stable_ms": None if first_visual_stable_ms is None else round(first_visual_stable_ms, 3),
         "settle_threshold": settle_threshold,
         "settle_consecutive": settle_consecutive,
@@ -184,7 +246,7 @@ def main() -> int:
         print("本探针仅支持 Windows。")
         return 2
 
-    parser = argparse.ArgumentParser(description="采样 WSGAME 大/小 Surface 切换渲染耗时（诊断专用）")
+    parser = argparse.ArgumentParser(description="自动采样 WSGAME 大/小 Surface 切换渲染耗时（诊断专用）")
     parser.add_argument("parent_title", nargs="?", default="梦幻西游 ONLINE")
     parser.add_argument("--interval", type=float, default=0.05, help="截图间隔秒数，默认 0.05s")
     parser.add_argument("--samples", type=int, default=40, help="每次切换后的截图数量，默认 40")
@@ -209,55 +271,54 @@ def main() -> int:
         print(f"至少需要 2 个 WSGAME surface，当前={len(views)}")
         return 1
 
+    scan = scan_game_accounts(parent.hwnd)
     print(f"parent hwnd={parent.hwnd}")
-    for index, view in enumerate(views, 1):
+    print("=== 初始角色/Surface 扫描 ===")
+    for account in scan.accounts:
+        resolution = account.expected_resolution
         print(
-            f"  [{index}] hwnd={view.hwnd} "
-            f"client={view.window.width}x{view.window.height} "
-            f"visible={view.window.visible} title={view.window.title!r}"
+            f"  view=#{account.view_index} character={account.character_name!r} "
+            f"logged_in={account.logged_in} hwnd={account.hwnd} "
+            f"client={resolution[0]}x{resolution[1] if resolution else 'unknown'} "
+            if resolution else
+            f"  view=#{account.view_index} character={account.character_name!r} "
+            f"logged_in={account.logged_in} hwnd={account.hwnd} client=unknown"
         )
 
-    small = [
-        i for i, view in enumerate(views, 1)
-        if (view.window.width, view.window.height) == (806, 606)
-    ]
-    large = [
-        i for i, view in enumerate(views, 1)
-        if (view.window.width, view.window.height) == (1024, 768)
-    ]
-    if not small or not large:
-        print("未同时发现 client=806x606 与 client=1024x768 的两个稳定 surface。")
-        print("本探针不会猜测哪个是大/小，请先确认窗口实际 geometry。")
-        return 1
-
-    # Use the first matching surface of each size; this is diagnostic only.
-    small_index = small[0]
-    large_index = large[0]
     original_surface = manager.current_surface_index()
     original_tab = manager.current_index()
-
-    print(f"small_surface=view{small_index} (806x606)")
-    print(f"large_surface=view{large_index} (1024x768)")
+    original_fg = int(ctypes.windll.user32.GetForegroundWindow())
     print(f"original_surface={original_surface}")
     print(f"original_tab={original_tab}")
     print(f"sample_interval_ms={args.interval * 1000:.1f}")
     print(f"samples_per_transition={args.samples}")
     print(f"rounds_per_direction={args.rounds}")
-    print("注意：本探针只读取/截图/切换 Surface，不修改现有生产功能。")
+    print("本探针全自动切换、截图、检测；不需要手动切子窗口。")
+    print("分辨率只作为当前观测状态，不与 view 编号或登录状态绑定。")
 
     cap = WindowsGraphicsCapture()
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
     all_results: list[dict[str, object]] = []
-    original_fg = int(__import__("ctypes").windll.user32.GetForegroundWindow())
+
+    # Pick two views from the first scan, preferring distinct observed client
+    # sizes. If client sizes are equal, still measure the pair: capture sizes
+    # may differ because the host/capture path can scale them differently.
+    distinct = []
+    for i, a in enumerate(scan.accounts, 1):
+        for j, b in enumerate(scan.accounts, 1):
+            if i < j and a.expected_resolution != b.expected_resolution:
+                distinct.append((i, j))
+    pair = distinct[0] if distinct else (1, 2)
+    first_view, second_view = pair
+    print(f"sampling_pair=view{first_view} <-> view{second_view}")
 
     try:
-        # Start from small for the first direction.
-        manager.switch_surface_to(small_index)
+        manager.switch_surface_to(first_view)
         for round_no in range(1, args.rounds + 1):
-            print(f"\n=== round {round_no}: 小 -> 大 ===")
+            print(f"\n=== round {round_no}: 自动测量 view{first_view} -> view{second_view} ===")
             result = _sample_transition(
-                cap, manager, parent.hwnd, small_index, large_index,
+                cap, manager, parent.hwnd, first_view, second_view,
                 interval=args.interval, samples=args.samples,
                 settle_threshold=args.settle_threshold,
                 settle_consecutive=args.settle_consecutive,
@@ -266,9 +327,9 @@ def main() -> int:
             all_results.append(result)
             print(result)
 
-            print(f"=== round {round_no}: 大 -> 小 ===")
+            print(f"=== round {round_no}: 自动测量 view{second_view} -> view{first_view} ===")
             result = _sample_transition(
-                cap, manager, parent.hwnd, large_index, small_index,
+                cap, manager, parent.hwnd, second_view, first_view,
                 interval=args.interval, samples=args.samples,
                 settle_threshold=args.settle_threshold,
                 settle_consecutive=args.settle_consecutive,
@@ -282,17 +343,18 @@ def main() -> int:
             writer = csv.DictWriter(handle, fieldnames=list(all_results[0]))
             writer.writeheader()
             writer.writerows(all_results)
-
         print("\n=== 汇总 ===")
         for item in all_results:
             print(
                 f"{item['direction']}: "
+                f"view{item['source_view']} {item['source_capture_size']} -> "
+                f"view{item['target_view']} {item['target_capture_size']}, "
                 f"switch_return={item['switch_return_ms']}ms, "
-                f"target_geometry={item['first_target_geometry_ms']}ms, "
+                f"target_size={item['first_target_capture_size_ms']}ms, "
                 f"visual_stable={item['first_visual_stable_ms']}ms"
             )
         print(f"summary={summary}")
-        print(f"foreground_unchanged={int(__import__('ctypes').windll.user32.GetForegroundWindow()) == original_fg}")
+        print(f"foreground_unchanged={int(ctypes.windll.user32.GetForegroundWindow()) == original_fg}")
         return 0
     finally:
         try:
@@ -300,9 +362,13 @@ def main() -> int:
             manager.switch_to(original_tab)
         except Exception as exc:
             print(f"context_restore_error={exc}")
-        final_fg = int(__import__("ctypes").windll.user32.GetForegroundWindow())
+        final_fg = int(ctypes.windll.user32.GetForegroundWindow())
         print("\n恢复测试上下文：")
         print(f"restored_surface={manager.current_surface_index() == original_surface}")
         print(f"restored_tab={manager.current_index() == original_tab}")
         print(f"foreground_final={final_fg}")
         print(f"foreground_unchanged={final_fg == original_fg}")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
