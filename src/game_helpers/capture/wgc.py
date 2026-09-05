@@ -22,13 +22,7 @@ class WindowsGraphicsCapture:
         retries: int = 2,
         retry_delay: float = 0.15,
     ) -> Frame:
-        """Return the first available BGRA frame for a WindowInfo-like object or HWND.
-
-        WGC can occasionally close or fail to deliver the first frame while a
-        hosted window is being rebound. Retry the complete capture session a
-        small number of times; this does not change the target HWND or bring it
-        to the foreground.
-        """
+        """Return the first available BGRA frame for a WindowInfo-like object or HWND."""
         if sys.platform != "win32":
             raise RuntimeError("Windows Graphics Capture is only available on Windows")
 
@@ -40,16 +34,13 @@ class WindowsGraphicsCapture:
                 "install the Windows extras with: pip install -e '.[windows]'"
             ) from exc
 
-        # Keep the capture API tolerant of callers that naturally have an HWND.
-        # Frame.window still needs a WindowInfo, so resolve an integer HWND first.
+        # A selected WSGAME is a child HWND, so top-level enumeration cannot
+        # resolve it. Resolve arbitrary HWNDs through the dedicated helper.
         if isinstance(window, int):
-            from game_helpers.core.window import list_windows
+            from game_helpers.core.window import get_window_info
 
             hwnd = int(window)
-            resolved = next((item for item in list_windows() if item.hwnd == hwnd), None)
-            if resolved is None:
-                raise ValueError(f"could not resolve WindowInfo for hwnd={hwnd}")
-            window = resolved
+            window = get_window_info(hwnd)
         hwnd = int(window.hwnd)
 
         if retries < 0:
