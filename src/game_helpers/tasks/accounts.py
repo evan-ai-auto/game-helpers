@@ -7,6 +7,7 @@ import sys
 from dataclasses import dataclass
 
 from ..core.game_view import discover_game_views
+from ..core.surface import query_surface_geometry
 from .models import AccountCandidate
 
 
@@ -51,7 +52,7 @@ def parse_character_title(title: str) -> tuple[str | None, str | None, str | Non
 
 
 def scan_game_accounts(parent_hwnd: int) -> AccountScanResult:
-    """Discover all WSGAME children and classify their title identity."""
+    """Discover all WSGAME children and classify identity plus current geometry."""
     if sys.platform != "win32":
         raise RuntimeError("梦幻西游 account scanning requires Windows")
 
@@ -63,6 +64,7 @@ def scan_game_accounts(parent_hwnd: int) -> AccountScanResult:
         character_name, account_name, identity, logged_in = parse_character_title(view.window.title)
         process_id = ctypes.c_ulong()
         user32.GetWindowThreadProcessId(view.hwnd, ctypes.byref(process_id))
+        geometry = query_surface_geometry(view.hwnd)
         accounts.append(
             AccountCandidate(
                 view_index=index,
@@ -72,7 +74,14 @@ def scan_game_accounts(parent_hwnd: int) -> AccountScanResult:
                 account_name=account_name,
                 identity=identity,
                 logged_in=logged_in,
-                metadata={"title": view.window.title},
+                client_width=geometry.client_width,
+                client_height=geometry.client_height,
+                dpi=geometry.dpi,
+                metadata={
+                    "title": view.window.title,
+                    "screen_left": geometry.screen_left,
+                    "screen_top": geometry.screen_top,
+                },
             )
         )
 
