@@ -91,7 +91,7 @@ class RoutePlan:
 
 @dataclass(frozen=True)
 class AccountCandidate:
-    """Identity information for one 梦幻西游 WSGAME instance."""
+    """Identity and current surface geometry for one 梦幻西游 WSGAME instance."""
 
     view_index: int
     hwnd: int
@@ -100,4 +100,14 @@ class AccountCandidate:
     account_name: str | None = None
     identity: str | None = None
     logged_in: bool | None = None
+    client_width: int | None = None
+    client_height: int | None = None
+    dpi: int | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def expected_resolution(self) -> tuple[int, int] | None:
+        """Resolution observed during the initial instance scan."""
+        if self.client_width and self.client_height:
+            return self.client_width, self.client_height
+        return None
