@@ -1,16 +1,18 @@
-"""Interactive menu: choose a character first, then choose an independent flow."""
+"""Interactive verification menu: choose character once, then compose flow nodes."""
 from __future__ import annotations
+
 import sys
-from .accounts import scan_game_accounts
-from .character_selection import logged_in_accounts, select_character
-from .soul_task_toggle_auto_probe import run as verify_soul_toggle
-from .background_item_panel_open_probe import main as verify_item_panel
+
 from ..core.view_manager import GameViewManager
 from ..core.window import find_window
+from .accounts import scan_game_accounts
+from .background_item_panel_toggle_probe import run as verify_item_panel_toggle
+from .character_selection import logged_in_accounts, select_character
+from .soul_task_toggle_auto_probe import run as verify_soul_toggle
 
 OPTIONS = {
     "1": "命魂任务面板：自动识别并切换折叠/展开",
-    "2": "道具栏：验证当前开关状态并执行反向切换",
+    "2": "道具栏：自动识别当前状态并执行反向切换",
 }
 
 
@@ -41,6 +43,7 @@ def main() -> int:
 
     selected = select_character(scan, accounts[character_choice - 1].view_index)
     print(f"已选择角色：'{selected.character_name}' (view=#{selected.view_index})")
+
     print("\n可选手动验证流程：")
     for key, label in OPTIONS.items():
         print(f"  {key}. {label}")
@@ -52,14 +55,11 @@ def main() -> int:
         print("无效选项。")
         return 1
 
-    # The soul probe now accepts the already-selected character, so it will not
-    # perform a second character prompt. The item probe keeps its existing
-    # standalone entry point for now.
+    # CharacterSelectionResult is the session context. Individual workflow
+    # nodes must not rescan or prompt for a character again.
     if choice == "1":
         return verify_soul_toggle(title, selected, GameViewManager(parent.hwnd, timeout=2.0))
-
-    sys.argv = [sys.argv[0], title]
-    return verify_item_panel()
+    return verify_item_panel_toggle(parent.hwnd, selected)
 
 
 if __name__ == "__main__":
