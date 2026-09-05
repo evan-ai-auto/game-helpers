@@ -6,6 +6,7 @@
     {
       "name": "item_panel_bottom_frame",
       "image": "../item_panel_bottom.png",
+      "position_type": "floating",
       "offset_x": 0,
       "offset_y": 0,
       "threshold": 0.95,
