@@ -24,15 +24,19 @@ def _parent_to_child(parent: int, child: int, x: int, y: int) -> tuple[int, int]
 
 
 def run(parent_title: str, selected, manager: GameViewManager) -> int:
+    parent_window = find_window(parent_title)
+    if parent_window is None:
+        print(f"parent window not found: {parent_title!r}")
+        return 2
     original_surface = manager.current_surface_index()
     original_tab = manager.current_index()
     original_fg = _fg()
     result = 1
     try:
-        sync_selected_character(find_window(parent_title).hwnd, selected)
+        sync_selected_character(parent_window.hwnd, selected)
         time.sleep(.3)
         cap = WindowsGraphicsCapture()
-        before = cap.capture(find_window(parent_title).hwnd)
+        before = cap.capture(parent_window.hwnd)
         obs = detect_soul_task_panel_collapsed(before)
         print(f"selected character='{selected.character_name}' view_index={selected.view_index} hwnd={selected.hwnd}")
         print(f"original_surface={original_surface}")
@@ -41,23 +45,40 @@ def run(parent_title: str, selected, manager: GameViewManager) -> int:
         print(f"panel_before_collapsed={obs.collapsed}")
         print(f"panel_before_confidence={obs.confidence:.3f}")
         print(f"before_evidence={obs.evidence}")
+        if obs.collapsed is None:
+            print("panel_state_unknown=True")
+            return 1
         target_expanded = bool(obs.collapsed)
         print(f"target_state={'expanded' if target_expanded else 'collapsed'}")
 
         point = DEFAULT_SOUL_TASK_UI.task_entry_toggle.pixel(before.width, before.height)
-        child_xy = _parent_to_child(find_window(parent_title).hwnd, selected.hwnd, *point)
+        base_child_xy = _parent_to_child(parent_window.hwnd, selected.hwnd, *point)
         print(f"parent_toggle_pixel={point}")
-        print(f"selected_toggle_client={child_xy}")
-        BackgroundInput(selected.hwnd).click_sync(*child_xy)
-        time.sleep(.8)
+        print(f"selected_toggle_client={base_child_xy}")
+        print("开始在标定点附近进行小范围后台命中探测（无需手动输入方向）。")
 
-        after = cap.capture(find_window(parent_title).hwnd)
-        after_obs = detect_soul_task_panel_collapsed(after)
+        offsets = [(0, 0), (-3, 0), (3, 0), (0, -3), (0, 3), (-6, 0), (6, 0), (0, -6), (0, 6)]
+        success = False
+        after = before
+        after_obs = obs
+        for dx, dy in offsets:
+            candidate = (base_child_xy[0] + dx, base_child_xy[1] + dy)
+            print(f"toggle_candidate_client={candidate}")
+            BackgroundInput(selected.hwnd).click_sync(*candidate)
+            time.sleep(.45)
+            after = cap.capture(parent_window.hwnd)
+            after_obs = detect_soul_task_panel_collapsed(after)
+            print(f"candidate_after_collapsed={after_obs.collapsed}")
+            print(f"candidate_after_confidence={after_obs.confidence:.3f}")
+            print(f"candidate_after_evidence={after_obs.evidence}")
+            if after_obs.collapsed == (not target_expanded):
+                print(f"toggle_hit_candidate={candidate}")
+                success = True
+                break
+
         print(f"panel_after_collapsed={after_obs.collapsed}")
         print(f"panel_after_confidence={after_obs.confidence:.3f}")
         print(f"after_evidence={after_obs.evidence}")
-        expected_collapsed = not target_expanded
-        success = after_obs.collapsed == expected_collapsed
         print(f"toggle_verified={success}")
         print(f"foreground_unchanged_after_click={_fg() == original_fg}")
         out = Path("diagnostic/soul_task_toggle_auto")
