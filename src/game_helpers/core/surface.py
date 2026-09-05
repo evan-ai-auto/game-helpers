@@ -42,11 +42,14 @@ class SurfaceHealth:
 
     @property
     def ready(self) -> bool:
-        return self.status in {"ready", "scaled"}
+        # Visual assets are currently defined in native client pixels. Until a
+        # frame-normalization layer exists, a uniformly scaled frame is useful
+        # diagnostic information but is not safe for pixel-template interaction.
+        return self.status == "ready"
 
     @property
     def geometry_mismatch(self) -> bool:
-        return self.status == "mismatch"
+        return self.status in {"scaled", "mismatch"}
 
 
 def query_surface_geometry(hwnd: int) -> SurfaceGeometry:
@@ -91,6 +94,7 @@ def inspect_surface(frame: Frame, geometry: SurfaceGeometry | None = None) -> Su
     uniform_scale = abs(sx - sy) <= 0.02 * max(sx, sy)
     if aspect_delta <= 0.02 and uniform_scale:
         evidence.append("frame_is_uniformly_scaled_relative_to_client")
+        evidence.append("pixel-template interaction is blocked until normalization is available")
         return SurfaceHealth("scaled", (ew, eh), (fw, fh), sx, sy, aspect_delta, tuple(evidence))
 
     evidence.append("frame_and_client_geometry_are_not_compatible")
