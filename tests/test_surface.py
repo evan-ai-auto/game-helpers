@@ -26,6 +26,6 @@ def test_surface_health_scaled_when_aspect_and_scale_match() -> None:
 
 def test_surface_health_mismatch_when_aspect_changes() -> None:
     geometry = SurfaceGeometry(1, 1024, 768, 100, 200, 96)
-    health = inspect_surface(_frame(800, 600), geometry)
+    health = inspect_surface(_frame(800, 500), geometry)
     assert health.status == "mismatch"
     assert not health.ready
