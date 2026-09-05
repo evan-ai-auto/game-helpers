@@ -19,14 +19,25 @@ class VisualStateStatus(str):
     INVALID = "invalid"
 
 
+class VisualPositionType(str):
+    """Spatial behavior declared by a visual asset."""
+
+    FIXED = "fixed"
+    FLOATING = "floating"
+
+
 @dataclass(frozen=True)
 class VisualAnchor:
     name: str
     image_path: Path
-    offset_x: int
-    offset_y: int
+    offset_x: int = 0
+    offset_y: int = 0
     threshold: float = 0.92
     search_step: int = 1
+    position_type: str = VisualPositionType.FLOATING
+    expected_x: float | None = None
+    expected_y: float | None = None
+    position_tolerance: int = 12
 
 
 @dataclass(frozen=True)
@@ -104,34 +115,82 @@ def _load_profile(path: str | Path) -> VisualStateProfile:
         VisualAnchor(
             name=item["name"],
             image_path=(base / item["image"]).resolve(),
-            offset_x=int(item["offset_x"]),
-            offset_y=int(item["offset_y"]),
+            offset_x=int(item.get("offset_x", 0)),
+            offset_y=int(item.get("offset_y", 0)),
             threshold=float(item.get("threshold", 0.92)),
             search_step=max(1, int(item.get("search_step", 1))),
+            position_type=str(item.get("position_type", VisualPositionType.FLOATING)),
+            expected_x=(float(item["expected_x"]) if item.get("expected_x") is not None else None),
+            expected_y=(float(item["expected_y"]) if item.get("expected_y") is not None else None),
+            position_tolerance=max(0, int(item.get("position_tolerance", 12))),
         )
         for item in payload["anchors"]
     )
     if not anchors:
         raise ValueError("visual state profile has no anchors")
+    for anchor in anchors:
+        if anchor.position_type not in (VisualPositionType.FIXED, VisualPositionType.FLOATING):
+            raise ValueError(f"unsupported position_type: {anchor.position_type}")
+        if anchor.position_type == VisualPositionType.FIXED and not (0.0 <= (anchor.expected_x or -1.0) <= 1.0 and 0.0 <= (anchor.expected_y or -1.0) <= 1.0):
+            raise ValueError(f"fixed anchor {anchor.name} requires normalized expected_x/expected_y")
     return VisualStateProfile(str(payload["name"]), anchors, max(1, int(payload.get("consecutive_frames", 2))))
 
 
+def _candidate_origins(image: np.ndarray, anchor: VisualAnchor, scores: np.ndarray) -> list[tuple[int, int, float]]:
+    """Return candidate template origins according to the anchor's position contract."""
+    h, w = image.shape
+    th, tw = _template_gray(anchor.image_path).shape
+    if scores.size == 0:
+        return []
+    if anchor.position_type == VisualPositionType.FLOATING:
+        ys, xs = np.where(scores >= anchor.threshold)
+        return [(int(x * anchor.search_step), int(y * anchor.search_step), float(scores[y, x])) for y, x in zip(ys, xs)]
+
+    assert anchor.expected_x is not None and anchor.expected_y is not None
+    expected_x = int(round(anchor.expected_x * w))
+    expected_y = int(round(anchor.expected_y * h))
+    # expected_x/y refer to the template origin. Search a bounded pixel window around it.
+    x0 = max(0, expected_x - anchor.position_tolerance)
+    x1 = min(w - tw, expected_x + anchor.position_tolerance)
+    y0 = max(0, expected_y - anchor.position_tolerance)
+    y1 = min(h - th, expected_y + anchor.position_tolerance)
+    if x1 < x0 or y1 < y0:
+        return []
+    sx0, sx1 = x0 // anchor.search_step, x1 // anchor.search_step
+    sy0, sy1 = y0 // anchor.search_step, y1 // anchor.search_step
+    window = scores[sy0 : sy1 + 1, sx0 : sx1 + 1]
+    if window.size == 0:
+        return []
+    local_y, local_x = np.unravel_index(int(np.argmax(window)), window.shape)
+    score = float(window[local_y, local_x])
+    if score < anchor.threshold:
+        return []
+    return [(int((sx0 + local_x) * anchor.search_step), int((sy0 + local_y) * anchor.search_step), score)]
+
+
 def detect_visual_state(frame: Frame, profile: VisualStateProfile) -> VisualStateObservation:
-    """Search the complete frame for a composite visual-state asset."""
+    """Detect a composite visual state while honoring each anchor's position contract."""
     try:
         image = _frame_gray(frame)
-        matches = [(anchor, _ncc_map(image, _template_gray(anchor.image_path), anchor.search_step)) for anchor in profile.anchors]
-        base = profile.anchors[0]
-        base_scores = matches[0][1]
-        ys, xs = np.where(base_scores >= base.threshold)
-        if len(xs) == 0:
+        loaded = [(anchor, _template_gray(anchor.image_path)) for anchor in profile.anchors]
+        matches = [(anchor, template, _ncc_map(image, template, anchor.search_step)) for anchor, template in loaded]
+        base, base_template, base_scores = matches[0]
+        candidates = _candidate_origins(image, base, base_scores)
+        if not candidates:
             return VisualStateObservation(profile.name, VisualStateStatus.NOT_DETECTED, float(base_scores.max()) if base_scores.size else 0.0, evidence=(f"anchor {base.name} not found",))
-        candidates = np.argsort(base_scores[ys, xs])[::-1]
-        for idx in candidates[:64]:
-            bx, by = int(xs[idx] * base.search_step), int(ys[idx] * base.search_step)
-            scores_for_origin = [(base.name, float(base_scores[ys[idx], xs[idx]]))]
+        candidates.sort(key=lambda item: item[2], reverse=True)
+        for bx, by, base_score in candidates[:64]:
+            scores_for_origin = [(base.name, base_score)]
             valid = True
-            for anchor, scores in matches[1:]:
+            for anchor, _template, scores in matches[1:]:
+                if anchor.position_type == VisualPositionType.FIXED:
+                    anchor_candidates = _candidate_origins(image, anchor, scores)
+                    if not anchor_candidates:
+                        valid = False
+                        break
+                    ax, ay, score = anchor_candidates[0]
+                    scores_for_origin.append((anchor.name, score))
+                    continue
                 ax = bx + anchor.offset_x - base.offset_x
                 ay = by + anchor.offset_y - base.offset_y
                 sx, sy = ax // anchor.search_step, ay // anchor.search_step
@@ -145,7 +204,7 @@ def detect_visual_state(frame: Frame, profile: VisualStateProfile) -> VisualStat
                     break
             if valid:
                 return VisualStateObservation(profile.name, VisualStateStatus.DETECTED, min(s for _, s in scores_for_origin), (bx - base.offset_x, by - base.offset_y), tuple(scores_for_origin), ("all required anchors matched",))
-        return VisualStateObservation(profile.name, VisualStateStatus.NOT_DETECTED, float(base_scores.max()), evidence=("base anchor found but composite anchors did not align",))
+        return VisualStateObservation(profile.name, VisualStateStatus.NOT_DETECTED, float(base_scores.max()), evidence=("required anchors did not satisfy their position contracts",))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return VisualStateObservation(profile.name, VisualStateStatus.INVALID, 0.0, evidence=(str(exc),))
 
