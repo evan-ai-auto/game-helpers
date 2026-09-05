@@ -14,7 +14,8 @@ from pathlib import Path
 
 from ..actions.background_input import BackgroundInput
 from ..capture import WindowsGraphicsCapture, save_png
-from ..core.surface import inspect_surface, query_surface_geometry
+from ..core.surface import inspect_surface
+from ..core.view_manager import GameViewManager
 from .character_selection import CharacterSelectionResult
 from .verification_session import VerificationSession
 from .visual_state import detect_visual_state, load_visual_state, make_visual_state_verifier
@@ -89,9 +90,7 @@ def _wait_for_f8() -> bool:
 
 def run(parent_hwnd: int, selected: CharacterSelectionResult) -> int:
     """Verify a background item-panel toggle using one shared session."""
-    manager = __import__("game_helpers.core.view_manager", fromlist=["GameViewManager"]).GameViewManager(
-        parent_hwnd, timeout=2.0
-    )
+    manager = GameViewManager(parent_hwnd, timeout=2.0)
     session = VerificationSession(
         parent_hwnd=parent_hwnd,
         selected=selected,
@@ -158,21 +157,16 @@ def run(parent_hwnd: int, selected: CharacterSelectionResult) -> int:
 
         target_open = not initial.detected
         print(f"target_item_panel_open={target_open}")
-        verifier = make_visual_state_verifier(lambda: session.capture_frame(), profile)
-
-        # A toggle verifier must prove the state is the opposite of the state
-        # observed before the click. Do not treat the mere existence of a frame
-        # as success.
-        def opposite_state_verifier():
-            observation = verifier()
-            if observation is None:
-                return None
-            return observation if observation.detected == target_open else None
+        verifier = make_visual_state_verifier(
+            lambda: session.capture_frame(),
+            profile,
+            expected_detected=target_open,
+        )
 
         outcome = BackgroundInput(selected.hwnd).click_and_verify(
             client_x,
             client_y,
-            opposite_state_verifier,
+            verifier,
             timeout=5.0,
             poll_interval=0.10,
         )
