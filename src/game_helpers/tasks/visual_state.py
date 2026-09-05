@@ -131,7 +131,12 @@ def _load_profile(path: str | Path) -> VisualStateProfile:
     for anchor in anchors:
         if anchor.position_type not in (VisualPositionType.FIXED, VisualPositionType.FLOATING):
             raise ValueError(f"unsupported position_type: {anchor.position_type}")
-        if anchor.position_type == VisualPositionType.FIXED and not (0.0 <= (anchor.expected_x or -1.0) <= 1.0 and 0.0 <= (anchor.expected_y or -1.0) <= 1.0):
+        if anchor.position_type == VisualPositionType.FIXED and (
+            anchor.expected_x is None
+            or anchor.expected_y is None
+            or not 0.0 <= anchor.expected_x <= 1.0
+            or not 0.0 <= anchor.expected_y <= 1.0
+        ):
             raise ValueError(f"fixed anchor {anchor.name} requires normalized expected_x/expected_y")
     return VisualStateProfile(str(payload["name"]), anchors, max(1, int(payload.get("consecutive_frames", 2))))
 
