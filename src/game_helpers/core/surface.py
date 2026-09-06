@@ -1,13 +1,21 @@
-"""Geometry and health checks for hosted WSGAME surfaces."""
+"""Geometry and health checks for hosted game surfaces."""
 from __future__ import annotations
 
 import ctypes
 import sys
 from dataclasses import dataclass
 from ctypes import wintypes
+from typing import Protocol
 
-from ..capture.models import Frame
 from .models import Point
+
+
+class FrameLike(Protocol):
+    """Minimal capture contract required by surface inspection."""
+
+    width: int
+    height: int
+    window: object
 
 
 @dataclass(frozen=True)
@@ -42,9 +50,6 @@ class SurfaceHealth:
 
     @property
     def ready(self) -> bool:
-        # Visual assets are currently defined in native client pixels. Until a
-        # frame-normalization layer exists, a uniformly scaled frame is useful
-        # diagnostic information but is not safe for pixel-template interaction.
         return self.status == "ready"
 
     @property
@@ -65,17 +70,15 @@ def query_surface_geometry(hwnd: int) -> SurfaceGeometry:
     get_dpi = getattr(user32, "GetDpiForWindow", None)
     dpi = int(get_dpi(wintypes.HWND(hwnd))) if get_dpi else 96
     return SurfaceGeometry(
-        hwnd=int(hwnd),
-        client_width=int(rect.right - rect.left),
-        client_height=int(rect.bottom - rect.top),
-        screen_left=int(origin.x),
-        screen_top=int(origin.y),
-        dpi=dpi or 96,
+        hwnd=int(hwnd), client_width=int(rect.right - rect.left), client_height=int(rect.bottom - rect.top),
+        screen_left=int(origin.x), screen_top=int(origin.y), dpi=dpi or 96,
     )
 
 
-def inspect_surface(frame: Frame, geometry: SurfaceGeometry | None = None) -> SurfaceHealth:
-    geometry = geometry or query_surface_geometry(frame.window.hwnd)
+def inspect_surface(frame: FrameLike, geometry: SurfaceGeometry | None = None) -> SurfaceHealth:
+    """Inspect a frame using only the minimal capture contract, not Capture types."""
+    window = frame.window
+    geometry = geometry or query_surface_geometry(int(window.hwnd))
     ew, eh = geometry.client_width, geometry.client_height
     fw, fh = int(frame.width), int(frame.height)
     if ew <= 0 or eh <= 0 or fw <= 0 or fh <= 0:
@@ -86,16 +89,13 @@ def inspect_surface(frame: Frame, geometry: SurfaceGeometry | None = None) -> Su
     frame_aspect = fw / fh
     aspect_delta = abs(frame_aspect - expected_aspect) / expected_aspect
     evidence = [f"client_size={ew}x{eh}", f"frame_size={fw}x{fh}", f"scale=({sx:.4f},{sy:.4f})", f"aspect_delta={aspect_delta:.4f}"]
-
     if fw == ew and fh == eh:
         evidence.append("frame_matches_client_exactly")
         return SurfaceHealth("ready", (ew, eh), (fw, fh), sx, sy, aspect_delta, tuple(evidence))
-
     uniform_scale = abs(sx - sy) <= 0.02 * max(sx, sy)
     if aspect_delta <= 0.02 and uniform_scale:
         evidence.append("frame_is_uniformly_scaled_relative_to_client")
         evidence.append("pixel-template interaction is blocked until normalization is available")
         return SurfaceHealth("scaled", (ew, eh), (fw, fh), sx, sy, aspect_delta, tuple(evidence))
-
     evidence.append("frame_and_client_geometry_are_not_compatible")
     return SurfaceHealth("mismatch", (ew, eh), (fw, fh), sx, sy, aspect_delta, tuple(evidence))
