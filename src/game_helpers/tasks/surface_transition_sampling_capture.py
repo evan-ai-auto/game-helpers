@@ -7,6 +7,33 @@ from ..capture.models import Frame
 from ..core.window import get_window_info
 
 
+NORMALIZED_WIDTH = 1024
+NORMALIZED_HEIGHT = 768
+
+
+def normalize_frame(frame: Frame, width: int = NORMALIZED_WIDTH, height: int = NORMALIZED_HEIGHT) -> Frame:
+    """Resize a captured child surface to a fixed diagnostic canvas.
+
+    Transition comparison should not depend on the current child window client
+    size. All sampled images are converted to the same 1024x768 BGRA canvas.
+    """
+    source = np.frombuffer(frame.data, dtype=np.uint8).reshape(
+        frame.height, frame.width, 4
+    )
+    y_index = np.linspace(0, frame.height - 1, height).astype(np.int32)
+    x_index = np.linspace(0, frame.width - 1, width).astype(np.int32)
+    normalized = source[y_index][:, x_index]
+    normalized = np.ascontiguousarray(normalized)
+    return Frame(
+        frame.window,
+        width,
+        height,
+        normalized.tobytes(),
+        frame.captured_at,
+        frame.backend,
+    )
+
+
 def crop_child_from_parent(
     host_frame: Frame,
     parent_geometry,
@@ -15,13 +42,7 @@ def crop_child_from_parent(
     canvas_width: int,
     canvas_height: int,
 ) -> tuple[Frame, tuple[float, float], tuple[int, int, int, int], tuple[int, int, int, int]]:
-    """Map the complete child client rectangle into parent-capture pixels.
-
-    The returned crop is clipped only for measurement; the mapped rectangle
-    and coverage are recorded so a transition that has not fully rendered the
-    target can be distinguished from a stable state.
-    """
-    _ = (canvas_width, canvas_height)  # retained for call-site compatibility
+    _ = (canvas_width, canvas_height)
     sx = host_frame.width / parent_geometry.client_width
     sy = host_frame.height / parent_geometry.client_height
     left_c = child_geometry.screen_left - parent_geometry.screen_left
@@ -65,4 +86,4 @@ def capture_role(cap, parent_hwnd, parent_geometry, child_geometry, max_client_s
         canvas_width=max_client_size[0],
         canvas_height=max_client_size[1],
     )
-    return host, crop, scales, mapped, clipped
+    return host, normalize_frame(crop), scales, mapped, clipped
