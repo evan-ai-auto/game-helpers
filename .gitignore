@@ -1,0 +1,8 @@
+# Local environment
+.venv/
+
+# Editable install metadata
+src/game_helpers.egg-info/
+
+# Legacy root probe copy (package entry is under src/)
+surface_transition_sampling_probe.py
