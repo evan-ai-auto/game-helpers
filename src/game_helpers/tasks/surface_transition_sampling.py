@@ -63,7 +63,7 @@ def sample_transition(
             parent_hwnd,
             parent_geometry,
             target_geometry,
-            (max(source_profile[0], target_profile[0]), max(source_profile[1], target_profile[1])),
+            (NORMALIZED_WIDTH, NORMALIZED_HEIGHT),
         )
         captured_at = time.perf_counter()
         elapsed_ms = (captured_at - switch_started) * 1000.0
@@ -71,7 +71,7 @@ def sample_transition(
         d = delta(previous_fp, fp)
         previous_fp = fp
 
-        coverage_ok = mapped[0] >= 0 and mapped[1] >= 0 and mapped[2] <= host.width and mapped[3] <= host.height and clipped == mapped
+        coverage_ok = clipped == mapped
         if coverage_ok and first_target_coverage_ms is None:
             first_target_coverage_ms = elapsed_ms
 
@@ -108,6 +108,10 @@ def sample_transition(
         "direction": direction,
         "source_view": source_index,
         "target_view": target_index,
+        "source_client_size": f"{source_profile[0]}x{source_profile[1]}",
+        "target_client_size": f"{target_profile[0]}x{target_profile[1]}",
+        "source_baseline_crop": f"{NORMALIZED_WIDTH}x{NORMALIZED_HEIGHT}",
+        "target_baseline_crop": f"{NORMALIZED_WIDTH}x{NORMALIZED_HEIGHT}",
         "switch_return_ms": round(switch_return_ms, 3),
         "first_target_coverage_ms": None if first_target_coverage_ms is None else round(first_target_coverage_ms, 3),
         "first_visual_stable_ms": None if first_visual_stable_ms is None else round(first_visual_stable_ms, 3),
