@@ -52,5 +52,18 @@ class BackgroundGameSession:
 
         return AgentRuntime(self.capture, agent, **kwargs)
 
+    def build_dream_agent_runtime(self, *, asset_root=None, **kwargs):
+        """Build the first concrete game agent: 梦幻西游."""
+        from ..games.menghuanxiyou import DreamAgent, DreamGameAdapter, DreamObservationBuilder
+        from .agent_runtime import AgentRuntime
+
+        return AgentRuntime(
+            self.capture,
+            DreamAgent(),
+            observation_builder=DreamObservationBuilder(asset_root),
+            game_adapter=DreamGameAdapter(asset_root),
+            **kwargs,
+        )
+
     def _current_zero_based(self) -> int:
         return self.views.current_surface_index() - 1
