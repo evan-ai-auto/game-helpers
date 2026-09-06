@@ -9,7 +9,7 @@ def test_discover_game_views_filters_by_class(monkeypatch):
         WindowInfo(12, "Game", "wsgame", Rect(0, 10, 100, 110), True),
     ]
     monkeypatch.setattr(
-        "game_helpers.core.children.list_child_windows",
+        "game_helpers.platform.windows.children.list_child_windows",
         lambda _hwnd, visible_only=False: children,
     )
 
