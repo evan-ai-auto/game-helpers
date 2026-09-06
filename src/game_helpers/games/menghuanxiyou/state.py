@@ -7,12 +7,12 @@ import json
 from pathlib import Path
 
 from game_helpers.core.agent_protocol import Observation
-from game_helpers.core.models import GameState, Rect
+from game_helpers.core.models import GameState, Point, Rect
 
 
 @dataclass
 class DreamGameState(GameState):
-    """Game-specific state projected from the generic Observation contract."""
+    """Actionable semantic state projected from visual evidence and game knowledge."""
 
     game: str = "梦幻西游"
     resolution: str = ""
@@ -20,11 +20,16 @@ class DreamGameState(GameState):
     soul_task_claimed: bool = False
     scene_id: str | None = None
     scene_name: str | None = None
+    scene_confidence: float = 0.0
+    player_position: Point | None = None
     transport_points: dict[str, Rect] = field(default_factory=dict)
+    nearby_targets: dict[str, Rect] = field(default_factory=dict)
+    interaction_target: str | None = None
+    navigation_goal: str | None = None
 
 
 class DreamGameAdapter:
-    """Map visual observations into actionable 梦幻西游 state."""
+    """Map observations into state while keeping map knowledge separate from vision."""
 
     def __init__(self, asset_root: str | Path | None = None) -> None:
         root = Path(asset_root) if asset_root else Path(__file__).resolve().parents[4] / "data" / "assets"
@@ -39,21 +44,40 @@ class DreamGameAdapter:
             return {}
 
     def to_state(self, observation: Observation) -> DreamGameState:
-        objects = observation.objects
+        objects = dict(observation.objects)
+        scene_hint = observation.metadata.get("scene_id")
         scene = self.scenes.get("scene", {})
-        soul_task_claimed = "soul_task_claimed" in objects
+        scene_id = scene_hint if scene_hint == scene.get("id") else None
+        scene_name = scene.get("name") if scene_id else None
+        confidence = float(observation.metadata.get("scene_confidence", 0.0))
+
+        # Map knowledge is not treated as visual detection. Only detected
+        # objects become actionable interaction targets.
+        transport_points: dict[str, Rect] = {}
+        for item in self.scenes.get("transport_points", []):
+            key = f"transport:{item['id']}"
+            if key in objects:
+                transport_points[item["id"]] = objects[key]
+
+        target = observation.metadata.get("interaction_target")
         return DreamGameState(
             window=observation.frame.window,
             screenshot_available=True,
             inventory_visible="item_panel_open" in objects,
             item_panel_open="item_panel_open" in objects,
-            soul_task_claimed=soul_task_claimed,
-            task_completed=soul_task_claimed,
+            soul_task_claimed="soul_task_claimed" in objects,
+            task_completed="soul_task_claimed" in objects,
             detected_text=list(observation.text),
-            targets=dict(objects),
+            targets=objects,
             game=observation.metadata.get("game", "梦幻西游"),
             resolution=observation.metadata.get("resolution", ""),
-            scene_id=scene.get("id"),
-            scene_name=scene.get("name"),
+            scene_id=scene_id,
+            scene_name=scene_name,
+            scene_confidence=confidence,
+            player_position=None,
+            transport_points=transport_points,
+            nearby_targets={k: v for k, v in objects.items() if k.startswith("npc:") or k.startswith("transport:")},
+            interaction_target=target,
+            navigation_goal=observation.metadata.get("navigation_goal"),
             metadata=dict(observation.metadata),
         )
