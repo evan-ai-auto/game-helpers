@@ -22,6 +22,9 @@ class DreamGameState(GameState):
     scene_name: str | None = None
     scene_confidence: float = 0.0
     player_position: Point | None = None
+    player_position_confidence: float = 0.0
+    cash: int | None = None
+    cash_confidence: float = 0.0
     transport_points: dict[str, Rect] = field(default_factory=dict)
     nearby_targets: dict[str, Rect] = field(default_factory=dict)
     interaction_target: str | None = None
@@ -48,11 +51,24 @@ class DreamGameAdapter:
         scene_hint = observation.metadata.get("scene_id")
         scene = self.scenes.get("scene", {})
         scene_id = scene_hint if scene_hint == scene.get("id") else None
-        scene_name = scene.get("name") if scene_id else None
+        scene_name = scene.get("name") if scene_id else observation.metadata.get("scene_name")
         confidence = float(observation.metadata.get("scene_confidence", 0.0))
 
-        # Map knowledge is not treated as visual detection. Only detected
-        # objects become actionable interaction targets.
+        location = observation.metadata.get("player_location", {})
+        position = None
+        position_confidence = 0.0
+        if isinstance(location, dict) and location.get("x") is not None and location.get("y") is not None:
+            position = Point(int(location["x"]), int(location["y"]))
+            position_confidence = float(location.get("confidence", 0.0))
+            scene_name = scene_name or location.get("scene_name")
+
+        cash_info = observation.metadata.get("cash", {})
+        cash = None
+        cash_confidence = 0.0
+        if isinstance(cash_info, dict) and cash_info.get("value") is not None:
+            cash = int(cash_info["value"])
+            cash_confidence = float(cash_info.get("confidence", 0.0))
+
         transport_points: dict[str, Rect] = {}
         for item in self.scenes.get("transport_points", []):
             key = f"transport:{item['id']}"
@@ -74,7 +90,10 @@ class DreamGameAdapter:
             scene_id=scene_id,
             scene_name=scene_name,
             scene_confidence=confidence,
-            player_position=None,
+            player_position=position,
+            player_position_confidence=position_confidence,
+            cash=cash,
+            cash_confidence=cash_confidence,
             transport_points=transport_points,
             nearby_targets={k: v for k, v in objects.items() if k.startswith("npc:") or k.startswith("transport:")},
             interaction_target=target,

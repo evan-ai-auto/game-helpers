@@ -27,6 +27,7 @@ class FrameLike(Protocol):
     data: bytes
     captured_at: float
     backend: str
+    metadata: Mapping[str, Any]
 
 
 @dataclass(frozen=True)

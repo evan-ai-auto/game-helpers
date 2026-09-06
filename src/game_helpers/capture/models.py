@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from time import time
+from typing import Any, Mapping
 
 from game_helpers.core.models import WindowInfo
 
@@ -12,9 +13,9 @@ from game_helpers.core.models import WindowInfo
 class Frame:
     """A captured BGRA image associated with a source window.
 
-    ``data`` contains tightly packed BGRA bytes, four bytes per pixel.
-    Keeping the capture layer independent of NumPy lets callers choose their
-    preferred image-processing stack later.
+    ``metadata`` is an optional bridge for platform-specific perception
+    adapters. Vision engines should prefer pixels, but can attach OCR or
+    capture-side hints without coupling the capture layer to an OCR engine.
     """
 
     window: WindowInfo
@@ -23,6 +24,7 @@ class Frame:
     data: bytes
     captured_at: float
     backend: str
+    metadata: Mapping[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_bgra(
@@ -33,10 +35,11 @@ class Frame:
         data: bytes,
         *,
         backend: str,
+        metadata: Mapping[str, Any] | None = None,
     ) -> "Frame":
         expected = width * height * 4
         if width <= 0 or height <= 0:
             raise ValueError("frame dimensions must be positive")
         if len(data) != expected:
             raise ValueError(f"expected {expected} BGRA bytes, got {len(data)}")
-        return cls(window, width, height, bytes(data), time(), backend)
+        return cls(window, width, height, bytes(data), time(), backend, metadata or {})
