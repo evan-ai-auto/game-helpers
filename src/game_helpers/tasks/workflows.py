@@ -41,12 +41,17 @@ def default_workflows() -> tuple[TaskWorkflow, ...]:
         TaskWorkflow(
             id="minghun",
             name="命魂任务",
-            description="命魂任务状态诊断入口；当前阶段只检测是否已领取，不执行领取。",
+            description="执行领取状态检测（800×600 基线）；不自动领取。",
             recipe=TaskRecipe(
                 id="minghun",
                 name="命魂任务",
                 category=TaskCategory.GENERAL,
-                metadata={"game": "梦幻西游", "diagnosis_only": True, "status_detector": "soul_task"},
+                metadata={
+                    "game": "梦幻西游",
+                    "diagnosis_only": True,
+                    "status_detector": "soul_task",
+                    "baseline_client": "800x600",
+                },
             ),
         ),
         TaskWorkflow(

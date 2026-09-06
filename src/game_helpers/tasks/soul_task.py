@@ -69,12 +69,15 @@ class SoulTaskUiProfile:
     match_threshold: float = 0.78
 
 
+# Baseline child-client resolution for UI fractions and click targets.
+SOUL_TASK_BASELINE_SIZE = (800, 600)
+
 DEFAULT_SOUL_TASK_UI = SoulTaskUiProfile(
-    # Parent WGC frame is 1036x831 in the user's current environment.
-    task_entry_toggle=UiPoint(25 / 1036, 153 / 831),
+    # Fractions of the selected WSGAME client (baseline 800x600), not the host chrome.
+    task_entry_toggle=UiPoint(25 / 800, 153 / 600),
     task_panel_icon=UiPoint(0.10, 0.10),
     claimed_icon_region=UiRect(0.0, 0.0, 0.34, 0.42),
-    collapsed_toggle_region=UiRect(10 / 1036, 139 / 831, 42 / 1036, 166 / 831),
+    collapsed_toggle_region=UiRect(10 / 800, 139 / 600, 42 / 800, 166 / 600),
 )
 
 
