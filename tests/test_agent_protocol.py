@@ -7,6 +7,7 @@ from game_helpers.core import (
     ActionType,
     AgentDecision,
     Observation,
+    Rect,
     VerificationResult,
 )
 
@@ -26,7 +27,7 @@ def test_observation_accepts_capture_frame_contract():
     observation = Observation(
         frame=frame,
         observation_id="obs-1",
-        objects={"button": None},
+        objects={"button": Rect(0, 0, 10, 10)},
         text=("Play",),
     )
 
