@@ -12,11 +12,7 @@ from .view_manager import GameViewManager
 
 
 class BackgroundGameSession:
-    """Coordinate one hosted game surface without activating the host window.
-
-    This is runtime orchestration, not Core: it composes window/view selection,
-    capture and input adapters into one session boundary for an Agent.
-    """
+    """Coordinate one hosted game surface without activating the host window."""
 
     def __init__(self, window: WindowInfo, *, timeout: float = 2.0) -> None:
         if sys.platform != "win32":
@@ -49,6 +45,12 @@ class BackgroundGameSession:
             screenshot_available=True,
             metadata={"capture_backend": frame.backend},
         )
+
+    def build_agent_runtime(self, agent, **kwargs):
+        """Bind this Windows/WGC session to the generic AgentRuntime loop."""
+        from .agent_runtime import AgentRuntime
+
+        return AgentRuntime(self.capture, agent, **kwargs)
 
     def _current_zero_based(self) -> int:
         return self.views.current_surface_index() - 1
