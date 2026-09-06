@@ -8,13 +8,7 @@ from typing import Callable, Protocol
 
 from ..actions.executor import ActionExecutor
 from ..capture.models import Frame
-from ..core.agent_protocol import (
-    ActionResult,
-    ActionStatus,
-    AgentDecision,
-    Observation,
-    VerificationResult,
-)
+from ..core.agent_protocol import ActionResult, ActionStatus, AgentDecision, Observation, VerificationResult
 from ..core.models import GameState
 
 
@@ -42,12 +36,14 @@ class Verifier(Protocol):
 
 @dataclass(frozen=True)
 class AgentStep:
-    """One complete Capture -> ... -> Verification transition."""
+    """One Capture -> Observation -> State -> Decide -> Execute -> Verify transition."""
 
     observation: Observation
     state: GameState
     decision: AgentDecision
     results: tuple[ActionResult, ...]
+    next_observation: Observation
+    next_state: GameState
     verification: VerificationResult
 
 
@@ -55,28 +51,19 @@ class DefaultObservationBuilder:
     """Turn a capture Frame into the protocol-level Observation."""
 
     def build(self, frame: Frame) -> Observation:
-        return Observation(
-            frame=frame,
-            timestamp=frame.captured_at,
-            metadata={"capture_backend": frame.backend},
-        )
+        return Observation(frame=frame, timestamp=frame.captured_at, metadata={"capture_backend": frame.backend})
 
 
 class MetadataGameAdapter:
-    """Small adapter for bootstrapping a game-specific adapter.
-
-    Real games should replace this with detection/recognition logic. Keeping it
-    here makes the runtime usable for smoke tests without inventing game rules.
-    """
+    """Bootstrap adapter; real games replace this with Vision + game semantics."""
 
     def to_state(self, observation: Observation) -> GameState:
-        metadata = dict(observation.metadata)
         return GameState(
             window=observation.frame.window,
             screenshot_available=True,
             detected_text=list(observation.text),
             targets=dict(observation.objects),
-            metadata=metadata,
+            metadata=dict(observation.metadata),
         )
 
 
@@ -112,16 +99,20 @@ class AgentRuntime:
         previous = self._state or state
         decision = self.agent.decide(state, observation)
         results = tuple(self._execute(action) for action in decision.actions)
-        verification = self.verifier.verify(previous, state, decision, results)
-        self._state = verification.state or state
-        return AgentStep(observation, self._state, decision, results, verification)
+
+        next_frame = self.capture()
+        next_observation = self.observation_builder.build(next_frame)
+        next_state = self.game_adapter.to_state(next_observation)
+        verification = self.verifier.verify(previous, next_state, decision, results)
+        self._state = verification.state or next_state
+        return AgentStep(observation, state, decision, results, next_observation, self._state, verification)
 
     def run(self, *, max_steps: int | None = None) -> list[AgentStep]:
         steps: list[AgentStep] = []
         while max_steps is None or len(steps) < max_steps:
             step = self.step()
             steps.append(step)
-            if step.state.task_completed:
+            if step.next_state.task_completed:
                 break
         return steps
 
@@ -135,10 +126,10 @@ class AgentRuntime:
 
 
 class DefaultVerifier:
-    """Conservative verifier: execution must succeed; state is carried forward."""
+    """Conservative verifier: execution must succeed and post-action state is retained."""
 
     def verify(self, previous, current, decision, results):
         failed = [result for result in results if not result.succeeded]
         if failed:
             return VerificationResult(False, "action execution failed", current)
-        return VerificationResult(True, "actions executed", current)
+        return VerificationResult(True, "post-action observation accepted", current)
