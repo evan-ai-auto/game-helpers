@@ -41,12 +41,14 @@ class DreamGameAdapter:
     def to_state(self, observation: Observation) -> DreamGameState:
         objects = observation.objects
         scene = self.scenes.get("scene", {})
+        soul_task_claimed = "soul_task_claimed" in objects
         return DreamGameState(
             window=observation.frame.window,
             screenshot_available=True,
             inventory_visible="item_panel_open" in objects,
             item_panel_open="item_panel_open" in objects,
-            soul_task_claimed="soul_task_claimed" in objects,
+            soul_task_claimed=soul_task_claimed,
+            task_completed=soul_task_claimed,
             detected_text=list(observation.text),
             targets=dict(objects),
             game=observation.metadata.get("game", "梦幻西游"),
