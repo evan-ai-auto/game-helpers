@@ -2,7 +2,7 @@
 
 Windows 游戏 GUI 自动化 / GUI Agent 核心包。当前基线：**子窗 800×600**、默认**纯后台**（不抢前台）。
 
-产品与验收文档见仓库根目录 [`docs/`](../../../docs/README.md)。
+产品与验收文档见仓库根目录 [`docs/`](../../docs/README.md)。
 
 ---
 
@@ -50,7 +50,7 @@ find_window
   → guard.finish()
 ```
 
-稳定入口表见 [`docs/capabilities.md`](../../../docs/capabilities.md)。
+稳定入口表见 [`docs/capabilities.md`](../../docs/capabilities.md)。
 
 ---
 
@@ -91,5 +91,5 @@ find_window
 .\.venv\Scripts\python.exe -m game_helpers.tasks.instance_surface_cli
 ```
 
-人工复验步骤：[`docs/verification.md`](../../../docs/verification.md)。  
-资产维护：[`docs/maintain.md`](../../../docs/maintain.md)。
+人工复验步骤：[`docs/verification.md`](../../docs/verification.md)。  
+资产维护：[`docs/maintain.md`](../../docs/maintain.md)。
