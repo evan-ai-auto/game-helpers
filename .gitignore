@@ -2,7 +2,22 @@
 .venv/
 
 # Editable install metadata
+*.egg-info/
 src/game_helpers.egg-info/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
 
 # Legacy root probe copy (package entry is under src/)
 surface_transition_sampling_probe.py
+
+# Local diagnostic / probe outputs (keep generating locally; do not commit)
+diagnostic/
+surface-probe/
+surface-probe-2/
+background-hover-1/
+background-hover-2/
+background-input-*.png
