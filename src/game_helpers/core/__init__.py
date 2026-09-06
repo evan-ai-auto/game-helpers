@@ -4,15 +4,24 @@ Win32 discovery/input and runtime orchestration are intentionally kept outside
 Core. Legacy convenience names remain lazy compatibility exports.
 """
 
+from .agent_protocol import (
+    ActionResult,
+    ActionStatus,
+    AgentDecision,
+    FrameLike,
+    Observation,
+    VerificationResult,
+)
 from .diagnostics import WindowDiagnostics, diagnose_window
 from .game_view import GameView, discover_game_views
 from .models import Action, ActionType, GameState, Point, Rect, WindowInfo
 from .surface import SurfaceGeometry, SurfaceHealth, inspect_surface, query_surface_geometry
 
 __all__ = [
-    "Action", "ActionType", "GameState", "GameView", "Point", "Rect", "SurfaceGeometry",
-    "SurfaceHealth", "WindowDiagnostics", "WindowInfo", "diagnose_window", "discover_game_views",
-    "inspect_surface", "query_surface_geometry",
+    "Action", "ActionResult", "ActionStatus", "ActionType", "AgentDecision", "FrameLike",
+    "GameState", "GameView", "Observation", "Point", "Rect", "SurfaceGeometry",
+    "SurfaceHealth", "VerificationResult", "WindowDiagnostics", "WindowInfo",
+    "diagnose_window", "discover_game_views", "inspect_surface", "query_surface_geometry",
 ]
 
 
