@@ -4,43 +4,45 @@
 
 具体游戏适配层。第一款真实接入游戏为 **梦幻西游**。
 
-## 当前实现
+## Game Agent Brain
+
+当前链路已经从单一“命魂任务视觉闭环”升级为长期 Agent Brain：
 
 ```text
-WGC Frame
-   ↓
-DreamObservationBuilder
-   ├─ 道具栏入口模板
-   ├─ 道具面板模板
-   └─ 命魂任务已领取图标
-   ↓
-DreamGameAdapter
-   ↓
+Capture / WGC
+    ↓
+Vision Observation
+    ├─ UI 状态
+    ├─ 场景识别（OCR/显式视觉证据接口）
+    └─ NPC / 传送点视觉目标接口
+    ↓
 DreamGameState
-   ↓
-DreamAgent
-   ├─ 打开道具栏
-   └─ 等待/确认命魂任务状态
+    ↓
+GoalPlanner
+    ├─ 场景确认
+    ├─ 目标理解
+    ├─ 导航
+    ├─ 交互
+    └─ 状态变化验证
+    ↓
+Action → Result → Verification
+    ↑                    │
+    └── Memory / Recovery
 ```
 
-## 边界
+## 已实现
 
-- 游戏视觉资产和语义只放在 `games/<target_game>` 或 `data/assets`。
-- 通用 Vision 只负责把像素变成可复用的检测结果。
-- Game Adapter 把检测结果解释成游戏状态。
-- Agent Policy 根据游戏状态决定下一步动作，但不调用 Windows API。
+- `core.agent_brain`：通用 GoalPlanner、AgentMemory、RecoveryPolicy。
+- `games/menghuanxiyou/scene.py`：场景识别器，优先使用显式视觉/OCR证据，不把未知场景猜成已知场景。
+- `games/menghuanxiyou/navigation.py`：从场景知识构建传送点/导航图。
+- `games/menghuanxiyou/recovery.py`：retry → reacquire → abort 的有界恢复策略。
+- `DreamAgent`：支持 `soul_task` 和 `transport:<target_id>` 两类目标，并通过 Runtime 回收执行/验证结果。
+- `AgentRuntime`：每轮完成 post-action recapture，并把 VerificationResult 回传给 Agent Memory。
 
-## 当前验收范围
+## 安全动作原则
 
-基于项目现有 **800×600** 资产，Agent 可以形成真实闭环：
+导航和 NPC/传送点交互只允许使用当前 Observation 中**视觉确认的目标**。地图 JSON 中的坐标属于知识，不会自动变成盲点点击坐标。
 
-1. 检测道具栏入口。
-2. 必要时点击打开道具栏。
-3. 重新截图并检测命魂任务已领取图标。
-4. 视觉状态确认后结束当前任务。
+## 当前限制
 
-其中命魂图标资产已经标记为 800×600 实机验证通过；道具栏相关资产仍保留 pending 标记，因此不宣称整个流程已经完成实机验收。
-
-## 后续
-
-在真实 Windows 游戏环境验证上述链路后，再增加场景识别、NPC/传送点导航和更高层任务策略；不要把未经验证的坐标直接升级成自动驾驶策略。
+现有仓库的场景/NPC 视觉资产仍不完整，因此“场景识别 → NPC/传送点导航 → 传送 → 状态变化验证”已经有 Brain、状态机、导航图和恢复机制，但不能宣称已经完成真实 Windows 游戏实机验收。下一步应补齐真实游戏截图/目标模板（或接入 OCR/VLM Vision Adapter），再进行端到端验收。
