@@ -21,8 +21,8 @@
 | 6 | 按分辨率解析 UI 资产 | `tasks.asset_resolution.resolve_resolution_asset` | `resolutions/{WxH}/`；缺档报错 |
 | 6 | 人工协助采坐标（F8） | `tasks.manual_coordinate.collect_client_coordinate` | **标定专用** |
 | 6 | 采坐标 CLI | `python -m game_helpers.tasks.manual_coordinate_cli` | 不写回文件 |
-| 5 | 道具栏开/关检测 | `resolutions/800x600/item_panel_open.json` | 新「加锁」模板；`pending` 待你确认 |
-| 5+2 | 道具栏检测+反转 | `item_panel_flow` + `item_bar_toggle.json` | 默认用 `click_client`；`--coord-source` 可选 |
+| 5 | 道具栏开/关检测 | `resolutions/800x600/item_panel_open.json` | 临时模板已接线；`pending`，需 800×600 V3 确认 |
+| 5+2 | 道具栏检测+反转 | `item_panel_flow` + `item_bar_toggle.json` | 默认 `stored_click`；基线非 800×600 会拒跑 |
 | 2+5 | 父窗截图并裁子窗 | `tasks.verification_session.VerificationSession.capture_frame` | WGC 抓父窗再 crop |
 | 5 | 命魂面板折叠检测 | `tasks.soul_task.detect_soul_task_panel_collapsed` | 基于子窗帧 |
 | 5 | 命魂已领取图标检测 | `tasks.soul_task.detect_soul_task_claimed_icon` | 模板资产见 maintain |

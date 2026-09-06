@@ -7,8 +7,11 @@
   "threshold": 0.75,
   "search_step": 1,
   "y0_fraction": 0.85,
-  "click_client": [469, 565],
+  "click_client": [
+    469,
+    565
+  ],
   "verification_status": "pending",
   "verified_resolutions": [],
-  "verification_notes": "人工 F8 采点 (469,565)：后台点击后面板已打开，但旧打开态检测失败。等打开态复验通过后可将本资产标 verified。"
+  "verification_notes": "人工/模板坐标在空闲态曾可打开面板；800x600 冒烟时角色处于自动战斗并进入战斗对话，点击未稳定打开。请空闲态再验 V3。click_client 暂保留 [469,565]；本角色模板中心约 (462,582)。"
 }

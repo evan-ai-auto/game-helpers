@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "item_panel_open",
-  "description": "800×600：道具栏打开态检测。请用你上传的稳定 chrome 模板替换 image。",
+  "description": "800×600：道具栏打开态检测。用稳定 chrome（如底部页签）作标志。",
   "resolution": "800x600",
   "anchors": [
     {
@@ -17,5 +17,5 @@
   "consecutive_frames": 2,
   "verification_status": "pending",
   "verified_resolutions": [],
-  "verification_notes": "等待人工上传正式 800×600 打开态模板到 item_panel_open.png。临时可用 item_panel_open_tab_lock.png（Agent 从 after 截图裁的「加锁」页签）。"
+  "verification_notes": "临时「加锁」页签裁剪。800x600 上须在空闲非战斗态复验 V3 后再标 verified。"
 }

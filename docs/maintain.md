@@ -69,8 +69,8 @@ data/assets/ui/resolutions/800x600/item_panel_open.png
 | 资产 | 路径 | status | 备注 |
 |---|---|---|---|
 | 命魂已领取图标 | `ui/soul_task_claimed_icon.json` | `verified` | V1；800×600 |
-| 道具栏打开态（新） | `resolutions/800x600/item_panel_open.json` + `item_panel_open.png` | `pending` | **待你上传正式 PNG**；现为临时「加锁」裁剪 |
-| 道具栏切换（新） | `resolutions/800x600/item_bar_toggle.json` | `pending` | 含人工 `click_client=[469,565]` |
+| 道具栏打开态（新） | `resolutions/800x600/item_panel_open.json` + `item_panel_open.png` | `pending` | 临时「加锁」裁剪已就位；**须在 800×600 上 V3 通过后再 verified**（现场曾扫到 1024×768 拒跑） |
+| 道具栏切换（新） | `resolutions/800x600/item_bar_toggle.json` | `pending` | `click_client=[469,565]`；同上，等 V3 两轮通过 |
 | 道具栏打开态（旧） | `visual_states/item_panel_open.json` | `failed` | 废弃 |
 | 道具栏切换（旧） | `ui/item_bar_toggle.json` | `failed` | 废弃 |
 | 女娲神使 / 场景 | `npcs/`、`scenes/` | `pending` | 未分分辨率 |
