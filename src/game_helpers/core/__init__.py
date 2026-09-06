@@ -1,42 +1,36 @@
-from .children import list_child_windows
+"""Generic GUI Agent Core contracts and platform-independent models.
+
+Win32 discovery/input and runtime orchestration are intentionally kept outside
+Core. Legacy convenience names remain lazy compatibility exports.
+"""
+
 from .diagnostics import WindowDiagnostics, diagnose_window
 from .game_view import GameView, discover_game_views
 from .models import Action, ActionType, GameState, Point, Rect, WindowInfo
 from .surface import SurfaceGeometry, SurfaceHealth, inspect_surface, query_surface_geometry
-from .tab import GameViewTabSession, current_tab_index, find_tab_control, select_tab
-from .view_manager import GameViewManager
-from .window import find_window, list_windows
 
 __all__ = [
-    "Action",
-    "ActionType",
-    "GameState",
-    "GameView",
-    "GameViewManager",
-    "GameViewTabSession",
-    "Point",
-    "Rect",
-    "SurfaceGeometry",
-    "SurfaceHealth",
-    "WindowDiagnostics",
-    "WindowInfo",
-    "current_tab_index",
-    "diagnose_window",
-    "discover_game_views",
-    "find_tab_control",
-    "find_window",
-    "inspect_surface",
-    "list_child_windows",
-    "list_windows",
-    "query_surface_geometry",
-    "select_tab",
+    "Action", "ActionType", "GameState", "GameView", "Point", "Rect", "SurfaceGeometry",
+    "SurfaceHealth", "WindowDiagnostics", "WindowInfo", "diagnose_window", "discover_game_views",
+    "inspect_surface", "query_surface_geometry",
 ]
 
 
 def __getattr__(name: str):
-    """Lazy-load the high-level session to avoid core/capture import cycles."""
+    """Load legacy adapters only when an old API is explicitly requested."""
+    if name == "list_child_windows":
+        from ..platform.windows.children import list_child_windows
+        return list_child_windows
+    if name in {"current_tab_index", "find_tab_control", "select_tab", "GameViewTabSession"}:
+        from ..platform.windows import tabs
+        return getattr(tabs, name)
+    if name == "GameViewManager":
+        from ..runtime.view_manager import GameViewManager
+        return GameViewManager
     if name == "BackgroundGameSession":
-        from .background_session import BackgroundGameSession
-
+        from ..runtime.session import BackgroundGameSession
         return BackgroundGameSession
+    if name in {"find_window", "list_windows", "get_window_info"}:
+        from ..platform.windows import window
+        return getattr(window, name)
     raise AttributeError(name)
