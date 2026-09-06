@@ -84,15 +84,21 @@ class GameViewManager:
 
         user32 = ctypes.windll.user32
         foreground_before = int(user32.GetForegroundWindow())
-        SW_HIDE = 0
-        SW_SHOWNOACTIVATE = 4
+        # Prefer SetWindowPos + SWP_NOACTIVATE over ShowWindow: some hosts still
+        # steal focus when child visibility flips via ShowWindow(SW_SHOWNOACTIVATE).
+        SWP_NOSIZE = 0x0001
+        SWP_NOMOVE = 0x0002
+        SWP_NOZORDER = 0x0004
+        SWP_NOACTIVATE = 0x0010
+        SWP_SHOWWINDOW = 0x0040
+        SWP_HIDEWINDOW = 0x0080
+        flags_base = SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
         target = views[index - 1]
 
         for view in views:
-            user32.ShowWindow(
-                view.hwnd,
-                SW_SHOWNOACTIVATE if view.hwnd == target.hwnd else SW_HIDE,
-            )
+            flags = flags_base | (SWP_SHOWWINDOW if view.hwnd == target.hwnd else SWP_HIDEWINDOW)
+            if not user32.SetWindowPos(int(view.hwnd), 0, 0, 0, 0, 0, flags):
+                raise ctypes.WinError()
 
         deadline = time.monotonic() + self.timeout
         while time.monotonic() < deadline:

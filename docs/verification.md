@@ -1,8 +1,10 @@
 # 人工复验清单
 
-Agent 先实机冒烟，再把本页步骤给你；**你本地确认通过后**，我们再开下一项。
+**验收节奏**：你本地执行并把控制台日志/截图结论反馈给 Agent → Agent 分析改代码 → 你再验。  
+Agent **不**长时间挂机等待游戏前台交互或未满足条件的循环。
 
-基线：子窗 **800×600**；纯后台（不要把游戏点到最前）。
+基线：子窗 **800×600**；纯后台（不要把游戏点到最前）。  
+资产是否可用以 JSON 的 `verification_status` 为准，台账见 [maintain.md](maintain.md)。
 
 ---
 
@@ -42,13 +44,13 @@ Agent 先实机冒烟，再把本页步骤给你；**你本地确认通过后**�
 
 ---
 
-## V2 — 多子窗口后台切换（待你确认）
+## V2 — 多子窗口后台切换
 
 | 项 | 内容 |
 |---|---|
 | 覆盖能力 | 3 纯后台 · 4 多子窗口切换 · 父窗截图区分实例 |
-| Agent 冒烟 | **已通过**（6/6 实例画面可区分，前台未变，已恢复） |
-| 你的确认 | 待确认 |
+| Agent 冒烟 | 已通过 |
+| 你的确认 | 待确认（或已确认后改这里） |
 
 **前置条件**
 
@@ -65,30 +67,50 @@ Agent 先实机冒烟，再把本页步骤给你；**你本地确认通过后**�
 
 （无交互，直接跑完。）
 
-**操作步骤**
-
-1. 执行上面命令
-2. 观察控制台：是否逐个 `Surface #N` 且 `foreground` 不变
-3. 可选：打开 `diagnostic/instance_surfaces_verify/surface-*.png`，看各实例画面是否不同
-4. 结束后看游戏是否回到原先可见页签/画面（命令会恢复 original surface）
-
 **通过标准**
 
-- `WSGAME instances` ≥ 2
-- 每个 `Surface #N: visible_surface=N`
-- `unique_surface_frames` 等于实例数（或 `surfaces_distinct=True`）
+- `surfaces_distinct=True`
 - `foreground_unchanged=True`
 - `restored=True`
 - `result=PASSED`
 
-**失败时请告诉我**
-
-- 完整控制台尾部（含 `result=`）
-- 当时前台窗口是否被切到游戏
-- `instances` 数量
-
 ---
 
-## 下一项预告（V2 你确认后再做）
+## V3 — 道具栏状态检测 + 反向切换（待你确认）
 
-预计 **V3 — 后台选角同步（Surface+Tab）**：`character_selection_cli`（需交互选角色）。
+| 项 | 内容 |
+|---|---|
+| 覆盖能力 | 1 选角 · 2 后台点击 · 5 打开态检测（800×600 新模板）· 存储 click_client · 7 流程 |
+| Agent | 已换 `resolutions/800x600` 资产；打开态 offline 可区分 before/after |
+| 你的确认 | **请再跑一轮**（建议先默认 `auto`，用已存 `(469,565)`） |
+
+**已知问题修正**
+
+1. **抢前台**：Surface 切换改为 `SetWindowPos(SWP_NOACTIVATE)`；`BackgroundRunGuard` 结束时若前台被抢走会尝试恢复。默认 `--coord-source auto` **不会**为采点拉前台（只有 `manual` / 回退才会）。  
+2. **打开态模板**：请把正式 800×600 图覆盖到  
+   `data/assets/ui/resolutions/800x600/item_panel_open.png`（步骤见 [maintain.md](maintain.md) §1.4）。
+
+**推荐复验（无需再 F8）**
+
+```powershell
+.\.venv\Scripts\python.exe -m game_helpers.tasks.task_workflow_cli
+```
+
+选角色 → 选道具栏。默认 `auto` 会用资产里的 `click_client=[469,565]`。
+
+关→开、开→关各一轮；跑前/跑后肉眼确认。
+
+仍要人工采点时加：`--coord-source manual`
+
+**通过标准**
+
+- `resolution_key=800x600`  
+- before/after 与肉眼一致且相反  
+- `result=PASSED`  
+- `coord_source_used=stored_click`（默认）或 `manual`  
+
+**请反馈**：完整控制台日志。---
+
+## 下一项预告（V3 你确认后再做）
+
+预计继续其它状态检测或任务步骤能力。

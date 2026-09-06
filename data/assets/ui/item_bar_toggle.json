@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "name": "item_bar_toggle",
+  "deprecated": true,
+  "superseded_by": "data/assets/ui/resolutions/800x600/item_bar_toggle.json",
+  "description": "已废弃：请使用 resolutions/{WxH}/item_bar_toggle.json。",
+  "image": "道具栏图标.blob",
+  "threshold": 0.75,
+  "search_step": 1,
+  "y0_fraction": 0.85,
+  "baseline_client": [800, 600],
+  "verification_status": "failed",
+  "verified_resolutions": [],
+  "verification_notes": "已迁移到按分辨率目录维护。"
+}

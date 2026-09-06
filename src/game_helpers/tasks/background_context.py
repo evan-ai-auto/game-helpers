@@ -56,14 +56,28 @@ class BackgroundRunGuard:
             restore_point=capture_view_restore_point(manager),
         )
 
-    def finish(self) -> dict[str, bool]:
+    def finish(self, *, restore_foreground: bool = True) -> dict[str, bool]:
         try:
             surface_ok, tab_ok = restore_view(self.manager, self.restore_point)
         except Exception:
             surface_ok, tab_ok = False, False
+
+        foreground_restored = True
+        if restore_foreground and self.foreground_before and foreground_hwnd() != self.foreground_before:
+            # Surface/tab flips can occasionally steal focus; put the original
+            # foreground window back so normal automation stays background-safe.
+            try:
+                from .manual_coordinate import set_foreground
+
+                set_foreground(self.foreground_before)
+                foreground_restored = foreground_hwnd() == self.foreground_before
+            except Exception:
+                foreground_restored = False
+
         foreground_ok = foreground_hwnd() == self.foreground_before
         return {
             "restored_surface": surface_ok,
             "restored_tab": tab_ok,
             "foreground_unchanged": foreground_ok,
+            "foreground_restored": foreground_restored,
         }

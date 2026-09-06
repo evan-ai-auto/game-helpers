@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import io
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -67,11 +69,65 @@ def _frame_gray(frame: Frame) -> np.ndarray:
     return (0.114 * b + 0.587 * g + 0.299 * r).astype(np.float32)
 
 
+def _open_template_image(path: Path) -> Image.Image:
+    """Open a PNG/JPEG template, or a ``.blob`` file that stores base64 image bytes."""
+    if path.suffix.lower() == ".blob":
+        payload = path.read_text(encoding="utf-8").strip()
+        return Image.open(io.BytesIO(base64.b64decode(payload, validate=True)))
+    return Image.open(path)
+
+
 def _template_gray(path: Path) -> np.ndarray:
-    with Image.open(path) as image:
+    with _open_template_image(path) as image:
         rgb = image.convert("RGB")
     array = np.asarray(rgb, dtype=np.float32)
     return (0.114 * array[..., 2] + 0.587 * array[..., 1] + 0.299 * array[..., 0]).astype(np.float32)
+
+
+@dataclass(frozen=True)
+class TemplateMatch:
+    """Best template match inside a frame (client/capture pixel space)."""
+
+    score: float
+    origin: tuple[int, int]
+    width: int
+    height: int
+
+    @property
+    def center(self) -> tuple[int, int]:
+        return self.origin[0] + self.width // 2, self.origin[1] + self.height // 2
+
+
+def find_template_match(
+    frame: Frame,
+    template_path: str | Path,
+    *,
+    threshold: float = 0.75,
+    search_step: int = 1,
+    y0_fraction: float | None = None,
+) -> TemplateMatch | None:
+    """Locate a single template by NCC; optional ``y0_fraction`` limits search to the bottom band."""
+    path = Path(template_path)
+    image = _frame_gray(frame)
+    template = _template_gray(path)
+    th, tw = template.shape
+    y0 = 0
+    if y0_fraction is not None:
+        if not 0.0 <= y0_fraction < 1.0:
+            raise ValueError("y0_fraction must be in [0, 1)")
+        y0 = int(round(float(y0_fraction) * image.shape[0]))
+        y0 = min(max(0, y0), max(0, image.shape[0] - th))
+    search = image[y0:, :]
+    scores = _ncc_map(search, template, max(1, int(search_step)))
+    if scores.size == 0:
+        return None
+    local_y, local_x = np.unravel_index(int(np.argmax(scores)), scores.shape)
+    score = float(scores[local_y, local_x])
+    if score < float(threshold):
+        return None
+    origin_x = int(local_x * search_step)
+    origin_y = int(y0 + local_y * search_step)
+    return TemplateMatch(score=score, origin=(origin_x, origin_y), width=int(tw), height=int(th))
 
 
 def _ncc_map(image: np.ndarray, template: np.ndarray, step: int) -> np.ndarray:

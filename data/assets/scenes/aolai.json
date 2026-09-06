@@ -70,5 +70,8 @@
       "note": "花果山门派入口"
     }
   ],
-  "source_note": "由用户提供的傲来国传送点表整理。坐标按用户提供的数据原样保存。"
+  "source_note": "由用户提供的傲来国传送点表整理。坐标按用户提供的数据原样保存。",
+  "verification_status": "pending",
+  "verified_resolutions": [],
+  "verification_notes": "场景坐标未做分辨率分档；自动化使用前需按客户区单独验证。"
 }

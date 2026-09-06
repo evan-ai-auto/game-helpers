@@ -11,6 +11,8 @@
 5. 资产与流程走可维护目录，勿把模板路径写死难扩展。
 6. **新流程优先组合 [capabilities.md](capabilities.md) 里的稳定入口**，不要从探针里再抄一份。
 7. 未请勿 commit；发现做不了的记 [backlog.md](backlog.md)。
+8. **实机验收以用户本地跑为准**：改完后给出指令与期望日志字段即可；不要长时间挂机等待游戏条件/交互。用户贴日志后再分析调整。
+9. 资产 JSON 必须带 `verification_status`（`pending`/`verified`/`failed`）；流程优先只用 `verified`。约定见 [maintain.md](maintain.md)。
 
 ## 代码落点（短）
 
@@ -23,6 +25,7 @@
 | 角色 / 状态 / 流程 | `tasks/` |
 | 命魂最小闭环 | `tasks/soul_task_flow.py`、`task_workflow_cli.py` |
 | 点击 | `actions/background_input.py` |
-| 图标与状态资产 | `data/assets/`（人工维护） |
+| 人工采坐标（F8） | `tasks/manual_coordinate.py`、`manual_coordinate_cli.py` |
+| 图标与状态资产 | `data/assets/ui/resolutions/{WxH}/` + `tasks/asset_resolution.py` |
 
 切角色：先 `switch_surface_to`，再后台 `switch_to`，并确认前台未变（或用 `sync_selected_character` / `BackgroundRunGuard`）。

@@ -1,7 +1,9 @@
 {
   "version": 1,
   "name": "item_panel_open",
-  "description": "道具栏打开状态：使用用户提供样本中的稳定底部边框/页签结构作为标志，不依赖物品内容；整帧任意位置搜索。",
+  "deprecated": true,
+  "superseded_by": "data/assets/ui/resolutions/800x600/item_panel_open.json",
+  "description": "已废弃：旧模板在 800×600 上无法可靠检测打开态。请使用 resolutions/{WxH}/item_panel_open.json。",
   "anchors": [
     {
       "name": "item_panel_bottom_frame",
@@ -13,5 +15,8 @@
       "search_step": 1
     }
   ],
-  "consecutive_frames": 2
+  "consecutive_frames": 2,
+  "verification_status": "failed",
+  "verified_resolutions": [],
+  "verification_notes": "800×600 after 截图上最高 NCC≈0.43，面板已开仍判关闭。已用 resolutions/800x600 新模板替代。"
 }

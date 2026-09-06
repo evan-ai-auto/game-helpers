@@ -17,7 +17,12 @@
 | 3+4 | 后台切角色（Surface+Tab） | `tasks.character_selection.sync_selected_character` | 不抢焦点；失败则抛错 |
 | 3 | 后台运行上下文（保存/恢复） | `tasks.background_context.BackgroundRunGuard` | 记录前台+视图，结束后恢复 |
 | 4 | 多子窗切换原语 | `core.view_manager.GameViewManager.switch_surface_to` / `switch_to` | `activate_before_switch=False` |
-| 2 | 后台点击 | `actions.background_input.BackgroundInput.click_sync` | 子窗客户区坐标 |
+| 2 | 后台点击 | `actions.background_input.BackgroundInput.click_sync` / `click_and_verify` | 子窗客户区坐标 |
+| 6 | 按分辨率解析 UI 资产 | `tasks.asset_resolution.resolve_resolution_asset` | `resolutions/{WxH}/`；缺档报错 |
+| 6 | 人工协助采坐标（F8） | `tasks.manual_coordinate.collect_client_coordinate` | **标定专用** |
+| 6 | 采坐标 CLI | `python -m game_helpers.tasks.manual_coordinate_cli` | 不写回文件 |
+| 5 | 道具栏开/关检测 | `resolutions/800x600/item_panel_open.json` | 新「加锁」模板；`pending` 待你确认 |
+| 5+2 | 道具栏检测+反转 | `item_panel_flow` + `item_bar_toggle.json` | 默认用 `click_client`；`--coord-source` 可选 |
 | 2+5 | 父窗截图并裁子窗 | `tasks.verification_session.VerificationSession.capture_frame` | WGC 抓父窗再 crop |
 | 5 | 命魂面板折叠检测 | `tasks.soul_task.detect_soul_task_panel_collapsed` | 基于子窗帧 |
 | 5 | 命魂已领取图标检测 | `tasks.soul_task.detect_soul_task_claimed_icon` | 模板资产见 maintain |
@@ -50,7 +55,7 @@ find_window
 |---|---|
 | 前台 Ctrl+Tab / `activate_before_switch=True` | 违反纯后台约束 |
 | `SetWindowPos` 硬扩宿主 | 游戏常锁死；多分辨率暂缓 |
-| 各 `*_probe` 里的临时代码 | 诊断用，可能抢焦点或手控 F8 |
+| 各未整理的 `*_probe` 临时代码 | 诊断用；采坐标请改用 `manual_coordinate` |
 | 师门/自定义流程执行 | 尚未实现，仅可选目录项 |
 
 ---

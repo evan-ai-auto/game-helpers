@@ -10,5 +10,8 @@
     }
   ],
   "functions": ["领取命魂任务"],
-  "source_note": "由用户提供的命魂任务领取 NPC 信息整理。"
+  "source_note": "由用户提供的命魂任务领取 NPC 信息整理。",
+  "verification_status": "pending",
+  "verified_resolutions": [],
+  "verification_notes": "坐标尚未在自动化点击链路中单独验收；注意可能随分辨率变化。"
 }

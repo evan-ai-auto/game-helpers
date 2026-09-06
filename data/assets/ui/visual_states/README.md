@@ -1,8 +1,14 @@
 # Visual state assets
 
-Visual assets declare their spatial behavior explicitly:
+Prefer resolution-scoped profiles:
 
-- `floating`: the feature may appear at different screen positions; detection searches the full frame.
-- `fixed`: the feature is expected near a configured normalized position; detection only searches within the configured tolerance window.
+`data/assets/ui/resolutions/{WxH}/*.json`
 
-This property belongs to the visual asset/anchor definition so new UI assets can reuse the same detector without adding task-specific logic.
+Legacy files under this folder may be marked `deprecated` / `failed`.
+
+Each profile still declares anchors as:
+
+- `floating`: search the full frame
+- `fixed`: search near normalized `expected_x` / `expected_y`
+
+Also carry `verification_status` (`pending` | `verified` | `failed`). See `docs/maintain.md`.

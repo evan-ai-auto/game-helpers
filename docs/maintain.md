@@ -3,22 +3,77 @@
 > **本节给人维护用。**  
 > 日常加图标、加状态、加任务流程，只改这里列出的位置；尽量少改 `src/` 里的核心代码。
 
-**验收分辨率基线：800×600**（多分辨率后续再做）。
+**当前开发基线：只做 800×600。**  
+多分辨率目录已预留；等 800×600 功能全部完成、你再补其它分辨率资产并验证（见 [backlog.md](backlog.md) MULTI-RES）。
 
-写新流程前先看已验证能力表：[capabilities.md](capabilities.md)。
+写新流程前先看：[capabilities.md](capabilities.md)。  
+实机复验：[verification.md](verification.md)（以你本地日志为准）。
 
 ---
 
-## 1. 模板 / 状态资产
+## 1. 模板 / 状态资产（按分辨率分目录）
 
-| 类型 | 放哪里 | 怎么扩 |
+推荐布局（已落地）：
+
+```text
+data/assets/ui/resolutions/
+  800x600/     ← 当前维护
+  1024x768/    ← 占位，以后再补
+```
+
+运行时用 `tasks.asset_resolution.resolve_resolution_asset(name, client_size)`  
+按**当前子窗客户区**选文件夹；缺档直接报错，不会误用其它分辨率。
+
+| 类型 | 800×600 路径 | 怎么扩 |
 |---|---|---|
-| UI 图标等 blob | `data/assets/ui/` | 加入新 `.blob`（及配套说明若有） |
-| 命魂已领取图标 | `data/assets/ui/soul_task_claimed_icon.json` | 在 800×600 截图上重采后替换 |
-| 视觉状态定义 | `data/assets/ui/visual_states/` | 新增/修改 `.json`（参考同目录已有文件与 README） |
-| NPC / 场景等 | `data/assets/npcs/`、`data/assets/scenes/` | 按现有目录结构追加 |
+| 道具栏打开态 | `resolutions/800x600/item_panel_open.json` + **`item_panel_open.png`** | **请你上传正式模板替换该 PNG**（见 §1.4） |
+| 道具栏切换 | `resolutions/800x600/item_bar_toggle.json` + `item_bar_icon.blob` | 可写 `click_client:[x,y]`；或靠模板 |
+| 命魂已领取图标 | 现仍用 `ui/soul_task_claimed_icon.json`（副本在 `resolutions/800x600/`） | 目标分辨率重采 |
+| NPC / 场景 | `npcs/`、`scenes/` | 坐标同样建议日后按分辨率分档 |
+| 旧路径 | `visual_states/item_panel_open.json`、`ui/item_bar_toggle.json` | **已废弃**，勿再接流程 |
 
-**要求**：新资产先在 **800×600** 角色上验证通过，再接到流程里用。
+### 1.4 上传道具栏「打开态」800×600 模板
+
+1. 游戏客户区 **800×600**，道具栏**打开**，截一张干净子窗图（或从 `diagnostic/workflow_runs/item_panel/after-*.png` 裁）  
+2. 裁一块**稳定 chrome**（推荐底部页签如「加锁」，或标题栏固定字；避免人物头像、背包物品内容）  
+3. 覆盖保存为：
+
+```text
+data/assets/ui/resolutions/800x600/item_panel_open.png
+```
+
+4. 如需改阈值，编辑同目录 `item_panel_open.json` 里 `anchors[0].threshold`（默认 `0.88`）  
+5. 跑道具栏流程：关闭时应 `not_detected`，打开时应 `detected`；通过后把 JSON 的 `verification_status` 改为 `verified`，并同步 §1.3 台账  
+
+当前仓库里的 `item_panel_open.png` 是临时裁剪（「加锁」），**以你上传的正式版为准**。
+
+### 1.1 验证状态字段（必填）
+
+| 字段 | 取值 | 含义 |
+|---|---|---|
+| `verification_status` | `pending` / `verified` / `failed` | 待验证 / 已验证 / 失败 |
+| `verified_resolutions` | 如 `["800x600"]` | 仅 verified 时填写 |
+| `verification_notes` | 字符串 | 可选说明 |
+
+新资产默认 `pending`。流程优先只用 `verified`（诊断可临时用 pending）。
+
+### 1.2 多分辨率策略（同意的推进方式）
+
+1. **现在**：只实现 + 验收 **800×600**  
+2. **资产**：按 `resolutions/{WxH}/` 分目录维护（比单 JSON 里塞多套 variants 更清晰、好对比）  
+3. **以后**：你提供 1024×768 等素材 → 放入对应目录 → 单独验证 → 改 `verification_status`  
+4. 缺分辨率资产时运行时报错，不静默缩放/挪用
+
+### 1.3 当前资产台账
+
+| 资产 | 路径 | status | 备注 |
+|---|---|---|---|
+| 命魂已领取图标 | `ui/soul_task_claimed_icon.json` | `verified` | V1；800×600 |
+| 道具栏打开态（新） | `resolutions/800x600/item_panel_open.json` + `item_panel_open.png` | `pending` | **待你上传正式 PNG**；现为临时「加锁」裁剪 |
+| 道具栏切换（新） | `resolutions/800x600/item_bar_toggle.json` | `pending` | 含人工 `click_client=[469,565]` |
+| 道具栏打开态（旧） | `visual_states/item_panel_open.json` | `failed` | 废弃 |
+| 道具栏切换（旧） | `ui/item_bar_toggle.json` | `failed` | 废弃 |
+| 女娲神使 / 场景 | `npcs/`、`scenes/` | `pending` | 未分分辨率 |
 
 ---
 
@@ -26,26 +81,24 @@
 
 | 做什么 | 约定 |
 |---|---|
-| 流程内容 | 用「已验证资产」描述步骤（检测状态 → 操作 → 再检测） |
-| 执行对象 | 针对「当前选中的已登录角色」 |
+| 流程内容 | 用已验证资产：检测 → 操作 → 再检测 |
 | 执行入口 | `python -m game_helpers.tasks.task_workflow_cli` |
-| 当前已支持 | 命魂任务 → 领取状态检测 |
-
-> 新流程优先挂到 `workflows.py` 目录，并在本文件补一行说明。
+| 道具栏坐标 | 默认 `auto`（优先资产 `click_client`）；标定用 `--coord-source manual` |
+| 单独采点 | `python -m game_helpers.tasks.manual_coordinate_cli` |
 
 ---
 
-## 3. 维护检查清单（加人改资产时勾一下）
+## 3. 维护检查清单
 
-- [ ] 资产路径已放对目录
-- [ ] 已在 **800×600** 目标角色上验证过
-- [ ] 状态检测结果符合预期（开/关、已领取/未领取等）
-- [ ] 需要的话已挂到某个流程步骤
-- [ ] 未把大图 / 调试截图提交进仓库（除非明确需要）
+- [ ] 放进对应 `resolutions/{WxH}/`
+- [ ] 写了 `verification_status`
+- [ ] 在该分辨率实机验证过
+- [ ] 台账已同步
+- [ ] 未提交大图调试截图（除非必要）
 
 ---
 
 ## 4. 不要放这里的东西
 
-- 核心窗口捕获、切换、点击驱动 → 改代码，见 [agent-coding.md](agent-coding.md)
-- 暂缓的技术坑 → 记 [backlog.md](backlog.md)
+- 核心捕获/点击驱动 → [agent-coding.md](agent-coding.md)
+- 暂缓项 → [backlog.md](backlog.md)

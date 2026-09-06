@@ -55,6 +55,22 @@ def default_workflows() -> tuple[TaskWorkflow, ...]:
             ),
         ),
         TaskWorkflow(
+            id="daoju_panel",
+            name="道具栏状态检测",
+            description="检测道具栏开/关并后台反转；默认模板定位，可用 --coord-source manual 人工采点（800×600）。",
+            recipe=TaskRecipe(
+                id="daoju_panel",
+                name="道具栏状态检测",
+                category=TaskCategory.GENERAL,
+                metadata={
+                    "game": "梦幻西游",
+                    "baseline_client": "800x600",
+                    "status_detector": "item_panel_open",
+                    "supports_toggle": True,
+                },
+            ),
+        ),
+        TaskWorkflow(
             id="shimen",
             name="师门任务",
             description="师门任务诊断流程（当前仅选择流程，不执行任务）。",

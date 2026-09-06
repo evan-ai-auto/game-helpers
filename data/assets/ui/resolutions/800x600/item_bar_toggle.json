@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "name": "item_bar_toggle",
+  "description": "800×600：底部快捷栏「道具」图标定位/点击。优先使用人工确认的 click_client。",
+  "resolution": "800x600",
+  "image": "item_bar_icon.blob",
+  "threshold": 0.75,
+  "search_step": 1,
+  "y0_fraction": 0.85,
+  "click_client": [469, 565],
+  "verification_status": "pending",
+  "verified_resolutions": [],
+  "verification_notes": "人工 F8 采点 (469,565)：后台点击后面板已打开，但旧打开态检测失败。等打开态复验通过后可将本资产标 verified。"
+}

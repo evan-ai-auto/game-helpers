@@ -61,5 +61,8 @@
       "note": "进入化生寺门派"
     }
   ],
-  "source_note": "由用户提供的长安城传送位置表整理。坐标按用户提供的数据原样保存。"
+  "source_note": "由用户提供的长安城传送位置表整理。坐标按用户提供的数据原样保存。",
+  "verification_status": "pending",
+  "verified_resolutions": [],
+  "verification_notes": "场景坐标未做分辨率分档；自动化使用前需按客户区单独验证。"
 }
