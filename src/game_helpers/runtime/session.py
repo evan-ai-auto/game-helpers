@@ -40,28 +40,25 @@ class BackgroundGameSession:
         return view, self.capture()
 
     def state(self, frame: Frame) -> GameState:
-        return GameState(
-            window=self.window,
-            screenshot_available=True,
-            metadata={"capture_backend": frame.backend},
-        )
+        return GameState(window=self.window, screenshot_available=True, metadata={"capture_backend": frame.backend})
 
     def build_agent_runtime(self, agent, **kwargs):
-        """Bind this Windows/WGC session to the generic AgentRuntime loop."""
         from .agent_runtime import AgentRuntime
-
         return AgentRuntime(self.capture, agent, **kwargs)
 
-    def build_dream_agent_runtime(self, *, asset_root=None, **kwargs):
-        """Build the first concrete game agent: 梦幻西游."""
+    def build_dream_agent_runtime(self, *, asset_root=None, goal: str = "soul_task", **kwargs):
+        """Build the Dream Agent Brain with an explicit long-task goal."""
         from ..games.menghuanxiyou import DreamAgent, DreamGameAdapter, DreamObservationBuilder
+        from ..games.menghuanxiyou.navigation import DreamNavigationGraph
         from .agent_runtime import AgentRuntime
 
+        adapter = DreamGameAdapter(asset_root)
+        navigation = DreamNavigationGraph(adapter.scenes)
         return AgentRuntime(
             self.capture,
-            DreamAgent(),
+            DreamAgent(navigation=navigation, goal=goal),
             observation_builder=DreamObservationBuilder(asset_root),
-            game_adapter=DreamGameAdapter(asset_root),
+            game_adapter=adapter,
             **kwargs,
         )
 
