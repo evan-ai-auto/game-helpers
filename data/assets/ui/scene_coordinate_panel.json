@@ -1,0 +1,25 @@
+{
+  "asset": "scene_coordinate_panel",
+  "game": "梦幻西游",
+  "purpose": "识别当前角色所处场景及地图坐标，供 Player Localization、导航和传送后的场景重定位使用。",
+  "sample_source_resolution": "1024x768",
+  "roi": [0, 0, 150, 70],
+  "recognition": {
+    "method": "OCR",
+    "scene_line": "场景/区域名称位于面板上方",
+    "coordinate_line": "地图名称 + [x,y]，示例：四方城[34,44]",
+    "coordinate_pattern": "(?P<map>.+?)\\s*[\\[(](?P<x>\\d+)\\s*[,，]\\s*(?P<y>\\d+)[\\])]"
+  },
+  "sample_observation": {
+    "map_name": "四方城",
+    "x": 34,
+    "y": 44
+  },
+  "verification_status": "pending",
+  "verified_resolutions": [],
+  "notes": [
+    "截图实际尺寸为 1024x768；当前项目 800x600 基线仍需单独采集/验证对应 ROI。",
+    "坐标属于动态状态，不应直接作为盲点点击坐标。",
+    "建议后续同时保留 OCR 原文和解析后的整数坐标，并记录 confidence。"
+  ]
+}
