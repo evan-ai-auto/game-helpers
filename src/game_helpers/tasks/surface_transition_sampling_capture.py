@@ -1,48 +1,68 @@
-"""Capture, crop and transition sampling helpers.
-
-Migrated from surface_transition_sampling_probe while keeping the probe entry
-compatible.
-"""
+"""Capture and child-surface crop helpers for transition sampling."""
 from __future__ import annotations
 
-import time
-from pathlib import Path
+import numpy as np
 
-from ..capture import save_png
 from ..capture.models import Frame
-from .surface_transition_sampling_utils import fingerprint, delta
+from ..core.window import get_window_info
 
 
-def crop_child_from_parent(host_frame, parent_geometry, child_geometry):
+def crop_child_from_parent(
+    host_frame: Frame,
+    parent_geometry,
+    child_geometry,
+    *,
+    canvas_width: int,
+    canvas_height: int,
+) -> tuple[Frame, tuple[float, float], tuple[int, int, int, int], tuple[int, int, int, int]]:
+    """Map the complete child client rectangle into parent-capture pixels.
+
+    The returned crop is clipped only for measurement; the mapped rectangle
+    and coverage are recorded so a transition that has not fully rendered the
+    target can be distinguished from a stable state.
+    """
+    _ = (canvas_width, canvas_height)  # retained for call-site compatibility
     sx = host_frame.width / parent_geometry.client_width
     sy = host_frame.height / parent_geometry.client_height
-    left = round((child_geometry.screen_left - parent_geometry.screen_left) * sx)
-    top = round((child_geometry.screen_top - parent_geometry.screen_top) * sy)
-    right = round((left + child_geometry.client_width) * 1)
-    bottom = round((top + child_geometry.client_height) * 1)
-    return left, top, right, bottom
+    left_c = child_geometry.screen_left - parent_geometry.screen_left
+    top_c = child_geometry.screen_top - parent_geometry.screen_top
+    right_c = left_c + child_geometry.client_width
+    bottom_c = top_c + child_geometry.client_height
+    left = round(left_c * sx)
+    top = round(top_c * sy)
+    right = round(right_c * sx)
+    bottom = round(bottom_c * sy)
+
+    source = np.frombuffer(host_frame.data, dtype=np.uint8).reshape(
+        host_frame.height, host_frame.width, 4
+    )
+    x0, y0 = max(0, left), max(0, top)
+    x1, y1 = min(host_frame.width, right), min(host_frame.height, bottom)
+    if x1 <= x0 or y1 <= y0:
+        raise RuntimeError("child target rectangle is outside parent capture")
+    cropped = np.ascontiguousarray(source[y0:y1, x0:x1, :])
+    return (
+        Frame(
+            get_window_info(child_geometry.hwnd),
+            cropped.shape[1],
+            cropped.shape[0],
+            cropped.tobytes(),
+            host_frame.captured_at,
+            host_frame.backend,
+        ),
+        (sx, sy),
+        (left, top, right, bottom),
+        (max(0, left), max(0, top), min(host_frame.width, right), min(host_frame.height, bottom)),
+    )
 
 
-def capture_role(cap, parent_hwnd, parent_geometry, child_geometry):
+def capture_role(cap, parent_hwnd, parent_geometry, child_geometry, max_client_size):
     host = cap.capture(parent_hwnd)
-    left, top, right, bottom = crop_child_from_parent(host, parent_geometry, child_geometry)
-    import numpy as np
-    source = np.frombuffer(host.data, dtype=np.uint8).reshape(host.height, host.width, 4)
-    cropped = np.ascontiguousarray(source[top:bottom, left:right, :])
-    crop = Frame(host.window, cropped.shape[1], cropped.shape[0], cropped.tobytes(), host.captured_at, host.backend)
-    return host, crop
-
-
-def sample_transition(cap, manager, parent_hwnd, target_index, output_dir: Path, samples=40, interval=0.05):
-    manager.switch_surface_to(target_index)
-    rows = []
-    previous = None
-    for index in range(samples):
-        if index:
-            time.sleep(interval)
-        frame = cap.capture(parent_hwnd)
-        current = fingerprint(frame)
-        rows.append({"sample": index, "delta": delta(previous, current)})
-        previous = current
-        save_png(frame, str(output_dir / f"frame-{index:03d}.png"))
-    return rows
+    crop, scales, mapped, clipped = crop_child_from_parent(
+        host,
+        parent_geometry,
+        child_geometry,
+        canvas_width=max_client_size[0],
+        canvas_height=max_client_size[1],
+    )
+    return host, crop, scales, mapped, clipped

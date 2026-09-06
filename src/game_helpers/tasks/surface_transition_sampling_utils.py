@@ -10,7 +10,7 @@ def fingerprint(frame: Frame, size: int = 48) -> np.ndarray:
     raw = np.frombuffer(frame.data, dtype=np.uint8)
     expected = frame.width * frame.height * 4
     if raw.size < expected:
-        raise ValueError("invalid frame buffer")
+        raise ValueError(f"invalid frame buffer: bytes={raw.size}, expected>={expected}")
     bgra = raw[:expected].reshape(frame.height, frame.width, 4)
     gray = (
         0.114 * bgra[:, :, 0]
