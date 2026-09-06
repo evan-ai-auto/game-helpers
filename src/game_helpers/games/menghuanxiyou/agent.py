@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from game_helpers.core.agent_brain import AgentMemory, GoalPlanner, PlanStep, RecoveryPolicy, state_key
-from game_helpers.core.agent_protocol import AgentDecision, ActionResult, Observation, VerificationResult
+from game_helpers.core.agent_protocol import ActionResult, AgentDecision, Observation, VerificationResult
 from game_helpers.core.models import Action, ActionType
 
 from .navigation import DreamNavigationGraph
@@ -12,12 +12,7 @@ from .state import DreamGameState
 
 
 class DreamAgent:
-    """Long-task policy with explicit milestones and bounded recovery.
-
-    The default goal remains the existing soul-task status flow. A navigation
-    goal can be supplied as ``transport:<id>``; movement is only executed when
-    a matching visual target is present in the current Observation.
-    """
+    """Long-task policy with explicit milestones and bounded recovery."""
 
     def __init__(self, *, navigation: DreamNavigationGraph | None = None, goal: str = "soul_task") -> None:
         self.navigation = navigation
@@ -26,7 +21,7 @@ class DreamAgent:
         self.recovery = RecoveryPolicy()
         self.recovery_actions = DreamRecovery()
         self.planner = GoalPlanner(self._steps_for(goal))
-        self._last_decision: AgentDecision | None = None
+        self._navigation_clicked = False
 
     @staticmethod
     def _steps_for(goal: str) -> tuple[PlanStep, ...]:
@@ -48,20 +43,15 @@ class DreamAgent:
         self.memory.observe_state(state_key(state))
         recovery = self.recovery_actions.decide(self.recovery.decide(self.memory))
         if recovery is not None:
-            self._last_decision = recovery
             return recovery
-
         if self.goal.startswith("transport:"):
-            decision = self._decide_transport(state, observation)
-        else:
-            decision = self._decide_soul_task(state, observation)
-        self._last_decision = decision
-        return decision
+            return self._decide_transport(state, observation)
+        return self._decide_soul_task(state, observation)
 
     def _decide_soul_task(self, state: DreamGameState, observation: Observation) -> AgentDecision:
         if state.soul_task_claimed:
             self.planner.advance_if(True)
-            return AgentDecision(rationale="命魂任务已领取，目标完成", confidence=1.0)
+            return AgentDecision(rationale="命魂任务已领取，目标完成", confidence=1.0, metadata={"goal_completed": True})
         if not state.item_panel_open:
             target = observation.objects.get("item_bar_toggle")
             if target is None:
@@ -72,22 +62,26 @@ class DreamAgent:
         return AgentDecision(actions=(Action(ActionType.WAIT, duration_ms=350),), rationale="等待命魂任务状态稳定", confidence=0.8)
 
     def _decide_transport(self, state: DreamGameState, observation: Observation) -> AgentDecision:
+        target_id = self.goal.removeprefix("transport:")
+        target_info = self.navigation.find(target_id) if self.navigation else None
+        if target_info and target_info.destination.get("scene_id") == state.scene_id:
+            self.planner.advance_if(True)
+            return AgentDecision(rationale=f"已到达目标场景 {state.scene_name}", confidence=1.0, metadata={"goal_completed": True})
         if state.scene_confidence < 0.8:
             return AgentDecision(actions=(Action(ActionType.WAIT, duration_ms=500),), rationale="场景识别置信度不足，等待重新感知", confidence=state.scene_confidence)
 
-        target_id = self.goal.removeprefix("transport:")
         target_key = f"transport:{target_id}"
         target = observation.objects.get(target_key)
         if target is None:
             return AgentDecision(actions=(Action(ActionType.WAIT, duration_ms=500),), rationale=f"未视觉确认目标 {target_id}，不执行盲点坐标", confidence=0.2)
 
-        if state.interaction_target == target_id:
+        if self._navigation_clicked:
             self.planner.advance_if(True)
             return AgentDecision(actions=(Action(ActionType.CLICK, target=target.center),), rationale=f"交互目标 {target_id}", confidence=0.85, metadata={"expected_target": target_id})
 
+        self._navigation_clicked = True
         self.planner.advance_if(True)
         return AgentDecision(actions=(Action(ActionType.CLICK, target=target.center),), rationale=f"导航至 {target_id}", confidence=0.75, metadata={"navigation_target": target_id})
 
     def on_step_completed(self, results: tuple[ActionResult, ...], verification: VerificationResult) -> None:
-        """Feed execution/verification outcomes back into memory for recovery."""
         self.memory.record_results(results, verification)
