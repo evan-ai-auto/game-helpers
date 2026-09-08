@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "game": "梦幻西游",
+  "description": "玩家提供的旗子/传送导航坐标。坐标按 x,y 保存；这些是导航知识资产，不应直接写死到 Agent 逻辑。",
+  "verification_status": "user_supplied",
+  "notes": [
+    "坐标来源于用户提供的旗子信息。",
+    "当前未按分辨率分档；实际自动点击前仍需按客户区/分辨率验证。",
+    "朱紫旗用户反馈为“没毛病”，当前没有新增坐标明细，因此仅记录确认状态。"
+  ],
+  "flags": {
+    "长安城": {
+      "red": [
+        {"name": "国境", "position": {"x": 9, "y": 7}},
+        {"name": "双", "position": {"x": 197, "y": 174}},
+        {"name": "驿站", "position": {"x": 285, "y": 44}},
+        {"name": "商会", "position": {"x": 325, "y": 14}},
+        {"name": "野外", "position": {"x": 538, "y": 5}},
+        {"name": "酒", "position": {"x": 453, "y": 165}},
+        {"name": "化生", "position": {"x": 507, "y": 273}}
+      ],
+      "yellow": [
+        {"name": "国子监", "position": {"x": 282, "y": 201}},
+        {"name": "皇宫", "position": {"x": 107, "y": 228}},
+        {"name": "赵美人", "position": {"x": 8, "y": 142}},
+        {"name": "秦府", "position": {"x": 87, "y": 78}},
+        {"name": "王捕头", "position": {"x": 41, "y": 61}},
+        {"name": "大宝", "position": {"x": 142, "y": 6}},
+        {"name": "歌", "position": {"x": 220, "y": 34}},
+        {"name": "陈员外", "position": {"x": 160, "y": 34}},
+        {"name": "小宝", "position": {"x": 312, "y": 121}},
+        {"name": "战神山", "position": {"x": 352, "y": 75}},
+        {"name": "赵姨娘", "position": {"x": 373, "y": 3}},
+        {"name": "铁", "position": {"x": 485, "y": 97}},
+        {"name": "家", "position": {"x": 523, "y": 128}},
+        {"name": "二宝", "position": {"x": 497, "y": 191}},
+        {"name": "穷汉", "position": {"x": 302, "y": 56}},
+        {"name": "王武", "position": {"x": 380, "y": 121}},
+        {"name": "怜儿", "position": {"x": 274, "y": 103}},
+        {"name": "活动人", "position": {"x": 227, "y": 121}},
+        {"name": "比武大会", "position": {"x": 115, "y": 109}},
+        {"name": "大唐", "position": {"x": 313, "y": 272}},
+        {"name": "帮派", "position": {"x": 384, "y": 265}}
+      ]
+    },
+    "朱紫国": {
+      "status": "user_confirmed_no_issue",
+      "note": "用户反馈：没毛病"
+    },
+    "长寿村": {
+      "unclassified": [
+        {"name": "方寸", "position": {"x": 109, "y": 203}},
+        {"name": "钟书生", "position": {"x": 44, "y": 158}},
+        {"name": "老村长", "position": {"x": 18, "y": 37}},
+        {"name": "当", "position": {"x": 17, "y": 126}},
+        {"name": "酒", "position": {"x": 112, "y": 146}},
+        {"name": "巫医", "position": {"x": 124, "y": 110}},
+        {"name": "郊外", "position": {"x": 142, "y": 4}}
+      ]
+    },
+    "傲来国": {
+      "unclassified": [
+        {"name": "女儿村", "position": {"x": 9, "y": 139}},
+        {"name": "红毛猿", "position": {"x": 48, "y": 97}},
+        {"name": "蝴蝶妹妹", "position": {"x": 63, "y": 55}},
+        {"name": "文老伯", "position": {"x": 15, "y": 25}},
+        {"name": "东海湾", "position": {"x": 168, "y": 15}},
+        {"name": "老张头", "position": {"x": 191, "y": 75}},
+        {"name": "花果山", "position": {"x": 210, "y": 142}}
+      ]
+    }
+  }
+}
