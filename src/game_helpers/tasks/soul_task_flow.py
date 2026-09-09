@@ -95,6 +95,7 @@ def run_soul_task_claim_diagnosis(
     error: str | None = None
     ok = False
     fixed_shortcut_coordinate: tuple[int, int] | None = None
+    coordinate_source = "vision"
 
     try:
         sync_selected_character(parent_hwnd, selection)
@@ -114,6 +115,8 @@ def run_soul_task_claim_diagnosis(
             SHORTCUT_PANEL_TARGET,
             resolution=client_size,
         )
+        if fixed_shortcut_coordinate is not None:
+            coordinate_source = f"fixed={fixed_shortcut_coordinate}"
 
         output_dir_path = Path(output_dir)
         output_dir_path.mkdir(parents=True, exist_ok=True)
@@ -123,6 +126,7 @@ def run_soul_task_claim_diagnosis(
         if panel.collapsed is None:
             raise RuntimeError(
                 "无法可靠判断命魂任务快捷图标集合展开/折叠状态; "
+                f"coordinate_source={coordinate_source}; "
                 + "; ".join(panel.evidence)
             )
 
@@ -142,11 +146,6 @@ def run_soul_task_claim_diagnosis(
                 failure_path = output_dir_path / f"character-{selection.view_index}-panel-failure.png"
                 save_png(frame, str(failure_path))
                 screenshot_path = str(failure_path)
-                coordinate_source = (
-                    f"fixed={fixed_shortcut_coordinate}"
-                    if fixed_shortcut_coordinate is not None
-                    else f"detected={click_location}"
-                )
                 raise RuntimeError(
                     "点击快捷图标集合开关后仍检测为折叠状态; "
                     f"click={click_location}; source={coordinate_source}; "
@@ -159,7 +158,7 @@ def run_soul_task_claim_diagnosis(
                 screenshot_path = str(failure_path)
                 raise RuntimeError(
                     "点击快捷图标集合开关后无法可靠判断展开状态; "
-                    f"click={click_location}; "
+                    f"click={click_location}; source={coordinate_source}; "
                     + "; ".join(panel_after.evidence)
                 )
 
