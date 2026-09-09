@@ -6,7 +6,7 @@
   "samples": {
     "800x600": {
       "shortcut_panel_toggle": {
-        "client": [18, 92],
+        "client": [20, 92],
         "source": "real_machine_manual_calibration",
         "note": "折叠态和展开态共用同一固定坐标；已通过人工观察确认可切换。"
       }
