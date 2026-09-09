@@ -11,9 +11,9 @@ from ..core.view_manager import GameViewManager
 from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
 from .soul_task import (
-    DEFAULT_SOUL_TASK_UI,
     SOUL_TASK_BASELINE_SIZE,
     SoulTaskObservation,
+    SoulTaskPanelObservation,
     SoulTaskStatus,
     detect_soul_task_claimed_icon,
     detect_soul_task_panel_collapsed,
@@ -36,9 +36,17 @@ class SoulTaskClaimDiagnosisResult:
     error: str | None = None
 
 
-def _click_soul_task_toggle(hwnd: int, frame_width: int, frame_height: int) -> tuple[int, int]:
-    """Click the panel toggle in selected WSGAME client coordinates."""
-    local_x, local_y = DEFAULT_SOUL_TASK_UI.task_entry_toggle.pixel(frame_width, frame_height)
+def _click_soul_task_toggle(
+    hwnd: int,
+    frame_width: int,
+    frame_height: int,
+    panel: SoulTaskPanelObservation,
+) -> tuple[int, int]:
+    """Click the detected arrow center in selected WSGAME client coordinates."""
+    if panel.click_location is not None:
+        local_x, local_y = panel.click_location
+    else:
+        raise RuntimeError("快捷图标集合箭头未提供可靠点击位置")
     BackgroundInput(hwnd).click_sync(local_x, local_y)
     return local_x, local_y
 
@@ -58,12 +66,7 @@ def run_soul_task_claim_diagnosis(
     output_dir: str | Path = "diagnostic/soul_task",
     require_baseline: bool = True,
 ) -> SoulTaskClaimDiagnosisResult:
-    """Background-sync the character and diagnose 命魂领取状态.
-
-    Does not raise the game window. Does not auto-claim the task from an NPC.
-    Reuses stable capabilities: sync_selected_character, VerificationSession,
-    BackgroundInput, soul_task detectors, BackgroundRunGuard.
-    """
+    """Background-sync the character and diagnose 命魂领取状态."""
     manager = GameViewManager(parent_hwnd, timeout=2.0)
     guard = BackgroundRunGuard.begin(manager)
     capture = WindowsGraphicsCapture()
@@ -99,18 +102,26 @@ def run_soul_task_claim_diagnosis(
         frame = session.capture_frame()
         panel = detect_soul_task_panel_collapsed(frame)
         if panel.collapsed is None:
-            raise RuntimeError("无法可靠判断命魂任务界面展开/折叠状态")
+            raise RuntimeError(
+                "无法可靠判断命魂任务快捷图标集合展开/折叠状态"
+            )
 
         if panel.collapsed:
-            _click_soul_task_toggle(selection.hwnd, frame.width, frame.height)
+            _click_soul_task_toggle(
+                selection.hwnd, frame.width, frame.height, panel
+            )
             panel_opened_by_tool = True
             time.sleep(0.55)
             frame = session.capture_frame()
             panel_after = detect_soul_task_panel_collapsed(frame)
             if panel_after.collapsed is True:
-                raise RuntimeError("点击展开开关后仍检测为折叠状态")
+                raise RuntimeError(
+                    "点击快捷图标集合开关后仍检测为折叠状态"
+                )
             if panel_after.collapsed is None:
-                raise RuntimeError("点击展开开关后无法可靠判断面板状态")
+                raise RuntimeError(
+                    "点击快捷图标集合开关后无法可靠判断展开状态"
+                )
 
         output = Path(output_dir) / f"character-{selection.view_index}.png"
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -126,7 +137,10 @@ def run_soul_task_claim_diagnosis(
             evidence=observation.evidence,
             screenshot_path=screenshot_path,
         )
-        ok = observation.status in {SoulTaskStatus.CLAIMED, SoulTaskStatus.NOT_CLAIMED}
+        ok = observation.status in {
+            SoulTaskStatus.CLAIMED,
+            SoulTaskStatus.NOT_CLAIMED,
+        }
     except Exception as exc:
         error = f"{type(exc).__name__}: {exc}"
         ok = False
@@ -134,8 +148,15 @@ def run_soul_task_claim_diagnosis(
         if panel_opened_by_tool:
             try:
                 frame_restore = session.capture_frame()
-                _click_soul_task_toggle(selection.hwnd, frame_restore.width, frame_restore.height)
-                time.sleep(0.35)
+                panel_restore = detect_soul_task_panel_collapsed(frame_restore)
+                if panel_restore.collapsed is False:
+                    _click_soul_task_toggle(
+                        selection.hwnd,
+                        frame_restore.width,
+                        frame_restore.height,
+                        panel_restore,
+                    )
+                    time.sleep(0.35)
             except Exception:
                 pass
         restore = guard.finish()
