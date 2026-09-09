@@ -7,7 +7,7 @@ from enum import Enum
 import json
 from pathlib import Path
 from time import time
-from typing import Callable, Mapping, Protocol, Any
+from typing import Any, Callable, Mapping, Protocol
 
 from ..actions.executor import ActionExecutor
 from ..capture.models import Frame
@@ -31,7 +31,7 @@ class Verifier(Protocol):
     def verify(self, previous: GameState, current: GameState, decision: AgentDecision, results: tuple[ActionResult, ...]) -> VerificationResult: ...
 
 
-class RuntimeStatus(str, Enum):
+class AgentRuntimeStatus(str, Enum):
     IDLE = "idle"
     RUNNING = "running"
     PAUSED_USER_REQUEST = "paused_user_request"
@@ -58,7 +58,7 @@ class RuntimeCheckpoint:
     observation: Mapping[str, Any]
     decision: Mapping[str, Any]
     results: tuple[Mapping[str, Any], ...] = ()
-    verification: Mapping[str, Any] = None
+    verification: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -111,7 +111,7 @@ class AgentRuntime:
         self.verifier = verifier or DefaultVerifier()
         self.checkpoint_dir = Path(checkpoint_dir) if checkpoint_dir is not None else None
         self._state: GameState | None = None
-        self._status = RuntimeStatus.IDLE
+        self._status = AgentRuntimeStatus.IDLE
         self._checkpoint: RuntimeCheckpoint | None = None
 
     @property
@@ -119,7 +119,7 @@ class AgentRuntime:
         return self._state
 
     @property
-    def status(self) -> RuntimeStatus:
+    def status(self) -> AgentRuntimeStatus:
         return self._status
 
     @property
@@ -127,7 +127,7 @@ class AgentRuntime:
         return self._checkpoint
 
     def step(self) -> AgentStep:
-        self._status = RuntimeStatus.RUNNING
+        self._status = AgentRuntimeStatus.RUNNING
         frame = self.capture()
         observation = self.observation_builder.build(frame)
         state = self.game_adapter.to_state(observation)
@@ -164,7 +164,7 @@ class AgentRuntime:
 
     def run(self, *, max_steps: int | None = None) -> list[AgentStep]:
         steps: list[AgentStep] = []
-        self._status = RuntimeStatus.RUNNING
+        self._status = AgentRuntimeStatus.RUNNING
         while max_steps is None or len(steps) < max_steps:
             try:
                 step = self.step()
@@ -172,10 +172,10 @@ class AgentRuntime:
                 return steps
             steps.append(step)
             if step.next_state.task_completed or step.decision.metadata.get("goal_completed"):
-                self._status = RuntimeStatus.COMPLETED
+                self._status = AgentRuntimeStatus.COMPLETED
                 break
             if step.decision.metadata.get("recovery") == "abort":
-                self._status = RuntimeStatus.FAILED
+                self._status = AgentRuntimeStatus.FAILED
                 break
         return steps
 
@@ -201,7 +201,7 @@ class AgentRuntime:
             verification=_json_safe(asdict(verification)) if verification is not None else None,
         )
         self._checkpoint = checkpoint
-        self._status = RuntimeStatus.PAUSED_USER_REQUEST
+        self._status = AgentRuntimeStatus.PAUSED_USER_REQUEST
         self._write_checkpoint(checkpoint)
         return RuntimePaused(checkpoint)
 
@@ -232,8 +232,10 @@ def _json_safe(value: Any) -> Any:
         return [_json_safe(item) for item in value]
     if isinstance(value, Enum):
         return value.value
+    if hasattr(value, "__dataclass_fields__"):
+        return _json_safe(asdict(value))
     if hasattr(value, "__dict__") and not isinstance(value, (str, bytes, bytearray)):
-        return _json_safe(asdict(value) if hasattr(value, "__dataclass_fields__") else vars(value))
+        return _json_safe(vars(value))
     return value
 
 
