@@ -117,6 +117,42 @@ Action
 
 ---
 
+## Fixed UI Coordinate Calibration
+
+For the current 梦幻西游 800×600 baseline, fixed-position UI controls can be calibrated manually and stored by resolution.
+
+Run:
+
+```powershell
+python -m game_helpers.tasks.ui_coordinate_calibration
+```
+
+The experiment currently exposes only two targets:
+
+```text
+1. 道具栏
+2. 任务图标集合开关
+0. 退出
+```
+
+The operator hovers the real UI control and presses F8. The screen position is converted to the selected game client's client coordinates and stored in:
+
+```text
+diagnostic/calibration/ui_coordinates.json
+```
+
+The same coordinate is used for the 任务图标集合开关 in both collapsed and expanded states. The experiment then keeps the existing PostMessageW click and visual verification flow, including PASS/FAIL output and before/after screenshots. When visual assets are incomplete, the PASS/FAIL result is auxiliary only; the current calibration decision is based on manual observation of the game and screenshots.
+
+The old module remains as a compatibility entry point:
+
+```powershell
+python -m game_helpers.tasks.item_panel_coordinate_calibration
+```
+
+It now opens the same two-target calibration experiment.
+
+---
+
 ## Target Modules
 
 Expected future structure:
