@@ -14,7 +14,7 @@ def test_load_fixed_ui_coordinate_by_resolution(tmp_path):
                 "samples": {
                     "800x600": {
                         "item_panel_toggle": {"client": [427, 575]},
-                        "shortcut_panel_toggle": {"client": [8, 93]},
+                        "shortcut_panel_toggle": {"client": [19, 93]},
                     }
                 },
             },
@@ -28,7 +28,7 @@ def test_load_fixed_ui_coordinate_by_resolution(tmp_path):
     ) == (427, 575)
     assert load_fixed_ui_coordinate(
         "shortcut_panel_toggle", resolution=(800, 600), path=path
-    ) == (8, 93)
+    ) == (19, 93)
     assert load_fixed_ui_coordinate(
         "item_panel_toggle", resolution=(1024, 768), path=path
     ) is None
@@ -55,3 +55,9 @@ def test_load_fixed_ui_coordinate_rejects_invalid_point(tmp_path):
     assert load_fixed_ui_coordinate(
         "item_panel_toggle", resolution=(800, 600), path=path
     ) is None
+
+
+def test_runtime_default_coordinate_file_contains_verified_shortcut_point():
+    assert load_fixed_ui_coordinate(
+        "shortcut_panel_toggle", resolution=(800, 600)
+    ) == (19, 93)
