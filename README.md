@@ -143,6 +143,20 @@ diagnostic/calibration/ui_coordinates.json
 
 The same coordinate is used for the 任务图标集合开关 in both collapsed and expanded states. The experiment then keeps the existing PostMessageW click and visual verification flow, including PASS/FAIL output and before/after screenshots. When visual assets are incomplete, the PASS/FAIL result is auxiliary only; the current calibration decision is based on manual observation of the game and screenshots.
 
+A real-machine 800×600 calibration has currently verified the 任务图标集合开关 coordinate as:
+
+```text
+client=(19, 93)
+```
+
+That coordinate is stored in the versioned runtime baseline:
+
+```text
+data/assets/ui/fixed_coordinates.json
+```
+
+The 命魂任务 flow prefers this fixed coordinate for the shortcut-panel click when a coordinate exists for the current resolution, and falls back to the existing visual click location only when no fixed coordinate is available. Visual state detection remains a separate verification concern.
+
 The old module remains as a compatibility entry point:
 
 ```powershell
