@@ -17,6 +17,7 @@ from pathlib import Path
 from ..actions.background_input import BackgroundInput
 from ..capture import WindowsGraphicsCapture, save_png
 from ..core.window import find_window
+from ..core.view_manager import GameViewManager
 from .accounts import scan_game_accounts
 from .asset_resolution import resolve_resolution_asset
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
@@ -172,6 +173,7 @@ def main() -> int:
     session = VerificationSession(
         parent_hwnd=parent.hwnd,
         selected=selected,
+        manager=GameViewManager(parent.hwnd, timeout=2.0),
         capture=WindowsGraphicsCapture(),
     )
 
