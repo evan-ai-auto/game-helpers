@@ -49,12 +49,7 @@ def verify_render_binding(
     previous_frame_sha256: str | None = None,
     settle_delay: float = 0.25,
 ) -> RenderBinding:
-    """Switch a selected view in the background and verify its rendered surface.
-
-    The check deliberately treats HWND/PID/title as window identity and the
-    captured frame as rendered-state evidence. A title alone never proves the
-    pixels belong to that character.
-    """
+    """Switch a selected view in the background and verify its rendered surface."""
     if sys.platform != "win32":
         raise RuntimeError("render binding verification requires Windows")
 
