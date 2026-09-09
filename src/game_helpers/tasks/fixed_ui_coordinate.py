@@ -4,7 +4,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-DEFAULT_COORDINATES_PATH = Path("diagnostic/calibration/ui_coordinates.json")
+# Versioned production coordinates are the runtime baseline. The calibration
+# experiment can still write a diagnostic file and pass it explicitly via
+# ``path`` when collecting a new machine-specific sample.
+DEFAULT_COORDINATES_PATH = Path("data/assets/ui/fixed_coordinates.json")
 
 
 def load_fixed_ui_coordinate(
@@ -23,10 +26,10 @@ def load_fixed_ui_coordinate(
         return None
     if not isinstance(payload, dict) or payload.get("version") != 1:
         return None
-    resolution_key = f"{resolution[0]}x{resolution[1]}"
     samples = payload.get("samples")
     if not isinstance(samples, dict):
         return None
+    resolution_key = f"{resolution[0]}x{resolution[1]}"
     resolution_samples = samples.get(resolution_key)
     if not isinstance(resolution_samples, dict):
         return None
