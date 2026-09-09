@@ -39,6 +39,10 @@ class AgentRuntimeStatus(str, Enum):
     FAILED = "failed"
 
 
+# Backward-compatible name for callers that imported the runtime-local status.
+RuntimeStatus = AgentRuntimeStatus
+
+
 class RuntimePaused(RuntimeError):
     """Raised when the current run must stop and wait for a new program run."""
 
