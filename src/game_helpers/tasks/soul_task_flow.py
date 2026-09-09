@@ -10,6 +10,7 @@ from ..capture import WindowsGraphicsCapture, save_png
 from ..core.view_manager import GameViewManager
 from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
+from .fixed_ui_coordinate import load_fixed_ui_coordinate
 from .shortcut_panel_vision import detect_shortcut_panel_state
 from .soul_task import (
     SOUL_TASK_BASELINE_SIZE,
@@ -19,6 +20,9 @@ from .soul_task import (
     detect_soul_task_claimed_icon,
 )
 from .verification_session import VerificationSession
+
+
+SHORTCUT_PANEL_TARGET = "shortcut_panel_toggle"
 
 
 @dataclass(frozen=True)
@@ -41,16 +45,19 @@ def _click_soul_task_toggle(
     frame_width: int,
     frame_height: int,
     panel: SoulTaskPanelObservation,
+    *,
+    fixed_coordinate: tuple[int, int] | None = None,
 ) -> tuple[int, int]:
-    """Click the detected arrow center in selected WSGAME client coordinates."""
-    if panel.click_location is not None:
+    """Click the calibrated fixed point when available, otherwise the detected arrow center."""
+    if fixed_coordinate is not None:
+        local_x, local_y = fixed_coordinate
+    elif panel.click_location is not None:
         local_x, local_y = panel.click_location
     else:
-        raise RuntimeError("快捷图标集合箭头未提供可靠点击位置")
+        raise RuntimeError("快捷图标集合未提供可靠点击位置")
 
-    # WSGAME's background UI path accepts queued mouse messages here. The
-    # legacy SendMessageW path can report success while the game ignores the
-    # click, so use the same PostMessageW transport as BackgroundInput.click().
+    # WSGAME's background UI path accepts queued mouse messages here. Keep the
+    # existing PostMessageW transport; only the coordinate source changes.
     BackgroundInput(hwnd).click(local_x, local_y)
     return local_x, local_y
 
@@ -87,6 +94,7 @@ def run_soul_task_claim_diagnosis(
     client_size: tuple[int, int] | None = None
     error: str | None = None
     ok = False
+    fixed_shortcut_coordinate: tuple[int, int] | None = None
 
     try:
         sync_selected_character(parent_hwnd, selection)
@@ -102,6 +110,10 @@ def run_soul_task_claim_diagnosis(
                 f"当前角色客户区为 {client_size[0]}x{client_size[1]}，"
                 f"本阶段仅支持基线 {SOUL_TASK_BASELINE_SIZE[0]}x{SOUL_TASK_BASELINE_SIZE[1]}。"
             )
+        fixed_shortcut_coordinate = load_fixed_ui_coordinate(
+            SHORTCUT_PANEL_TARGET,
+            resolution=client_size,
+        )
 
         output_dir_path = Path(output_dir)
         output_dir_path.mkdir(parents=True, exist_ok=True)
@@ -116,7 +128,11 @@ def run_soul_task_claim_diagnosis(
 
         if panel.collapsed:
             click_location = _click_soul_task_toggle(
-                selection.hwnd, frame.width, frame.height, panel
+                selection.hwnd,
+                frame.width,
+                frame.height,
+                panel,
+                fixed_coordinate=fixed_shortcut_coordinate,
             )
             panel_opened_by_tool = True
             time.sleep(0.55)
@@ -126,9 +142,15 @@ def run_soul_task_claim_diagnosis(
                 failure_path = output_dir_path / f"character-{selection.view_index}-panel-failure.png"
                 save_png(frame, str(failure_path))
                 screenshot_path = str(failure_path)
+                coordinate_source = (
+                    f"fixed={fixed_shortcut_coordinate}"
+                    if fixed_shortcut_coordinate is not None
+                    else f"detected={click_location}"
+                )
                 raise RuntimeError(
                     "点击快捷图标集合开关后仍检测为折叠状态; "
-                    f"click={click_location}; matched={panel.matched_template}; "
+                    f"click={click_location}; source={coordinate_source}; "
+                    f"matched={panel.matched_template}; "
                     + "; ".join(panel_after.evidence)
                 )
             if panel_after.collapsed is None:
@@ -137,7 +159,7 @@ def run_soul_task_claim_diagnosis(
                 screenshot_path = str(failure_path)
                 raise RuntimeError(
                     "点击快捷图标集合开关后无法可靠判断展开状态; "
-                    f"click={click_location}; matched={panel.matched_template}; "
+                    f"click={click_location}; "
                     + "; ".join(panel_after.evidence)
                 )
 
@@ -172,6 +194,7 @@ def run_soul_task_claim_diagnosis(
                         frame_restore.width,
                         frame_restore.height,
                         panel_restore,
+                        fixed_coordinate=fixed_shortcut_coordinate,
                     )
                     time.sleep(0.35)
             except Exception:
