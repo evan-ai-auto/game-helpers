@@ -4,13 +4,16 @@ from __future__ import annotations
 import numpy as np
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from ..capture import WindowsGraphicsCapture
 from ..capture.models import Frame
 from ..core.surface import SurfaceGeometry, SurfaceHealth, inspect_surface, query_surface_geometry
 from ..core.view_manager import GameViewManager
 from ..core.window import get_window_info
 from .character_selection import CharacterSelectionResult
+
+if TYPE_CHECKING:
+    from ..capture.wgc import WindowsGraphicsCapture
 
 
 @dataclass
