@@ -6,7 +6,6 @@ import hashlib
 import sys
 from dataclasses import dataclass
 
-from ..capture import WindowsGraphicsCapture
 from ..core.game_view import discover_game_views
 from ..core.view_manager import GameViewManager
 
@@ -61,6 +60,7 @@ def verify_render_binding(
 
     import ctypes
     import time
+    from ..capture.wgc import WindowsGraphicsCapture
 
     manager = GameViewManager(parent_hwnd, timeout=2.0)
     views = discover_game_views(parent_hwnd)
