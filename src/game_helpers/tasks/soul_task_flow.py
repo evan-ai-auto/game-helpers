@@ -183,21 +183,10 @@ def run_soul_task_claim_diagnosis(
         error = f"{type(exc).__name__}: {exc}"
         ok = False
     finally:
-        if panel_opened_by_tool:
-            try:
-                frame_restore = session.capture_frame()
-                panel_restore = detect_shortcut_panel_state(frame_restore)
-                if panel_restore.collapsed is False:
-                    _click_soul_task_toggle(
-                        selection.hwnd,
-                        frame_restore.width,
-                        frame_restore.height,
-                        panel_restore,
-                        fixed_coordinate=fixed_shortcut_coordinate,
-                    )
-                    time.sleep(0.35)
-            except Exception:
-                pass
+        # Do not click the shortcut-panel toggle a second time here. The CLI's
+        # contract is to leave the panel in the state reached by the workflow;
+        # the previous restore click made a successful collapsed->expanded run
+        # end in the original collapsed state.
         restore = guard.finish()
         restored_surface = restore["restored_surface"]
         restored_tab = restore["restored_tab"]
