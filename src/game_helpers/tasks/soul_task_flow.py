@@ -10,13 +10,13 @@ from ..capture import WindowsGraphicsCapture, save_png
 from ..core.view_manager import GameViewManager
 from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
+from .shortcut_panel_vision import detect_shortcut_panel_state
 from .soul_task import (
     SOUL_TASK_BASELINE_SIZE,
     SoulTaskObservation,
     SoulTaskPanelObservation,
     SoulTaskStatus,
     detect_soul_task_claimed_icon,
-    detect_soul_task_panel_collapsed,
 )
 from .verification_session import VerificationSession
 
@@ -99,32 +99,45 @@ def run_soul_task_claim_diagnosis(
                 f"本阶段仅支持基线 {SOUL_TASK_BASELINE_SIZE[0]}x{SOUL_TASK_BASELINE_SIZE[1]}。"
             )
 
+        output_dir_path = Path(output_dir)
+        output_dir_path.mkdir(parents=True, exist_ok=True)
+
         frame = session.capture_frame()
-        panel = detect_soul_task_panel_collapsed(frame)
+        panel = detect_shortcut_panel_state(frame)
         if panel.collapsed is None:
             raise RuntimeError(
-                "无法可靠判断命魂任务快捷图标集合展开/折叠状态"
+                "无法可靠判断命魂任务快捷图标集合展开/折叠状态; "
+                + "; ".join(panel.evidence)
             )
 
         if panel.collapsed:
-            _click_soul_task_toggle(
+            click_location = _click_soul_task_toggle(
                 selection.hwnd, frame.width, frame.height, panel
             )
             panel_opened_by_tool = True
             time.sleep(0.55)
             frame = session.capture_frame()
-            panel_after = detect_soul_task_panel_collapsed(frame)
+            panel_after = detect_shortcut_panel_state(frame)
             if panel_after.collapsed is True:
+                failure_path = output_dir_path / f"character-{selection.view_index}-panel-failure.png"
+                save_png(frame, str(failure_path))
+                screenshot_path = str(failure_path)
                 raise RuntimeError(
-                    "点击快捷图标集合开关后仍检测为折叠状态"
+                    "点击快捷图标集合开关后仍检测为折叠状态; "
+                    f"click={click_location}; matched={panel.matched_template}; "
+                    + "; ".join(panel_after.evidence)
                 )
             if panel_after.collapsed is None:
+                failure_path = output_dir_path / f"character-{selection.view_index}-panel-unknown.png"
+                save_png(frame, str(failure_path))
+                screenshot_path = str(failure_path)
                 raise RuntimeError(
-                    "点击快捷图标集合开关后无法可靠判断展开状态"
+                    "点击快捷图标集合开关后无法可靠判断展开状态; "
+                    f"click={click_location}; matched={panel.matched_template}; "
+                    + "; ".join(panel_after.evidence)
                 )
 
-        output = Path(output_dir) / f"character-{selection.view_index}.png"
-        output.parent.mkdir(parents=True, exist_ok=True)
+        output = output_dir_path / f"character-{selection.view_index}.png"
         save_png(frame, str(output))
         screenshot_path = str(output)
         observation = detect_soul_task_claimed_icon(frame)
@@ -148,7 +161,7 @@ def run_soul_task_claim_diagnosis(
         if panel_opened_by_tool:
             try:
                 frame_restore = session.capture_frame()
-                panel_restore = detect_soul_task_panel_collapsed(frame_restore)
+                panel_restore = detect_shortcut_panel_state(frame_restore)
                 if panel_restore.collapsed is False:
                     _click_soul_task_toggle(
                         selection.hwnd,
