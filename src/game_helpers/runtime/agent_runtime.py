@@ -91,9 +91,9 @@ class MetadataGameAdapter:
 class AgentRuntime:
     """Execute the agent loop and hard-stop when user intervention is required.
 
-    A user-request halt is deliberately terminal for the current process run:
-    no automatic retry, recovery, capture, planning, or action is performed
-    after the checkpoint is written. A later run starts from the latest code.
+    A user-request halt is terminal for the current runtime instance: after a
+    checkpoint is written, step() refuses to capture, plan, recover, or act.
+    A later process/run must construct a fresh runtime from the latest code.
     """
 
     def __init__(
@@ -131,6 +131,8 @@ class AgentRuntime:
         return self._checkpoint
 
     def step(self) -> AgentStep:
+        if self._status is AgentRuntimeStatus.PAUSED_USER_REQUEST and self._checkpoint is not None:
+            raise RuntimePaused(self._checkpoint)
         self._status = AgentRuntimeStatus.RUNNING
         frame = self.capture()
         observation = self.observation_builder.build(frame)
