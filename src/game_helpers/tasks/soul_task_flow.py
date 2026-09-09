@@ -47,7 +47,11 @@ def _click_soul_task_toggle(
         local_x, local_y = panel.click_location
     else:
         raise RuntimeError("快捷图标集合箭头未提供可靠点击位置")
-    BackgroundInput(hwnd).click_sync(local_x, local_y)
+
+    # WSGAME's background UI path accepts queued mouse messages here. The
+    # legacy SendMessageW path can report success while the game ignores the
+    # click, so use the same PostMessageW transport as BackgroundInput.click().
+    BackgroundInput(hwnd).click(local_x, local_y)
     return local_x, local_y
 
 
