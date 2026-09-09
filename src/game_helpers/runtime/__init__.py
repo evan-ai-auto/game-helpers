@@ -1,6 +1,15 @@
 """Runtime orchestration for GUI Agent sessions."""
 
-from .agent_runtime import AgentRuntime, AgentStep, DefaultObservationBuilder, DefaultVerifier, MetadataGameAdapter
+from .agent_runtime import (
+    AgentRuntime,
+    AgentRuntimeStatus,
+    AgentStep,
+    DefaultObservationBuilder,
+    DefaultVerifier,
+    MetadataGameAdapter,
+    RuntimeCheckpoint,
+    RuntimePaused,
+)
 from .session import BackgroundGameSession
 from .task_control import (
     AssignmentConflict,
@@ -19,6 +28,7 @@ from .view_manager import GameViewManager
 
 __all__ = [
     "AgentRuntime",
+    "AgentRuntimeStatus",
     "AgentStep",
     "AssignmentConflict",
     "AssignmentDecision",
@@ -33,6 +43,8 @@ __all__ = [
     "MetadataGameAdapter",
     "MultiCharacterRuntime",
     "RunMode",
+    "RuntimeCheckpoint",
+    "RuntimePaused",
     "RuntimeStatus",
     "TaskAssignment",
     "TaskRegistry",
