@@ -6,9 +6,18 @@
   "samples": {
     "800x600": {
       "shortcut_panel_toggle": {
-        "client": [19, 92],
-        "source": "real_machine_manual_calibration",
-        "note": "折叠态和展开态共用同一固定坐标；已通过人工观察确认可切换。"
+        "client": [
+          34,
+          92
+        ],
+        "screen": [
+          346,
+          341
+        ],
+        "target_hwnd": 395164,
+        "character_name": "划下、？线",
+        "identity": "无与伦比[将军] - 划下、？线[7324466]",
+        "captured_at_utc": "2026-09-09T12:31:09.045697+00:00"
       }
     }
   }
