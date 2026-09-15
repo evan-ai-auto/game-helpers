@@ -1,11 +1,18 @@
-"""Independent verifier for the unclaimed Soul Task icon template.
+"""Independent verifier for a supplied Soul Task icon template.
 
 This tool deliberately does not import the production SoulTask detector. It scans
-a runtime screenshot, finds the best template match inside a configurable ROI,
-and saves the exact runtime patch at the winning location for visual inspection.
+a runtime screenshot, finds the best match for the explicitly supplied template
+inside a configurable ROI, and saves the exact runtime patch at the winning
+location for visual inspection.
 
 Example:
-    python tools/verify_soul_task_unclaimed_template.py diagnostic/soul_task/character-2.png
+    python tools/verify_soul_task_unclaimed_template.py \
+        diagnostic/soul_task/character-2.png \
+        data/assets/ui/soul_task_claimed_icon.png
+
+Arguments:
+    screenshot: runtime screenshot to scan
+    template: transparent template image to match against the screenshot
 
 Exit codes:
     0 = match score reached threshold
@@ -21,7 +28,6 @@ import numpy as np
 from PIL import Image
 
 
-DEFAULT_TEMPLATE = Path("data/assets/ui/soul_task_unclaimed_icon.png")
 DEFAULT_ROI = (0, 0, 272, 252)
 
 
@@ -55,7 +61,7 @@ def find_best_match(
     x0 = max(0, x0)
     y0 = max(0, y0)
     x1 = min(frame.shape[1], x1)
-    y1 = min(frame.shape[0], y1)
+    y1 = min(frame.shape[2] if frame.ndim == 3 else frame.shape[1], y1)
     region = frame[y0:y1, x0:x1]
 
     th, tw = template_rgb.shape[:2]
@@ -85,7 +91,7 @@ def find_best_match(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("screenshot", type=Path)
-    parser.add_argument("--template", type=Path, default=DEFAULT_TEMPLATE)
+    parser.add_argument("template", type=Path)
     parser.add_argument(
         "--roi",
         nargs=4,
