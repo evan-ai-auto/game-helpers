@@ -61,7 +61,7 @@ def find_best_match(
     x0 = max(0, x0)
     y0 = max(0, y0)
     x1 = min(frame.shape[1], x1)
-    y1 = min(frame.shape[2] if frame.ndim == 3 else frame.shape[1], y1)
+    y1 = min(frame.shape[0], y1)
     region = frame[y0:y1, x0:x1]
 
     th, tw = template_rgb.shape[:2]
