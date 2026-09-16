@@ -1,0 +1,15 @@
+screenshot=diagnostic\workflow_runs\soul_task\2026-09-15-160411.png
+templates=data\assets\ui\soul_task_claimed_template1.png,data\assets\ui\soul_task_claimed_template3.png
+screenshot_size=800x601
+roi=(0, 0, 272, 252)
+threshold=0.8200
+template_count=2
+template_1_score=0.8269
+template_1_match_location=(30, 166)
+template_2_score=0.7926
+template_2_match_location=(0, 204)
+locations_consistent=False
+best_score=0.8269
+match_location=(30, 166)
+matched_crop=diagnostic\soul_task\compare\legacy\2026-09-15-160411_matched_crop.png
+RESULT=FAIL

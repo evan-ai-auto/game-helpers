@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "game": "梦幻西游",
+  "coordinate_type": "fixed_ui",
+  "samples": {
+    "800x600": {
+      "shortcut_panel_toggle": {
+        "client": [
+          45,
+          92
+        ],
+        "screen": [
+          411,
+          402
+        ],
+        "target_hwnd": 395164,
+        "character_name": "划下、？线",
+        "identity": "无与伦比[将军] - 划下、？线[7324466]",
+        "captured_at_utc": "2026-09-09T11:03:13.891147+00:00"
+      }
+    }
+  }
+}

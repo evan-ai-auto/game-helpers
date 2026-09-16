@@ -1,0 +1,10 @@
+screenshot=diagnostic\calibration\item_panel_click\before.png
+template=data\assets\ui\soul_task_unclaimed_icon.png
+screenshot_size=800x600
+template_size=29x30
+roi=(0, 0, 272, 252)
+best_score=0.8969
+threshold=0.8700
+match_location=(26, 160)
+matched_crop=diagnostic\soul_task\template_verify\before_matched_crop.png
+RESULT=PASS
