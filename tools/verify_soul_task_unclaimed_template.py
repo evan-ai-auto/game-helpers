@@ -1,4 +1,4 @@
-"""Verify Soul Task templates with configurable two-stage crops."""
+"""Verify Soul Task templates with fixed template scales."""
 from __future__ import annotations
 
 import argparse
@@ -10,7 +10,8 @@ from PIL import Image
 
 DEFAULT_ROI = (0, 0, 272, 252)
 DEFAULT_CROPS = ((0, 0, 272, 252), (10, 125, 125, 240))
-DEFAULT_SCALES = tuple(round(0.85 + index * 0.025, 3) for index in range(13))
+DEFAULT_TEMPLATE1_SCALE = 0.900
+DEFAULT_TEMPLATE2_SCALE = 0.850
 
 
 @dataclass(frozen=True)
@@ -101,15 +102,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("screenshot", type=Path)
     parser.add_argument("template1", type=Path)
-    parser.add_argument("template3", type=Path)
+    parser.add_argument("template2", type=Path)
     parser.add_argument("--roi", type=parse_rect, default=DEFAULT_ROI)
     parser.add_argument("--crop", action="append", type=parse_rect, dest="crops", help="relative crop rect; repeat twice")
-    parser.add_argument("--scale", action="append", type=float, dest="scales", help="template scale; repeat as needed")
     parser.add_argument("--threshold", type=float, default=0.82)
     parser.add_argument("--output-dir", type=Path, default=Path("diagnostic/soul_task/template_verify"))
     args = parser.parse_args()
 
-    paths = (args.screenshot, args.template1, args.template3)
+    paths = (args.screenshot, args.template1, args.template2)
     if any(not path.is_file() for path in paths):
         print("ERROR screenshot or template not found")
         return 2
@@ -117,19 +117,15 @@ def main() -> int:
     try:
         with Image.open(args.screenshot) as image:
             frame = np.asarray(image.convert("RGB"), dtype=np.float32)
-        template1 = load_template(args.template1)
-        template3 = load_template(args.template3)
+        template1 = resize_template(load_template(args.template1), DEFAULT_TEMPLATE1_SCALE)
+        template2 = resize_template(load_template(args.template2), DEFAULT_TEMPLATE2_SCALE)
     except (OSError, ValueError) as exc:
         print(f"ERROR unable to load image/template: {exc}")
         return 2
 
     crops = tuple(args.crops or DEFAULT_CROPS)
-    scales = tuple(args.scales or DEFAULT_SCALES)
     if len(crops) != 2:
         print("ERROR exactly two --crop values are required")
-        return 2
-    if not scales or any(scale <= 0 for scale in scales):
-        print("ERROR scales must be positive")
         return 2
 
     results = []
@@ -141,48 +137,47 @@ def main() -> int:
             return 2
 
         source_height, source_width = source.shape[:2]
-        for scale in scales:
-            scaled1 = resize_template(template1, scale)
-            scaled3 = resize_template(template3, scale)
-            score1, location1 = find_best(source, scaled1, (0, 0, source_width, source_height))
-            score3, location3 = find_best(source, scaled3, (0, 0, source_width, source_height))
-            results.append((index, rect, source_width, source_height, scale, score1, location1, score3, location3))
+        score1, location1 = find_best(source, template1, (0, 0, source_width, source_height))
+        score2, location2 = find_best(source, template2, (0, 0, source_width, source_height))
+        results.append((index, rect, source_width, source_height, score1, location1, score2, location2))
 
-    best1 = max(results, key=lambda result: result[5])
-    best3 = max(results, key=lambda result: result[7])
-    passed = best1[6] is not None and best3[8] is not None and best1[5] >= args.threshold and best3[7] >= args.threshold
-    status = "PASS" if passed else ("UNKNOWN" if best1[5] >= args.threshold else "FAIL")
+    best1 = max(results, key=lambda result: result[4])
+    best2 = max(results, key=lambda result: result[6])
+    passed = best1[5] is not None and best2[7] is not None and best1[4] >= args.threshold and best2[6] >= args.threshold
+    status = "PASS" if passed else ("UNKNOWN" if best1[4] >= args.threshold else "FAIL")
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     lines = [
         f"screenshot={args.screenshot}",
         f"threshold={args.threshold:.4f}",
         f"frame_size={frame.shape[1]}x{frame.shape[0]}",
+        f"template1_path={args.template1}",
+        f"template1_scale={DEFAULT_TEMPLATE1_SCALE:.3f}",
         f"template1_size={template1.rgb.shape[1]}x{template1.rgb.shape[0]}",
-        f"template3_size={template3.rgb.shape[1]}x{template3.rgb.shape[0]}",
-        f"scales={','.join(f'{scale:.3f}' for scale in scales)}",
+        f"template2_path={args.template2}",
+        f"template2_scale={DEFAULT_TEMPLATE2_SCALE:.3f}",
+        f"template2_size={template2.rgb.shape[1]}x{template2.rgb.shape[0]}",
         f"crop_count={len(crops)}",
     ]
     for index, rect in enumerate(crops, 1):
-        crop_results = [result for result in results if result[0] == index]
-        lines += [f"crop{index}_rect={rect}", f"crop{index}_size={crop_results[0][2]}x{crop_results[0][3]}"]
-        for result in crop_results:
-            _, _, _, _, scale, score1, location1, score3, location3 = result
-            lines += [
-                f"crop{index}_scale={scale:.3f}_template1_score={score1:.4f}",
-                f"crop{index}_scale={scale:.3f}_template3_score={score3:.4f}",
-            ]
+        result = results[index - 1]
+        lines += [
+            f"crop{index}_rect={rect}",
+            f"crop{index}_size={result[2]}x{result[3]}",
+            f"crop{index}_template1_score={result[4]:.4f}",
+            f"crop{index}_template1_match_location={result[5]}",
+            f"crop{index}_template2_score={result[6]:.4f}",
+            f"crop{index}_template2_match_location={result[7]}",
+        ]
 
     lines += [
         f"best_template1_crop={best1[0]}",
-        f"best_template1_scale={best1[4]:.3f}",
-        f"best_template1_score={best1[5]:.4f}",
-        f"best_template1_match_location={best1[6]}",
-        f"best_template3_crop={best3[0]}",
-        f"best_template3_scale={best3[4]:.3f}",
-        f"best_template3_score={best3[7]:.4f}",
-        f"best_template3_match_location={best3[8]}",
-        f"combined_score={0.65 * best1[5] + 0.35 * best3[7]:.4f}",
+        f"best_template1_score={best1[4]:.4f}",
+        f"best_template1_match_location={best1[5]}",
+        f"best_template2_crop={best2[0]}",
+        f"best_template2_score={best2[6]:.4f}",
+        f"best_template2_match_location={best2[7]}",
+        f"combined_score={0.65 * best1[4] + 0.35 * best2[6]:.4f}",
         f"RESULT={status}",
     ]
 
