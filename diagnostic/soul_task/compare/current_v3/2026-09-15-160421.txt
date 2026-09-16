@@ -1,0 +1,17 @@
+screenshot=diagnostic\workflow_runs\soul_task\2026-09-15-160421.png
+threshold=0.8200
+crop_count=2
+crop1_rect=(0, 0, 272, 252)
+crop1_template1_score=0.8115
+crop1_template1_match_location=(31, 167)
+crop1_template3_score=0.7999
+crop1_template3_match_location=(210, 132)
+crop2_rect=(20, 140, 100, 220)
+crop2_template1_score=0.8115
+crop2_template1_match_location=(11, 27)
+crop2_template3_score=0.7716
+crop2_template3_match_location=(14, 19)
+best_template1_crop=1
+best_template3_crop=1
+combined_score=0.8074
+RESULT=FAIL
