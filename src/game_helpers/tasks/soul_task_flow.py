@@ -56,8 +56,6 @@ def _click_soul_task_toggle(
     else:
         raise RuntimeError("快捷图标集合未提供可靠点击位置")
 
-    # WSGAME's background UI path accepts queued mouse messages here. Keep the
-    # existing PostMessageW transport; only the coordinate source changes.
     BackgroundInput(hwnd).click(local_x, local_y)
     return local_x, local_y
 
@@ -123,14 +121,25 @@ def run_soul_task_claim_diagnosis(
 
         frame = session.capture_frame()
         panel = detect_shortcut_panel_state(frame)
+        print(
+            "[命魂任务] 快捷图标集合初始状态："
+            f"{'折叠' if panel.collapsed is True else '展开' if panel.collapsed is False else '未知'}；"
+            f"是否需要展开={'是' if panel.collapsed is True else '否'}；"
+            f"匹配模板={panel.matched_template or '无'}；"
+            f"坐标来源={coordinate_source}；"
+            f"视觉点击点={panel.click_location or '无'}"
+        )
+        print(f"[命魂任务] 初始状态证据：{'；'.join(panel.evidence) or '无'}")
+
         if panel.collapsed is None:
             raise RuntimeError(
-                "无法可靠判断命魂任务快捷图标集合展开/折叠状态; "
+                "无法可靠判断快捷图标集合展开/折叠状态; "
                 f"coordinate_source={coordinate_source}; "
                 + "; ".join(panel.evidence)
             )
 
         if panel.collapsed:
+            print("[命魂任务] 展开决策：当前为折叠态，执行一次后台点击，不自动重试。")
             click_location = _click_soul_task_toggle(
                 selection.hwnd,
                 frame.width,
@@ -139,17 +148,27 @@ def run_soul_task_claim_diagnosis(
                 fixed_coordinate=fixed_shortcut_coordinate,
             )
             panel_opened_by_tool = True
+            print(f"[命魂任务] 展开操作：已发送后台点击，点击坐标={click_location}，等待状态变化=0.55秒")
             time.sleep(0.55)
             frame = session.capture_frame()
             panel_after = detect_shortcut_panel_state(frame)
+            print(
+                "[命魂任务] 点击后状态："
+                f"{'折叠' if panel_after.collapsed is True else '展开' if panel_after.collapsed is False else '未知'}；"
+                f"是否已展开={'是' if panel_after.collapsed is False else '否'}；"
+                f"匹配模板={panel_after.matched_template or '无'}；"
+                f"视觉点击点={panel_after.click_location or '无'}"
+            )
+            print(f"[命魂任务] 点击后状态证据：{'；'.join(panel_after.evidence) or '无'}")
+
             if panel_after.collapsed is True:
                 failure_path = output_dir_path / f"character-{selection.view_index}-panel-failure.png"
                 save_png(frame, str(failure_path))
                 screenshot_path = str(failure_path)
                 raise RuntimeError(
-                    "点击快捷图标集合开关后仍检测为折叠状态; "
+                    "执行一次展开点击后仍为折叠态，按策略停止，不自动重试; "
                     f"click={click_location}; source={coordinate_source}; "
-                    f"matched={panel.matched_template}; "
+                    f"before={panel.matched_template}; after={panel_after.matched_template}; "
                     + "; ".join(panel_after.evidence)
                 )
             if panel_after.collapsed is None:
@@ -157,10 +176,13 @@ def run_soul_task_claim_diagnosis(
                 save_png(frame, str(failure_path))
                 screenshot_path = str(failure_path)
                 raise RuntimeError(
-                    "点击快捷图标集合开关后无法可靠判断展开状态; "
+                    "执行展开点击后无法可靠判断状态，按策略停止; "
                     f"click={click_location}; source={coordinate_source}; "
                     + "; ".join(panel_after.evidence)
                 )
+            print("[命魂任务] 展开结果：折叠 → 展开，继续检测命魂领取图标。")
+        else:
+            print("[命魂任务] 展开决策：当前已经是展开态，不执行展开点击，直接继续。")
 
         output = output_dir_path / f"character-{selection.view_index}.png"
         save_png(frame, str(output))
@@ -183,10 +205,6 @@ def run_soul_task_claim_diagnosis(
         error = f"{type(exc).__name__}: {exc}"
         ok = False
     finally:
-        # Do not click the shortcut-panel toggle a second time here. The CLI's
-        # contract is to leave the panel in the state reached by the workflow;
-        # the previous restore click made a successful collapsed->expanded run
-        # end in the original collapsed state.
         restore = guard.finish()
         restored_surface = restore["restored_surface"]
         restored_tab = restore["restored_tab"]
