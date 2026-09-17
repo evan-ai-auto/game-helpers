@@ -131,6 +131,17 @@ def run_soul_task_claim_diagnosis(
 
         frame = session.capture_frame()
         panel = detect_shortcut_panel_state(frame)
+
+        before_click_path = (
+            output_dir_path
+            / f"character-{selection.view_index}-panel-before-click.png"
+        )
+        save_png(frame, str(before_click_path))
+        screenshot_path = str(before_click_path)
+
+        log_soul(f"点击前截图：{before_click_path}")
+        log_soul(f"实际点击位置：{format_client(click_client)}；来源={click_source}")
+
         state_confident = panel.collapsed is not None
         log_panel_state("展开前", panel)
         log_panel_evidence("展开前", panel)
