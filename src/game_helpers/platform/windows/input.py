@@ -26,7 +26,7 @@ class BackgroundClickVerification:
 
 
 class BackgroundInput:
-    """Send ordinary Win32 mouse/keyboard messages to a target child window."""
+    """Send ordinary Win32 background mouse/keyboard messages to a target window."""
 
     WM_MOUSEMOVE = 0x0200
     WM_LBUTTONDOWN = 0x0201
@@ -74,11 +74,15 @@ class BackgroundInput:
     def mouse_move(self, x: int, y: int) -> None:
         self._post(self.WM_MOUSEMOVE, 0, self._lparam(x, y))
 
-    def click(self, x: int, y: int) -> None:
+    def click(self, x: int, y: int) -> tuple[int, int, int]:
+        """Post mouse move/down/up and return each Win32 success flag."""
         lparam = self._lparam(x, y)
-        self._post(self.WM_MOUSEMOVE, 0, lparam)
-        self._post(self.WM_LBUTTONDOWN, self.MK_LBUTTON, lparam)
-        self._post(self.WM_LBUTTONUP, 0, lparam)
+        results = (
+            self._post(self.WM_MOUSEMOVE, 0, lparam),
+            self._post(self.WM_LBUTTONDOWN, self.MK_LBUTTON, lparam),
+            self._post(self.WM_LBUTTONUP, 0, lparam),
+        )
+        return results
 
     def click_and_verify(self, x: int, y: int, verifier: Callable[[], T | bool | None], *,
                         timeout: float = 3.0, poll_interval: float = 0.10) -> BackgroundClickVerification[T]:
@@ -117,9 +121,10 @@ class BackgroundInput:
     def alt_e_sync(self) -> None:
         self.key_sync(self.VK_E, alt=True, scan_code=0x12)
 
-    def _post(self, message: int, wparam: int, lparam: int) -> None:
+    def _post(self, message: int, wparam: int, lparam: int) -> int:
         if not self.user32.PostMessageW(self.hwnd, message, wparam, lparam):
             raise ctypes.WinError()
+        return 1
 
     def _send(self, message: int, wparam: int, lparam: int) -> int:
         return int(self.user32.SendMessageW(self.hwnd, message, wparam, lparam))
