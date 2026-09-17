@@ -49,11 +49,11 @@ def default_workflows() -> tuple[TaskWorkflow, ...]:
         ),
         TaskWorkflow(
             id="minghun_coordinate",
-            name="命魂任务坐标采集",
-            description="人工采集左上角快捷图标集合开关坐标；仅采点，不执行展开/折叠。",
+            name="命魂快捷图标开关连续坐标验证",
+            description="连续 F9 采点并后台点击；仅人工确认有效的坐标计入样本，ESC 结束，不自动重试或覆盖默认坐标。",
             recipe=TaskRecipe(
-                id="minghun_coordinate", name="命魂任务坐标采集", category=TaskCategory.GENERAL,
-                metadata={"game": "梦幻西游", "diagnosis_only": True, "calibration": "shortcut_panel_toggle", "baseline_client": "800x600"},
+                id="minghun_coordinate", name="命魂快捷图标开关连续坐标验证", category=TaskCategory.GENERAL,
+                metadata={"game": "梦幻西游", "diagnosis_only": True, "calibration": "shortcut_panel_toggle_continuous", "baseline_client": "800x600"},
             ),
         ),
         TaskWorkflow(
