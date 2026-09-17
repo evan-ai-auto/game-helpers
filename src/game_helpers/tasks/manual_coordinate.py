@@ -1,8 +1,8 @@
-"""Reusable manual coordinate collection (F8 hover assist).
+"""Reusable manual coordinate collection (F9 hover assist).
 
 This is an **asset-calibration** capability, not part of normal background
 automation. It may temporarily bring the game to the foreground so the operator
-can hover a UI control until a tooltip is visible, then press F8 to capture the
+can hover a UI control until a tooltip is visible, then press F9 to capture the
 exact screen → client mapping.
 """
 
@@ -17,7 +17,7 @@ from typing import Literal
 
 from .background_context import foreground_hwnd
 
-VK_F8 = 0x77
+VK_F9 = 0x78
 VK_ESCAPE = 0x1B
 
 CoordSource = Literal["auto", "manual", "auto_then_manual"]
@@ -37,16 +37,16 @@ class ManualCoordinateSample:
     foreground_hwnd_at_capture: int
 
 
-def wait_for_f8(*, cancel_on_escape: bool = True) -> bool:
-    """Block until F8 (True) or ESC (False)."""
+def wait_for_f9(*, cancel_on_escape: bool = True) -> bool:
+    """Block until F9 (True) or ESC (False)."""
     if sys.platform != "win32":
         raise RuntimeError("manual coordinate capture requires Windows")
     user32 = ctypes.windll.user32
     while True:
         if cancel_on_escape and (user32.GetAsyncKeyState(VK_ESCAPE) & 0x0001):
             return False
-        if user32.GetAsyncKeyState(VK_F8) & 0x0001:
-            while user32.GetAsyncKeyState(VK_F8) & 0x8000:
+        if user32.GetAsyncKeyState(VK_F9) & 0x0001:
+            while user32.GetAsyncKeyState(VK_F9) & 0x8000:
                 time.sleep(0.02)
             return True
         time.sleep(0.03)
@@ -103,7 +103,7 @@ def collect_client_coordinate(
     foreground_hwnd_for_hover: int | None = None,
     restore_foreground: int | None = None,
 ) -> ManualCoordinateSample:
-    """Prompt the operator to hover a control, press F8, return client coords.
+    """Prompt the operator to hover a control, press F9, return client coords.
 
     ``foreground_hwnd_for_hover`` (usually the game parent) is raised only for
     this assist step. ``restore_foreground`` defaults to the pre-assist FG window.
@@ -116,13 +116,13 @@ def collect_client_coordinate(
     hover_fg = int(foreground_hwnd_for_hover) if foreground_hwnd_for_hover else None
 
     print(prompt)
-    print("操作：悬停到目标上（建议看到 tooltip）→ 保持鼠标不动 → 按 F8；取消按 ESC。")
+    print("操作：悬停到目标上（建议看到 tooltip）→ 保持鼠标不动 → 按 F9；取消按 ESC。")
     if hover_fg:
         print(f"[采坐标] 临时前台 hwnd={hover_fg} …")
         set_foreground(hover_fg)
 
     try:
-        if not wait_for_f8():
+        if not wait_for_f9():
             raise RuntimeError("已取消人工采坐标（ESC）。")
         screen = cursor_screen_pos()
         client = screen_to_client(target_hwnd, screen[0], screen[1])
@@ -132,7 +132,7 @@ def collect_client_coordinate(
             target_hwnd=int(target_hwnd),
             foreground_hwnd_at_capture=foreground_hwnd(),
         )
-        print(f"coord_source=manual")
+        print("coord_source=manual")
         print(f"cursor_screen={sample.screen}")
         print(f"click_client={sample.client}")
         return sample
