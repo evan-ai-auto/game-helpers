@@ -1,4 +1,4 @@
-"""Manual calibration flow for the 命魂快捷图标集合开关."""
+"""Continuous manual calibration flow for the 命魂快捷图标集合开关."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,7 +26,7 @@ def run_soul_task_coordinate_collection(
     *,
     output_dir: str | Path = "diagnostic/soul_task",
 ) -> tuple[int, int]:
-    """Collect the toggle point, remap it, click once, and let the operator confirm."""
+    """Collect repeatedly; only operator-confirmed clicks are retained as valid samples."""
     del output_dir
     manager = GameViewManager(parent_hwnd, timeout=2.0)
     guard = BackgroundRunGuard.begin(manager)
@@ -36,46 +36,53 @@ def run_soul_task_coordinate_collection(
         manager=manager,
         capture=WindowsGraphicsCapture(),
     )
+    valid_samples: list[tuple[int, int]] = []
     try:
         sync_selected_character(parent_hwnd, selection)
         geometry = session.geometry()
-        client_size = (geometry.client_width, geometry.client_height)
-        print(f"[命魂坐标] 当前客户区={client_size[0]}x{client_size[1]}")
+        print(f"[命魂坐标] 当前客户区={geometry.client_width}x{geometry.client_height}")
         _print_geometry("target客户区原点", geometry)
         print(f"[命魂坐标] target_hwnd={selection.hwnd}; parent_hwnd={parent_hwnd}; foreground_hwnd={foreground_hwnd()}")
-        print("[命魂坐标] 采集后会按采集坐标执行一次后台点击，供人工确认结果。")
-        print("[命魂坐标] 不运行命魂状态检测，不自动重试点击。")
-        sample = collect_client_coordinate(
-            selection.hwnd,
-            prompt="请把鼠标移到左上角快捷图标集合开关上（建议看到 tooltip）",
-            foreground_hwnd_for_hover=parent_hwnd,
-        )
-        print(f"[命魂坐标] 采集完成：client={sample.client}; screen={sample.screen}")
-        print(f"[命魂坐标] 采集时 foreground_hwnd={sample.foreground_hwnd_at_capture}")
-        print(f"[命魂坐标] 建议保存为 shortcut_panel_toggle={sample.client}")
+        print("[命魂坐标] 连续验证模式：每次 F9 采点并后台点击，只有人工确认 y 的坐标计入有效样本。")
+        print("[命魂坐标] 按 ESC 结束采集；不会自动重试或覆盖默认坐标。")
 
-        before_click_geometry = session.geometry()
-        _print_geometry("点击前target客户区原点", before_click_geometry)
-        remapped_client = screen_to_client(selection.hwnd, sample.screen[0], sample.screen[1])
-        print(f"[命魂坐标] 点击前重新换算：screen={sample.screen} -> client={remapped_client}")
-        print(f"[命魂坐标] 点击前 target_hwnd={selection.hwnd}; foreground_hwnd={foreground_hwnd()}")
-        print(f"[命魂坐标] 测试点击：client={remapped_client}")
-        dispatch_results = BackgroundInput(selection.hwnd).click(remapped_client[0], remapped_client[1])
-        print(
-            "[命魂坐标] 点击消息发送结果："
-            f"WM_MOUSEMOVE={dispatch_results[0]}; "
-            f"WM_LBUTTONDOWN={dispatch_results[1]}; "
-            f"WM_LBUTTONUP={dispatch_results[2]}"
-        )
-        print("[命魂坐标] 测试点击已发送，请肉眼确认快捷图标集合是否发生展开/折叠变化。")
-        try:
-            confirmation = input("点击是否生效？按 Enter/y=生效，n=未生效：").strip().lower()
-        except EOFError:
-            confirmation = ""
-        if confirmation in {"n", "no", "否", "失败"}:
-            raise RuntimeError("人工确认测试点击未生效。")
-        print("[命魂坐标] 人工确认：测试点击视为生效。")
-        return remapped_client
+        while True:
+            try:
+                sample = collect_client_coordinate(
+                    selection.hwnd,
+                    prompt="请把鼠标移到目标开关上，保持不动后按 F9；按 ESC 结束",
+                    foreground_hwnd_for_hover=parent_hwnd,
+                )
+            except (KeyboardInterrupt, EOFError):
+                print("[命魂坐标] 采集结束。")
+                break
+
+            before_click_geometry = session.geometry()
+            remapped_client = screen_to_client(selection.hwnd, sample.screen[0], sample.screen[1])
+            dispatch_results = BackgroundInput(selection.hwnd).click(*remapped_client)
+            print(f"[命魂坐标] sample_screen={sample.screen}; sample_client={sample.client}; remapped_client={remapped_client}")
+            print(f"[命魂坐标] target_origin=({before_click_geometry.screen_left},{before_click_geometry.screen_top}); foreground_hwnd={foreground_hwnd()}")
+            print(f"[命魂坐标] dispatch=WM_MOUSEMOVE:{dispatch_results[0]},WM_LBUTTONDOWN:{dispatch_results[1]},WM_LBUTTONUP:{dispatch_results[2]}")
+            try:
+                confirmation = input("本次点击是否确实改变了展开/折叠状态？y=有效，n=无效，q=结束：").strip().lower()
+            except EOFError:
+                confirmation = "q"
+            if confirmation in {"q", "quit", "exit", "esc"}:
+                break
+            if confirmation in {"y", "yes", "是", "有效"}:
+                valid_samples.append(remapped_client)
+                print(f"[命魂坐标] VALID sample_index={len(valid_samples)} client={remapped_client}")
+            else:
+                print("[命魂坐标] INVALID 本次坐标未计入有效样本。")
+
+        print(f"[命魂坐标] valid_sample_count={len(valid_samples)}")
+        print(f"[命魂坐标] valid_samples={valid_samples}")
+        if valid_samples:
+            xs = [point[0] for point in valid_samples]
+            ys = [point[1] for point in valid_samples]
+            print(f"[命魂坐标] valid_bounds=x:{min(xs)}..{max(xs)},y:{min(ys)}..{max(ys)}")
+            return valid_samples[-1]
+        return (0, 0)
     finally:
         restore = guard.finish()
         print(f"[命魂坐标] restored_surface={restore['restored_surface']}")
