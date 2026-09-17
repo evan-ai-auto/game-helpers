@@ -12,6 +12,7 @@ from .character_selection import CharacterSelectionResult, sync_selected_charact
 from .manual_coordinate import collect_client_coordinate, screen_to_client
 from .shortcut_panel_vision import detect_shortcut_panel_state
 from .soul_task import SOUL_TASK_BASELINE_SIZE
+from .soul_task_match import as_pil_image
 from .verification_session import VerificationSession
 
 
@@ -45,12 +46,13 @@ def run_soul_task_detection_coordinate_validation(
             raise RuntimeError(f"当前客户区为 {client_size[0]}x{client_size[1]}，仅支持 800x600。")
 
         frame = session.capture_frame()
+        image = as_pil_image(frame)
         full_path = output / f"character-{selection.view_index}-full-before-detect.png"
-        save_png(frame, str(full_path))
-        panel = detect_shortcut_panel_state(frame)
+        save_png(image, str(full_path))
+        panel = detect_shortcut_panel_state(image)
 
         roi_left, roi_top, roi_right, roi_bottom = 0, 80, 40, 128
-        roi = frame.crop((roi_left, roi_top, roi_right, roi_bottom))
+        roi = image.crop((roi_left, roi_top, roi_right, roi_bottom))
         roi_path = output / f"character-{selection.view_index}-shortcut-roi.png"
         save_png(roi, str(roi_path))
 
