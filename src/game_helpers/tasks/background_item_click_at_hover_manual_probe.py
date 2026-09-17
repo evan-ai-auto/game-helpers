@@ -14,7 +14,6 @@ from __future__ import annotations
 import ctypes
 import sys
 import time
-from ctypes import wintypes
 from pathlib import Path
 
 from ..actions.background_input import BackgroundInput
@@ -23,146 +22,23 @@ from ..core.view_manager import GameViewManager
 from ..core.window import find_window
 from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
-
-VK_F8 = 0x77
-VK_ESCAPE = 0x1B
-
-
-class POINT(ctypes.Structure):
-    _fields_ = [("x", wintypes.LONG), ("y", wintypes.LONG)]
-
-
-def _foreground_hwnd() -> int:
-    return int(ctypes.windll.user32.GetForegroundWindow())
-
-
-def _cursor_pos() -> tuple[int, int]:
-    point = POINT()
-    if not ctypes.windll.user32.GetCursorPos(ctypes.byref(point)):
-        raise ctypes.WinError()
-    return int(point.x), int(point.y)
-
-
-def _set_foreground(hwnd: int, timeout: float = 2.0) -> None:
-    """Best-effort foreground handoff used only by this diagnostic probe."""
-    if not hwnd:
-        return
-    user32 = ctypes.windll.user32
-    current = _foreground_hwnd()
-    if current == hwnd:
-        return
-    current_thread = int(user32.GetWindowThreadProcessId(current, None)) if current else 0
-    target_thread = int(user32.GetWindowThreadProcessId(hwnd, None))
-    attached = False
-    try:
-        if current_thread and target_thread and current_thread != target_thread:
-            if not user32.AttachThreadInput(current_thread, target_thread, True):
-                raise ctypes.WinError()
-            attached = True
-        user32.BringWindowToTop(hwnd)
-        user32.SetForegroundWindow(hwnd)
-        deadline = time.monotonic() + timeout
-        while _foreground_hwnd() != hwnd and time.monotonic() < deadline:
-            time.sleep(0.02)
-        if _foreground_hwnd() != hwnd:
-            raise RuntimeError(
-                f"failed to make foreground hwnd={hwnd}: current={_foreground_hwnd()}"
-            )
-    finally:
-        if attached:
-            user32.AttachThreadInput(current_thread, target_thread, False)
-
-
-def _restore_foreground(hwnd: int | None) -> bool:
-    if not hwnd:
-        return True
-    _set_foreground(int(hwnd))
-    return _foreground_hwnd() == int(hwnd)
-
-
-def _screen_to_client(hwnd: int, x: int, y: int) -> tuple[int, int]:
-    point = POINT(int(x), int(y))
-    if not ctypes.windll.user32.ScreenToClient(hwnd, ctypes.byref(point)):
-        raise ctypes.WinError()
-    return int(point.x), int(point.y)
-
-
-def _client_size(hwnd: int) -> tuple[int, int]:
-    rect = wintypes.RECT()
-    if not ctypes.windll.user32.GetClientRect(hwnd, ctypes.byref(rect)):
-        raise ctypes.WinError()
-    return int(rect.right), int(rect.bottom)
-
-
-def _window_text(hwnd: int) -> str:
-    user32 = ctypes.windll.user32
-    length = int(user32.GetWindowTextLengthW(hwnd))
-    if length <= 0:
-        return ""
-    buf = ctypes.create_unicode_buffer(length + 1)
-    user32.GetWindowTextW(hwnd, buf, length + 1)
-    return buf.value
-
-
-def _window_class(hwnd: int) -> str:
-    buf = ctypes.create_unicode_buffer(256)
-    ctypes.windll.user32.GetClassNameW(hwnd, buf, len(buf))
-    return buf.value
-
-
-def _parent(hwnd: int) -> int:
-    return int(ctypes.windll.user32.GetParent(hwnd))
-
-
-def _root(hwnd: int) -> int:
-    return int(ctypes.windll.user32.GetAncestor(hwnd, 2))
-
-
-def _window_from_point(x: int, y: int) -> int:
-    return int(ctypes.windll.user32.WindowFromPoint(POINT(int(x), int(y))))
-
-
-def _ancestor_chain(hwnd: int, limit: int = 8) -> list[int]:
-    result: list[int] = []
-    current = int(hwnd)
-    while current and len(result) < limit:
-        result.append(current)
-        current = _parent(current)
-    return result
-
-
-def _print_window(label: str, hwnd: int) -> None:
-    if not hwnd:
-        print(f"{label}=0")
-        return
-    print(
-        f"{label}={hwnd} class='{_window_class(hwnd)}' title='{_window_text(hwnd)}' "
-        f"parent={_parent(hwnd)} root={_root(hwnd)}"
-    )
-
-
-def _wait_for_key_release(vk: int) -> None:
-    user32 = ctypes.windll.user32
-    while user32.GetAsyncKeyState(vk) & 0x8000:
-        time.sleep(0.03)
-
-
-def _wait_for_f8() -> bool:
-    user32 = ctypes.windll.user32
-    while True:
-        if user32.GetAsyncKeyState(VK_ESCAPE) & 0x0001:
-            return False
-        if user32.GetAsyncKeyState(VK_F8) & 0x0001:
-            _wait_for_key_release(VK_F8)
-            return True
-        time.sleep(0.03)
-
-
-def _restore_context(manager: GameViewManager, surface: int | None, tab: int | None) -> None:
-    if surface is not None:
-        manager.switch_surface_to(surface)
-    if tab is not None:
-        manager.switch_to(tab)
+from .probe_win32 import (
+    ancestor_chain,
+    client_size,
+    cursor_pos,
+    foreground_hwnd,
+    print_window,
+    restore_context,
+    restore_foreground,
+    root,
+    screen_to_client,
+    set_foreground,
+    wait_for_f8,
+    window_class,
+    window_from_point,
+    window_text,
+    parent as window_parent,
+)
 
 
 def main() -> int:
@@ -197,11 +73,11 @@ def main() -> int:
     selected = select_character(scan, accounts[choice - 1].view_index)
     original_surface = manager.current_surface_index()
     original_tab = manager.current_index()
-    foreground_before = _foreground_hwnd()
-    original_cursor = _cursor_pos()
+    foreground_before = foreground_hwnd()
+    original_cursor = cursor_pos()
 
     print(f"selected character='{selected.character_name}' view_index={selected.view_index} hwnd={selected.hwnd}")
-    _print_window("selected_info", selected.hwnd)
+    print_window("selected_info", selected.hwnd)
     print(f"original_surface={original_surface}")
     print(f"original_tab={original_tab}")
     print(f"original_foreground={foreground_before}")
@@ -222,37 +98,37 @@ def main() -> int:
 
         save_png(capture.capture(parent.hwnd), str(before_path))
 
-        _set_foreground(parent.hwnd)
-        print(f"foreground_during_coordinate_capture={_foreground_hwnd()}")
+        set_foreground(parent.hwnd)
+        print(f"foreground_during_coordinate_capture={foreground_hwnd()}")
         print("\n请手动把真实鼠标移动到‘道具’图标。")
         print("等‘道具 (Alt+E)’ tooltip 已明确显示后，保持鼠标不动，按 F8。")
         print("按 ESC 取消。")
-        if not _wait_for_f8():
+        if not wait_for_f8():
             print("收到 ESC，取消实验。")
             return 0
 
-        screen_x, screen_y = _cursor_pos()
-        client_x, client_y = _screen_to_client(selected.hwnd, screen_x, screen_y)
-        client_w, client_h = _client_size(selected.hwnd)
-        hit_hwnd = _window_from_point(screen_x, screen_y)
+        screen_x, screen_y = cursor_pos()
+        client_x, client_y = screen_to_client(selected.hwnd, screen_x, screen_y)
+        client_w, client_h = client_size(selected.hwnd)
+        hit_hwnd = window_from_point(screen_x, screen_y)
         print("\nMANUAL_HOVER_MARK")
         print(f"cursor_screen=({screen_x},{screen_y})")
         print(f"selected_client=({client_x},{client_y})")
         print(f"selected_client_size=({client_w},{client_h})")
         print(f"selected_ratio=({client_x / client_w:.6f},{client_y / client_h:.6f})")
-        _print_window("hit_test", hit_hwnd)
-        print(f"hit_root_is_game_parent={_root(hit_hwnd) == parent.hwnd if hit_hwnd else False}")
+        print_window("hit_test", hit_hwnd)
+        print(f"hit_root_is_game_parent={root(hit_hwnd) == parent.hwnd if hit_hwnd else False}")
         print(f"hit_is_selected={hit_hwnd == selected.hwnd}")
         print("hit_ancestor_chain:")
-        for index, hwnd in enumerate(_ancestor_chain(hit_hwnd), 1):
-            print(f"  [{index}] hwnd={hwnd} class='{_window_class(hwnd)}' title='{_window_text(hwnd)}' parent={_parent(hwnd)}")
+        for index, hwnd in enumerate(ancestor_chain(hit_hwnd), 1):
+            print(f"  [{index}] hwnd={hwnd} class='{window_class(hwnd)}' title='{window_text(hwnd)}' parent={window_parent(hwnd)}")
         save_png(capture.capture(parent.hwnd), str(hover_path))
         print(f"screenshot_hover={hover_path}")
 
-        if not _restore_foreground(foreground_before):
-            raise RuntimeError(f"cannot restore original foreground before background click: expected={foreground_before} actual={_foreground_hwnd()}")
-        print(f"foreground_before_background_click={_foreground_hwnd()}")
-        if _foreground_hwnd() != foreground_before:
+        if not restore_foreground(foreground_before):
+            raise RuntimeError(f"cannot restore original foreground before background click: expected={foreground_before} actual={foreground_hwnd()}")
+        print(f"foreground_before_background_click={foreground_hwnd()}")
+        if foreground_hwnd() != foreground_before:
             raise RuntimeError("foreground changed before background click")
 
         timeout = 5.0
@@ -274,7 +150,7 @@ def main() -> int:
         verified = False
         elapsed = 0.0
         while True:
-            foreground_now = _foreground_hwnd()
+            foreground_now = foreground_hwnd()
             if foreground_now != foreground_before:
                 print(f"verification_foreground_changed={foreground_now}")
                 break
@@ -284,10 +160,10 @@ def main() -> int:
             time.sleep(min(poll_interval, timeout - elapsed))
 
         save_png(capture.capture(parent.hwnd), str(during_path))
-        print(f"foreground_after_click={_foreground_hwnd()}")
-        print(f"foreground_unchanged={_foreground_hwnd() == foreground_before}")
+        print(f"foreground_after_click={foreground_hwnd()}")
+        print(f"foreground_unchanged={foreground_hwnd() == foreground_before}")
         print(f"screenshot_during_background={during_path}")
-        if _foreground_hwnd() != foreground_before:
+        if foreground_hwnd() != foreground_before:
             print("结果：后台点击后前台窗口发生变化，检测失败。")
             result_code = 1
         else:
@@ -303,24 +179,24 @@ def main() -> int:
         print(f"probe_error={exc}")
     finally:
         try:
-            _restore_context(manager, original_surface, original_tab)
+            restore_context(manager, original_surface, original_tab)
         except Exception as exc:
             print(f"context_restore_error={exc}")
             result_code = 1
         try:
-            foreground_restored = _restore_foreground(foreground_before)
+            foreground_restored = restore_foreground(foreground_before)
         except Exception as exc:
             print(f"foreground_restore_error={exc}")
             foreground_restored = False
             result_code = 1
         try:
             ctypes.windll.user32.SetCursorPos(int(original_cursor[0]), int(original_cursor[1]))
-            cursor_restored = _cursor_pos() == original_cursor
+            cursor_restored = cursor_pos() == original_cursor
         except Exception as exc:
             print(f"cursor_restore_error={exc}")
             cursor_restored = False
             result_code = 1
-        foreground_final = _foreground_hwnd()
+        foreground_final = foreground_hwnd()
         print("\n恢复测试上下文：")
         print(f"restored_surface={manager.current_surface_index() == original_surface}")
         print(f"restored_tab={manager.current_index() == original_tab}")

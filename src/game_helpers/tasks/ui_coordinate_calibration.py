@@ -10,227 +10,32 @@ manual source of truth when the visual assets are incomplete.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
 
-from ..actions.background_input import BackgroundInput
-from ..capture import WindowsGraphicsCapture, save_png
+from ..capture import WindowsGraphicsCapture
 from ..core.view_manager import GameViewManager
 from ..core.window import find_window
 from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
 from .fixed_ui_coordinate import DEFAULT_COORDINATES_PATH
 from .manual_coordinate import collect_client_coordinate
-from .shortcut_panel_vision import detect_shortcut_panel_state
 from .soul_task import SOUL_TASK_BASELINE_SIZE
-from .verification_session import VerificationSession
-from .visual_state import (
-    VisualStateObservation,
-    VisualStateProfile,
-    detect_visual_state,
-    load_visual_state,
-    make_visual_state_verifier,
+from .ui_coordinate_calibration_io import (
+    TARGET_ITEM_PANEL,
+    TARGET_SHORTCUT_PANEL,
+    session_item_profile_path,
+    write_sample,
 )
+from .ui_coordinate_calibration_runners import run_item_panel, run_shortcut_panel
+from .verification_session import VerificationSession
 
-TARGET_ITEM_PANEL = "item_panel_toggle"
-TARGET_SHORTCUT_PANEL = "shortcut_panel_toggle"
-
-
-def _load_samples(path: Path) -> dict:
-    if not path.exists():
-        return {
-            "version": 1,
-            "game": "梦幻西游",
-            "coordinate_type": "fixed_ui",
-            "samples": {},
-        }
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict) or payload.get("version") != 1:
-        raise ValueError(f"不支持的坐标标定文件格式：{path}")
-    samples = payload.get("samples")
-    if not isinstance(samples, dict):
-        raise ValueError(f"坐标标定文件缺少 samples：{path}")
-    return payload
-
-
-def _write_sample(
-    path: Path,
-    *,
-    resolution_key: str,
-    target: str,
-    sample,
-    character_name: str,
-    identity: str,
-) -> None:
-    payload = _load_samples(path)
-    payload["samples"][resolution_key] = payload["samples"].get(resolution_key, {})
-    payload["samples"][resolution_key][target] = {
-        "client": list(sample.client),
-        "screen": list(sample.screen),
-        "target_hwnd": sample.target_hwnd,
-        "character_name": character_name,
-        "identity": identity,
-        "captured_at_utc": datetime.now(timezone.utc).isoformat(),
-    }
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-
-def _observe_visual(
-    session: VerificationSession,
-    profile: VisualStateProfile,
-    output_path: Path,
-) -> VisualStateObservation:
-    frame = session.capture_frame()
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    save_png(frame, str(output_path))
-    return detect_visual_state(frame, profile)
-
-
-def _shortcut_verifier(
-    session: VerificationSession,
-    *,
-    expected_collapsed: bool,
-) -> Callable[[], object | None]:
-    consecutive = 0
-
-    def verify() -> object | None:
-        nonlocal consecutive
-        observation = detect_shortcut_panel_state(session.capture_frame())
-        if observation.collapsed is expected_collapsed:
-            consecutive += 1
-            if consecutive >= 2:
-                return observation
-        else:
-            consecutive = 0
-        return None
-
-    return verify
-
-
-def _click_item_panel(
-    session: VerificationSession,
-    profile: VisualStateProfile,
-    click_client: tuple[int, int],
-    *,
-    expected_open: bool,
-    timeout: float,
-):
-    verifier = make_visual_state_verifier(
-        session.capture_frame,
-        profile,
-        expected_detected=expected_open,
-    )
-    return BackgroundInput(session.selected.hwnd).click_and_verify(
-        click_client[0], click_client[1], verifier, timeout=timeout, poll_interval=0.10
-    )
-
-
-def _run_item_panel(
-    session: VerificationSession,
-    click_client: tuple[int, int],
-    *,
-    diagnostic_dir: Path,
-    timeout: float,
-) -> int:
-    profile_path = session_item_profile_path(session)
-    profile = load_visual_state(profile_path)
-    print(f"item_panel_open_profile={profile_path}")
-    before = _observe_visual(session, profile, diagnostic_dir / "before.png")
-    print(f"item_panel_before={before.detected}")
-    print(f"item_panel_before_status={before.status}")
-    print(f"item_panel_before_confidence={before.confidence:.4f}")
-    print(f"screenshot_before={diagnostic_dir / 'before.png'}")
-
-    if before.detected:
-        print("当前道具栏已打开：先用同一坐标后台点击关闭，再用同一坐标打开。")
-        close = _click_item_panel(
-            session, profile, click_client, expected_open=False, timeout=timeout
-        )
-        print(f"close_click_dispatched={close.dispatched}")
-        print(f"close_verification_verified={close.verified}")
-        print(f"close_verification_elapsed={close.elapsed:.3f}s")
-        after_close = _observe_visual(session, profile, diagnostic_dir / "after-close.png")
-        print(f"item_panel_after_close={after_close.detected}")
-        print(f"screenshot_after_close={diagnostic_dir / 'after-close.png'}")
-        if not close.verified:
-            print("RESULT=FAIL")
-            print("视觉验证未确认关闭；当前阶段请以人工观察为准。")
-            return 10
-
-    print("发送后台点击：目标=打开道具栏。")
-    opened = _click_item_panel(
-        session, profile, click_client, expected_open=True, timeout=timeout
-    )
-    after_open = _observe_visual(session, profile, diagnostic_dir / "after-open.png")
-    print(f"open_click_dispatched={opened.dispatched}")
-    print(f"open_verification_verified={opened.verified}")
-    print(f"open_verification_timed_out={opened.timed_out}")
-    print(f"open_verification_elapsed={opened.elapsed:.3f}s")
-    print(f"item_panel_after_open={after_open.detected}")
-    print(f"item_panel_after_open_status={after_open.status}")
-    print(f"item_panel_after_open_confidence={after_open.confidence:.4f}")
-    print(f"screenshot_after_open={diagnostic_dir / 'after-open.png'}")
-    print("RESULT=PASS" if opened.verified else "RESULT=FAIL")
-    if not opened.verified:
-        print("视觉验证未确认打开；当前阶段请以人工观察为准，不据此否定坐标或点击。")
-        return 11
-    print("视觉验证确认打开。")
-    return 0
-
-
-def session_item_profile_path(session: VerificationSession) -> Path:
-    from .asset_resolution import resolve_resolution_asset
-
-    geometry = session.geometry()
-    return resolve_resolution_asset("item_panel_open.json", (geometry.client_width, geometry.client_height))
-
-
-def _run_shortcut_panel(
-    session: VerificationSession,
-    click_client: tuple[int, int],
-    *,
-    diagnostic_dir: Path,
-    timeout: float,
-) -> int:
-    diagnostic_dir.mkdir(parents=True, exist_ok=True)
-    before_frame = session.capture_frame()
-    save_png(before_frame, str(diagnostic_dir / "before.png"))
-    before = detect_shortcut_panel_state(before_frame)
-    print(f"shortcut_panel_before={'collapsed' if before.collapsed is True else 'expanded' if before.collapsed is False else 'unknown'}")
-    print(f"shortcut_panel_before_confidence={before.confidence:.4f}")
-    print(f"screenshot_before={diagnostic_dir / 'before.png'}")
-
-    expected_collapsed = None if before.collapsed is None else not before.collapsed
-    if expected_collapsed is None:
-        print("当前箭头状态视觉检测未知，仍会按人工固定坐标发送一次 PostMessageW 点击。")
-    else:
-        state_text = "折叠" if expected_collapsed else "展开"
-        print(f"点击后视觉验证目标：{state_text}态。")
-
-    verifier = _shortcut_verifier(session, expected_collapsed=expected_collapsed) if expected_collapsed is not None else (lambda: None)
-    outcome = BackgroundInput(session.selected.hwnd).click_and_verify(
-        click_client[0], click_client[1], verifier, timeout=timeout, poll_interval=0.10
-    )
-    after_frame = session.capture_frame()
-    save_png(after_frame, str(diagnostic_dir / "after-click.png"))
-    after = detect_shortcut_panel_state(after_frame)
-    print(f"click_dispatched={outcome.dispatched}")
-    print(f"verification_verified={outcome.verified}")
-    print(f"verification_timed_out={outcome.timed_out}")
-    print(f"verification_elapsed={outcome.elapsed:.3f}s")
-    print(f"shortcut_panel_after={'collapsed' if after.collapsed is True else 'expanded' if after.collapsed is False else 'unknown'}")
-    print(f"shortcut_panel_after_confidence={after.confidence:.4f}")
-    print(f"screenshot_after_click={diagnostic_dir / 'after-click.png'}")
-    print("RESULT=PASS" if outcome.verified else "RESULT=FAIL")
-    if not outcome.verified:
-        print("视觉验证未确认状态变化；当前阶段请以人工观察为准，不据此否定坐标或点击。")
-    else:
-        print("视觉验证确认状态变化。")
-    return 0 if outcome.verified else 11
+__all__ = [
+    "TARGET_ITEM_PANEL",
+    "TARGET_SHORTCUT_PANEL",
+    "main",
+    "session_item_profile_path",
+]
 
 
 def main() -> int:
@@ -321,7 +126,7 @@ def main() -> int:
     )
     click_client = tuple(sample.client)
     output = Path(args.output)
-    _write_sample(
+    write_sample(
         output,
         resolution_key=resolution_key,
         target=target,
@@ -340,13 +145,13 @@ def main() -> int:
 
     diagnostic_dir = Path(args.diagnostic_dir) / target
     if target == TARGET_ITEM_PANEL:
-        return _run_item_panel(
+        return run_item_panel(
             session,
             click_client,
             diagnostic_dir=diagnostic_dir,
             timeout=args.timeout,
         )
-    return _run_shortcut_panel(
+    return run_shortcut_panel(
         session,
         click_client,
         diagnostic_dir=diagnostic_dir,

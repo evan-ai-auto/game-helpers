@@ -19,8 +19,6 @@ from __future__ import annotations
 
 import ctypes
 import sys
-import time
-from ctypes import wintypes
 from pathlib import Path
 
 from ..actions.background_input import BackgroundInput
@@ -28,129 +26,22 @@ from ..capture import WindowsGraphicsCapture, save_png
 from ..core.view_manager import GameViewManager
 from ..core.window import find_window
 from .accounts import scan_game_accounts
+from .background_item_panel_open_probe_visual import (
+    print_visual_diagnostic,
+    refresh_surface_for_capture,
+    verify_capture,
+)
 from .character_selection import logged_in_accounts, select_character, sync_selected_character
-from .visual_state import detect_visual_state, load_visual_state, make_visual_state_verifier
-
-VK_F8 = 0x77
-VK_ESCAPE = 0x1B
-
-
-class POINT(ctypes.Structure):
-    _fields_ = [("x", wintypes.LONG), ("y", wintypes.LONG)]
-
-
-def _foreground_hwnd() -> int:
-    return int(ctypes.windll.user32.GetForegroundWindow())
-
-
-def _cursor_pos() -> tuple[int, int]:
-    point = POINT()
-    if not ctypes.windll.user32.GetCursorPos(ctypes.byref(point)):
-        raise ctypes.WinError()
-    return int(point.x), int(point.y)
-
-
-def _set_foreground(hwnd: int, timeout: float = 2.0) -> None:
-    if not hwnd:
-        return
-    user32 = ctypes.windll.user32
-    current = _foreground_hwnd()
-    if current == hwnd:
-        return
-    current_thread = int(user32.GetWindowThreadProcessId(current, None)) if current else 0
-    target_thread = int(user32.GetWindowThreadProcessId(hwnd, None))
-    attached = False
-    try:
-        if current_thread and target_thread and current_thread != target_thread:
-            if not user32.AttachThreadInput(current_thread, target_thread, True):
-                raise ctypes.WinError()
-            attached = True
-        user32.BringWindowToTop(hwnd)
-        user32.SetForegroundWindow(hwnd)
-        deadline = time.monotonic() + timeout
-        while _foreground_hwnd() != hwnd and time.monotonic() < deadline:
-            time.sleep(0.02)
-        if _foreground_hwnd() != hwnd:
-            raise RuntimeError(f"failed to make foreground hwnd={hwnd}: current={_foreground_hwnd()}")
-    finally:
-        if attached:
-            user32.AttachThreadInput(current_thread, target_thread, False)
-
-
-def _restore_foreground(hwnd: int | None) -> bool:
-    if not hwnd:
-        return True
-    _set_foreground(int(hwnd))
-    return _foreground_hwnd() == int(hwnd)
-
-
-def _screen_to_client(hwnd: int, x: int, y: int) -> tuple[int, int]:
-    point = POINT(int(x), int(y))
-    if not ctypes.windll.user32.ScreenToClient(hwnd, ctypes.byref(point)):
-        raise ctypes.WinError()
-    return int(point.x), int(point.y)
-
-
-def _wait_for_f8() -> bool:
-    user32 = ctypes.windll.user32
-    while True:
-        if user32.GetAsyncKeyState(VK_ESCAPE) & 0x0001:
-            return False
-        if user32.GetAsyncKeyState(VK_F8) & 0x0001:
-            while user32.GetAsyncKeyState(VK_F8) & 0x8000:
-                time.sleep(0.02)
-            return True
-        time.sleep(0.03)
-
-
-def _restore_context(manager: GameViewManager, surface: int | None, tab: int | None) -> None:
-    if surface is not None:
-        manager.switch_surface_to(surface)
-    if tab is not None:
-        manager.switch_to(tab)
-
-
-def _verify_capture(capture, hwnd: int, profile, *, timeout: float, poll_interval: float):
-    """Poll visual state against one known capture target without clicking."""
-    verifier = make_visual_state_verifier(lambda: capture.capture(hwnd), profile)
-    deadline = time.monotonic() + timeout
-    while True:
-        value = verifier()
-        if value is not None:
-            return value
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            return None
-        time.sleep(min(poll_interval, remaining))
-
-
-def _refresh_surface_for_capture(manager: GameViewManager, selected_view_index: int, original_foreground: int) -> bool:
-    """Force a background-safe WSGAME repaint by switching away and back."""
-    views = manager.views()
-    if len(views) <= 1:
-        return False
-
-    refresh_index = next(index for index in range(1, len(views) + 1) if index != selected_view_index)
-    manager.switch_surface_to(refresh_index)
-    manager.switch_surface_to(selected_view_index)
-
-    foreground = _foreground_hwnd()
-    if foreground != original_foreground:
-        raise RuntimeError(
-            "foreground window changed during visual refresh: "
-            f"before={original_foreground}, after={foreground}"
-        )
-    return True
-
-
-def _print_visual_diagnostic(label: str, frame, profile) -> None:
-    """Print one-shot detector evidence so false negatives are distinguishable."""
-    observation = detect_visual_state(frame, profile)
-    print(f"visual_diagnostic_{label}_status={observation.status}")
-    print(f"visual_diagnostic_{label}_confidence={observation.confidence:.6f}")
-    print(f"visual_diagnostic_{label}_origin={observation.origin}")
-    print(f"visual_diagnostic_{label}_anchor_scores={observation.anchor_scores}")
-    print(f"visual_diagnostic_{label}_evidence={observation.evidence}")
+from .probe_win32 import (
+    cursor_pos,
+    foreground_hwnd,
+    restore_context,
+    restore_foreground,
+    screen_to_client,
+    set_foreground,
+    wait_for_f8,
+)
+from .visual_state import load_visual_state, make_visual_state_verifier
 
 
 def main() -> int:
@@ -185,8 +76,8 @@ def main() -> int:
     selected = select_character(scan, accounts[choice - 1].view_index)
     original_surface = manager.current_surface_index()
     original_tab = manager.current_index()
-    original_foreground = _foreground_hwnd()
-    original_cursor = _cursor_pos()
+    original_foreground = foreground_hwnd()
+    original_cursor = cursor_pos()
     result_code = 1
 
     print(f"selected character='{selected.character_name}' view_index={selected.view_index} hwnd={selected.hwnd}")
@@ -204,27 +95,27 @@ def main() -> int:
         refresh_path = output_dir / f"after-refresh-character-{selected.view_index}.png"
         save_png(capture.capture(parent.hwnd), str(before_path))
 
-        _set_foreground(parent.hwnd)
-        print(f"foreground_for_hover={_foreground_hwnd()}")
+        set_foreground(parent.hwnd)
+        print(f"foreground_for_hover={foreground_hwnd()}")
         print("请手动把真实鼠标移动到‘道具’图标。")
         print("确认‘道具 (Alt+E)’ tooltip 出现后保持鼠标不动，按 F8。")
         print("按 ESC 取消。")
-        if not _wait_for_f8():
+        if not wait_for_f8():
             print("收到 ESC，取消实验。")
             return 0
 
-        screen_x, screen_y = _cursor_pos()
-        client_x, client_y = _screen_to_client(selected.hwnd, screen_x, screen_y)
+        screen_x, screen_y = cursor_pos()
+        client_x, client_y = screen_to_client(selected.hwnd, screen_x, screen_y)
         print("\nMANUAL_HOVER_MARK")
         print(f"cursor_screen=({screen_x},{screen_y})")
         print(f"selected_client=({client_x},{client_y})")
         print("坐标来自真实 tooltip 命中位置，不猜测图标中心。")
 
-        if not _restore_foreground(original_foreground):
+        if not restore_foreground(original_foreground):
             raise RuntimeError(
-                f"cannot restore original foreground before background click: expected={original_foreground} actual={_foreground_hwnd()}"
+                f"cannot restore original foreground before background click: expected={original_foreground} actual={foreground_hwnd()}"
             )
-        if _foreground_hwnd() != original_foreground:
+        if foreground_hwnd() != original_foreground:
             raise RuntimeError("foreground changed before background click")
 
         profile_path = Path("data/assets/ui/visual_states/item_panel_open.json")
@@ -251,22 +142,22 @@ def main() -> int:
         print(f"verification_verified={outcome.verified}")
         print(f"verification_timed_out={outcome.timed_out}")
         print(f"verification_elapsed={outcome.elapsed:.3f}s")
-        print(f"foreground_after_click={_foreground_hwnd()}")
-        print(f"foreground_unchanged={_foreground_hwnd() == original_foreground}")
+        print(f"foreground_after_click={foreground_hwnd()}")
+        print(f"foreground_unchanged={foreground_hwnd() == original_foreground}")
         print(f"screenshot_before={before_path}")
         print(f"screenshot_after={after_path}")
-        _print_visual_diagnostic("after", after_frame, profile)
+        print_visual_diagnostic("after", after_frame, profile)
 
         observation = outcome.value if outcome.verified else None
         refresh_attempted = False
         if observation is None and outcome.timed_out:
             print("\n视觉验证超时：不重发点击，先尝试后台安全的 Surface 刷新。")
-            refresh_attempted = _refresh_surface_for_capture(manager, selected.view_index, original_foreground)
+            refresh_attempted = refresh_surface_for_capture(manager, selected.view_index, original_foreground)
             print(f"visual_refresh_attempted={refresh_attempted}")
             if refresh_attempted:
                 refresh_frame = capture.capture(parent.hwnd)
                 save_png(refresh_frame, str(refresh_path))
-                observation = _verify_capture(
+                observation = verify_capture(
                     capture,
                     parent.hwnd,
                     profile,
@@ -275,7 +166,7 @@ def main() -> int:
                 )
                 print(f"visual_refresh_screenshot={refresh_path}")
                 print(f"verification_after_refresh={observation is not None}")
-                _print_visual_diagnostic("after_refresh", refresh_frame, profile)
+                print_visual_diagnostic("after_refresh", refresh_frame, profile)
 
         if observation is not None:
             print(f"visual_state={observation.state}")
@@ -300,19 +191,19 @@ def main() -> int:
         result_code = 1
     finally:
         try:
-            _restore_context(manager, original_surface, original_tab)
+            restore_context(manager, original_surface, original_tab)
         except Exception as exc:
             print(f"context_restore_error={exc}")
             result_code = 1
         try:
-            foreground_restored = _restore_foreground(original_foreground)
+            foreground_restored = restore_foreground(original_foreground)
         except Exception as exc:
             print(f"foreground_restore_error={exc}")
             foreground_restored = False
             result_code = 1
         try:
             ctypes.windll.user32.SetCursorPos(*original_cursor)
-            cursor_restored = _cursor_pos() == original_cursor
+            cursor_restored = cursor_pos() == original_cursor
         except Exception as exc:
             print(f"cursor_restore_error={exc}")
             cursor_restored = False
@@ -321,8 +212,8 @@ def main() -> int:
         print(f"restored_surface={manager.current_surface_index() == original_surface}")
         print(f"restored_tab={manager.current_index() == original_tab}")
         print(f"foreground_restore_ok={foreground_restored}")
-        print(f"foreground_final={_foreground_hwnd()}")
-        print(f"foreground_unchanged={_foreground_hwnd() == original_foreground}")
+        print(f"foreground_final={foreground_hwnd()}")
+        print(f"foreground_unchanged={foreground_hwnd() == original_foreground}")
         print(f"cursor_restored={cursor_restored}")
         print("道具栏状态：保留测试后的状态，不自动恢复。")
 
