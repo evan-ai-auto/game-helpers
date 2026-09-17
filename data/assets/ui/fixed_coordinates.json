@@ -2,13 +2,13 @@
   "version": 1,
   "game": "梦幻西游",
   "coordinate_type": "fixed_ui",
-  "description": "Real-machine calibrated fixed UI client coordinates for the current 800×600 baseline.",
+  "description": "Real-machine calibrated fixed UI client coordinates for the current 800×600 baseline. shortcut_panel_toggle default click candidate is (14, 122); previous (34, 92) was an outdated calibration sample and must not be used as the production click.",
   "samples": {
     "800x600": {
       "shortcut_panel_toggle": {
         "client": [
-          34,
-          92
+          14,
+          122
         ],
         "screen": [
           346,
@@ -17,7 +17,8 @@
         "target_hwnd": 395164,
         "character_name": "划下、？线",
         "identity": "无与伦比[将军] - 划下、？线[7324466]",
-        "captured_at_utc": "2026-09-09T12:31:09.045697+00:00"
+        "captured_at_utc": "2026-09-09T12:31:09.045697+00:00",
+        "note": "Updated from obsolete (34, 92) to production default (14, 122). Visual match location remains separate from this click."
       }
     }
   }

@@ -12,6 +12,7 @@ from .soul_task_detect import (
     inspect_task_panel_image,
 )
 from .soul_task_models import (
+    DEFAULT_SHORTCUT_PANEL_CLICK,
     DEFAULT_SOUL_TASK_UI,
     SOUL_TASK_BASELINE_SIZE,
     SoulTaskDetectionReason,
@@ -24,6 +25,7 @@ from .soul_task_models import (
 )
 
 __all__ = [
+    "DEFAULT_SHORTCUT_PANEL_CLICK",
     "DEFAULT_SOUL_TASK_UI",
     "SOUL_TASK_BASELINE_SIZE",
     "SoulTaskDetectionReason",

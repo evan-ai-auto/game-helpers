@@ -15,10 +15,10 @@ from .soul_task import (
 )
 
 
-# The arrow is flush with the left edge of the real 800×600 client. The
-# previous ROI started at x=8, which clipped the real arrow and could select a
-# false-positive match farther to the right. Keep the ROI deliberately local,
-# but include x=0 so the actual control can be matched at the client edge.
+# The arrow is flush with the left edge of the real 800×600 client. Keep this
+# ROI as a small tolerance band around the production click candidate (14, 122).
+# Visual match centers found here are diagnostic only; the main flow clicks the
+# calibrated/default fixed client point, not the match center.
 SHORTCUT_PANEL_TOGGLE_REGION = UiRect(
     0 / 800,
     80 / 600,

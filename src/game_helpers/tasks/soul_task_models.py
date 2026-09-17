@@ -70,9 +70,15 @@ class SoulTaskUiProfile:
 
 SOUL_TASK_BASELINE_SIZE = (800, 600)
 
+# Production default click candidate for the shortcut-panel toggle on 800×600.
+# Visual matching is diagnostic only; the main flow clicks this fixed client point
+# (or the calibrated value in fixed_coordinates.json when present).
+DEFAULT_SHORTCUT_PANEL_CLICK = (14, 122)
+
 DEFAULT_SOUL_TASK_UI = SoulTaskUiProfile(
-    # Compatibility fallback only; normal operation locates the real arrow.
-    task_entry_toggle=UiPoint(25 / 800, 100 / 600),
+    # Fallback pixel for probes that still read task_entry_toggle; main flow uses
+    # DEFAULT_SHORTCUT_PANEL_CLICK / fixed_coordinates.json instead of vision centers.
+    task_entry_toggle=UiPoint(14 / 800, 122 / 600),
     task_panel_icon=UiPoint(0.10, 0.10),
     claimed_icon_region=UiRect(0.0, 0.0, 0.34, 0.42),
     collapsed_toggle_region=UiRect(8 / 800, 82 / 600, 52 / 800, 128 / 600),
@@ -97,5 +103,9 @@ class SoulTaskPanelObservation:
     match_location: tuple[int, int] | None
     reason: SoulTaskDetectionReason
     evidence: tuple[str, ...] = ()
+    # Visual match center only — never treat as the production click target.
     click_location: tuple[int, int] | None = None
     matched_template: str | None = None
+    match_score: float = 0.0
+    second_template: str | None = None
+    second_score: float | None = None

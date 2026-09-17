@@ -39,8 +39,8 @@ def detect_soul_task_panel_collapsed(
       * right-pointing arrow (light or grey) = collapsed
       * left-pointing arrow (light) = expanded
 
-    The returned click location is the matched arrow center, so execution does
-    not depend on the old fixed coordinate.
+    ``match_location`` / ``click_location`` describe the *visual* match only.
+    Production clicks must use the calibrated fixed coordinate, not these fields.
     """
     try:
         image = as_pil_image(image)
@@ -79,30 +79,35 @@ def detect_soul_task_panel_collapsed(
 
     matches.sort(key=lambda item: item[0], reverse=True)
     best_score, best_name, is_collapsed, location, size = matches[0]
-    second_score = matches[1][0]
+    second_score, second_name = matches[1][0], matches[1][1]
     margin = best_score - second_score
+
+    absolute = (left + location[0], top + location[1]) if location else None
+    visual_center = (
+        (absolute[0] + size[0] // 2, absolute[1] + size[1] // 2)
+        if absolute
+        else None
+    )
 
     if best_score < profile.toggle_match_threshold or margin < profile.toggle_margin:
         evidence = (
             f"toggle best={best_name} score={best_score:.3f}",
-            f"toggle second={matches[1][1]} score={second_score:.3f}",
+            f"toggle second={second_name} score={second_score:.3f}",
             f"toggle margin={margin:.3f}",
         )
         return SoulTaskPanelObservation(
             None,
             max(0.0, best_score),
-            (left + location[0], top + location[1]) if location else None,
+            absolute,
             SoulTaskDetectionReason.PANEL_STATE_UNKNOWN,
             evidence=evidence,
+            click_location=visual_center,
             matched_template=best_name,
+            match_score=float(best_score),
+            second_template=second_name,
+            second_score=float(second_score),
         )
 
-    absolute = (left + location[0], top + location[1]) if location else None
-    click_location = (
-        (absolute[0] + size[0] // 2, absolute[1] + size[1] // 2)
-        if absolute
-        else None
-    )
     confidence = max(0.0, min(1.0, 0.5 + 0.5 * best_score))
     reason = SoulTaskDetectionReason.PANEL_COLLAPSED if is_collapsed else SoulTaskDetectionReason.PANEL_EXPANDED
     evidence = (
@@ -116,8 +121,11 @@ def detect_soul_task_panel_collapsed(
         match_location=absolute,
         reason=reason,
         evidence=evidence,
-        click_location=click_location,
+        click_location=visual_center,
         matched_template=best_name,
+        match_score=float(best_score),
+        second_template=second_name,
+        second_score=float(second_score),
     )
 
 

@@ -106,18 +106,23 @@ def main() -> int:
     if workflow.id == "minghun":
         print("task_execution_started=True")
         result = run_soul_task_claim_diagnosis(parent.hwnd, selected, output_dir=f"{args.output_dir}/soul_task", require_baseline=True)
-        print(f"client_size={result.client_size}")
-        print(f"soul_task_status={result.status.value}")
+        print(f"[命魂任务] 客户区：{result.client_size[0]}x{result.client_size[1]}" if result.client_size else "[命魂任务] 客户区：未知")
+        print(f"[命魂任务] 领取状态：{result.status.value}")
         if result.observation is not None:
-            print(f"detection_reason={result.observation.reason.value}")
-            print(f"confidence={result.observation.confidence:.3f}")
-        print(f"screenshot={result.screenshot_path}")
-        print(f"foreground_unchanged={result.foreground_unchanged}")
-        print(f"restored_surface={result.restored_surface}")
-        print(f"restored_tab={result.restored_tab}")
+            print(f"[命魂任务] 领取分数：score={result.observation.confidence:.3f}")
+        if result.screenshot_path:
+            print(f"[命魂任务] 截图：{result.screenshot_path}")
+        if result.state_changed is not None:
+            print(f"[命魂任务] 状态变化标志：{'是' if result.state_changed else '否'}")
+        if result.state_confident is not None:
+            print(f"[命魂任务] 状态可信标志：{'是' if result.state_confident else '否'}")
+        if result.click_dispatch_success is not None:
+            print(f"[命魂任务] 点击发送标志：{'是' if result.click_dispatch_success else '否'}")
+        if result.verification_result:
+            print(f"[命魂任务] 校验结论：{result.verification_result}")
         print(result.message)
         if result.error:
-            print(f"error={result.error}")
+            print(f"[命魂任务] 错误摘要：{result.error}")
         print("[链路] 6/6 结果")
         if result.ok:
             print("result=PASSED")

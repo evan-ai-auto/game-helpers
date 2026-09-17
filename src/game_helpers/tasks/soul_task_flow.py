@@ -15,10 +15,20 @@ from .shortcut_panel_vision import detect_shortcut_panel_state
 from .soul_task import (
     SOUL_TASK_BASELINE_SIZE,
     SoulTaskObservation,
-    SoulTaskPanelObservation,
     SoulTaskStatus,
     detect_soul_task_claimed_icon,
 )
+from .soul_task_logging import (
+    claim_status_text,
+    format_bool_cn,
+    format_client,
+    format_score,
+    log_expand_failure,
+    log_panel_evidence,
+    log_panel_state,
+    log_soul,
+)
+from .soul_task_models import DEFAULT_SHORTCUT_PANEL_CLICK
 from .verification_session import VerificationSession
 
 
@@ -38,26 +48,26 @@ class SoulTaskClaimDiagnosisResult:
     screenshot_path: str | None
     client_size: tuple[int, int] | None
     error: str | None = None
+    state_changed: bool | None = None
+    state_confident: bool | None = None
+    click_dispatch_success: bool | None = None
+    verification_result: str | None = None
 
 
-def _click_soul_task_toggle(
-    hwnd: int,
-    frame_width: int,
-    frame_height: int,
-    panel: SoulTaskPanelObservation,
+def _resolve_shortcut_click(
     *,
-    fixed_coordinate: tuple[int, int] | None = None,
-) -> tuple[int, int]:
-    """Click the calibrated fixed point when available, otherwise the detected arrow center."""
-    if fixed_coordinate is not None:
-        local_x, local_y = fixed_coordinate
-    elif panel.click_location is not None:
-        local_x, local_y = panel.click_location
-    else:
-        raise RuntimeError("快捷图标集合未提供可靠点击位置")
+    client_size: tuple[int, int],
+) -> tuple[tuple[int, int], str]:
+    """Return (click_client, source_label). Vision match is never the click target."""
+    fixed = load_fixed_ui_coordinate(SHORTCUT_PANEL_TARGET, resolution=client_size)
+    if fixed is not None:
+        return fixed, "标定坐标"
+    return DEFAULT_SHORTCUT_PANEL_CLICK, "默认候选"
 
-    BackgroundInput(hwnd).click(local_x, local_y)
-    return local_x, local_y
+
+def _dispatch_click(hwnd: int, click: tuple[int, int]) -> bool:
+    results = BackgroundInput(hwnd).click(click[0], click[1])
+    return all(int(flag) != 0 for flag in results)
 
 
 def _status_message(observation: SoulTaskObservation) -> str:
@@ -92,8 +102,10 @@ def run_soul_task_claim_diagnosis(
     client_size: tuple[int, int] | None = None
     error: str | None = None
     ok = False
-    fixed_shortcut_coordinate: tuple[int, int] | None = None
-    coordinate_source = "vision"
+    state_changed: bool | None = None
+    state_confident: bool | None = None
+    click_dispatch_success: bool | None = None
+    verification_result: str | None = None
 
     try:
         sync_selected_character(parent_hwnd, selection)
@@ -109,80 +121,112 @@ def run_soul_task_claim_diagnosis(
                 f"当前角色客户区为 {client_size[0]}x{client_size[1]}，"
                 f"本阶段仅支持基线 {SOUL_TASK_BASELINE_SIZE[0]}x{SOUL_TASK_BASELINE_SIZE[1]}。"
             )
-        fixed_shortcut_coordinate = load_fixed_ui_coordinate(
-            SHORTCUT_PANEL_TARGET,
-            resolution=client_size,
-        )
-        if fixed_shortcut_coordinate is not None:
-            coordinate_source = f"fixed={fixed_shortcut_coordinate}"
+
+        click_client, click_source = _resolve_shortcut_click(client_size=client_size)
+        log_soul(f"点击候选：{format_client(click_client)}；来源={click_source}")
+        log_soul("说明：视觉匹配位置仅用于诊断，不作为实际点击坐标")
 
         output_dir_path = Path(output_dir)
         output_dir_path.mkdir(parents=True, exist_ok=True)
 
         frame = session.capture_frame()
         panel = detect_shortcut_panel_state(frame)
-        print(
-            "[命魂任务] 快捷图标集合初始状态："
-            f"{'折叠' if panel.collapsed is True else '展开' if panel.collapsed is False else '未知'}；"
-            f"是否需要展开={'是' if panel.collapsed is True else '否'}；"
-            f"匹配模板={panel.matched_template or '无'}；"
-            f"坐标来源={coordinate_source}；"
-            f"视觉点击点={panel.click_location or '无'}"
-        )
-        print(f"[命魂任务] 初始状态证据：{'；'.join(panel.evidence) or '无'}")
+        state_confident = panel.collapsed is not None
+        log_panel_state("展开前", panel)
+        log_panel_evidence("展开前", panel)
+        log_soul(f"状态可信：{format_bool_cn(state_confident)}")
 
         if panel.collapsed is None:
-            raise RuntimeError(
-                "无法可靠判断快捷图标集合展开/折叠状态; "
-                f"coordinate_source={coordinate_source}; "
-                + "; ".join(panel.evidence)
+            failure_path = output_dir_path / f"character-{selection.view_index}-panel-unknown.png"
+            save_png(frame, str(failure_path))
+            screenshot_path = str(failure_path)
+            verification_result = "状态不可信"
+            log_soul("展开结果：失败")
+            log_soul("失败原因：展开前无法可靠确认折叠/展开状态")
+            log_soul(f"点击位置：{format_client(click_client)}")
+            log_soul("点击发送：未执行")
+            log_soul(
+                f"展开前最佳模板：{panel.matched_template or '无'}；"
+                f"{format_score(panel.match_score if panel.matched_template else None)}"
             )
+            log_soul(
+                f"展开前次佳模板：{panel.second_template or '无'}；"
+                f"{format_score(panel.second_score if panel.second_template is not None else None)}"
+            )
+            log_soul("处理策略：停止，不自动重试")
+            raise RuntimeError("无法可靠判断快捷图标集合展开/折叠状态")
 
         if panel.collapsed:
-            print("[命魂任务] 展开决策：当前为折叠态，执行一次后台点击，不自动重试。")
-            click_location = _click_soul_task_toggle(
-                selection.hwnd,
-                frame.width,
-                frame.height,
-                panel,
-                fixed_coordinate=fixed_shortcut_coordinate,
-            )
+            log_soul("展开决策：当前为折叠态，执行一次后台点击")
+            click_dispatch_success = _dispatch_click(selection.hwnd, click_client)
             panel_opened_by_tool = True
-            print(f"[命魂任务] 展开操作：已发送后台点击，点击坐标={click_location}，等待状态变化=0.55秒")
+            log_soul(
+                f"执行展开点击：{format_client(click_client)}；"
+                f"消息发送={'成功' if click_dispatch_success else '失败'}"
+            )
+            if not click_dispatch_success:
+                verification_result = "点击发送失败"
+                state_changed = False
+                log_expand_failure(
+                    reason="后台点击消息发送失败",
+                    click=click_client,
+                    click_dispatch_success=False,
+                    panel_after=panel,
+                    strategy="停止，不自动重试",
+                )
+                raise RuntimeError("后台点击消息发送失败")
+
             time.sleep(0.55)
             frame = session.capture_frame()
             panel_after = detect_shortcut_panel_state(frame)
-            print(
-                "[命魂任务] 点击后状态："
-                f"{'折叠' if panel_after.collapsed is True else '展开' if panel_after.collapsed is False else '未知'}；"
-                f"是否已展开={'是' if panel_after.collapsed is False else '否'}；"
-                f"匹配模板={panel_after.matched_template or '无'}；"
-                f"视觉点击点={panel_after.click_location or '无'}"
+            log_panel_state("展开后", panel_after)
+            log_panel_evidence("展开后", panel_after)
+
+            state_confident_after = panel_after.collapsed is not None
+            state_changed = (
+                state_confident_after
+                and panel.collapsed is True
+                and panel_after.collapsed is False
             )
-            print(f"[命魂任务] 点击后状态证据：{'；'.join(panel_after.evidence) or '无'}")
+            log_soul(f"状态变化：{format_bool_cn(bool(state_changed))}")
+            log_soul(f"状态可信：{format_bool_cn(state_confident_after)}")
+            log_soul(f"点击发送：{format_bool_cn(click_dispatch_success)}")
 
             if panel_after.collapsed is True:
                 failure_path = output_dir_path / f"character-{selection.view_index}-panel-failure.png"
                 save_png(frame, str(failure_path))
                 screenshot_path = str(failure_path)
-                raise RuntimeError(
-                    "执行一次展开点击后仍为折叠态，按策略停止，不自动重试; "
-                    f"click={click_location}; source={coordinate_source}; "
-                    f"before={panel.matched_template}; after={panel_after.matched_template}; "
-                    + "; ".join(panel_after.evidence)
+                verification_result = "仍为折叠"
+                log_expand_failure(
+                    reason="点击后仍为折叠态",
+                    click=click_client,
+                    click_dispatch_success=True,
+                    panel_after=panel_after,
+                    strategy="停止，不自动重试",
                 )
+                raise RuntimeError("执行一次展开点击后仍为折叠态")
+
             if panel_after.collapsed is None:
                 failure_path = output_dir_path / f"character-{selection.view_index}-panel-unknown.png"
                 save_png(frame, str(failure_path))
                 screenshot_path = str(failure_path)
-                raise RuntimeError(
-                    "执行展开点击后无法可靠判断状态，按策略停止; "
-                    f"click={click_location}; source={coordinate_source}; "
-                    + "; ".join(panel_after.evidence)
+                verification_result = "点击后状态不可信"
+                log_expand_failure(
+                    reason="点击后状态无法可靠确认",
+                    click=click_client,
+                    click_dispatch_success=True,
+                    panel_after=panel_after,
+                    strategy="停止，不自动重试",
                 )
-            print("[命魂任务] 展开结果：折叠 → 展开，继续检测命魂领取图标。")
+                raise RuntimeError("执行展开点击后无法可靠判断状态")
+
+            verification_result = "展开成功"
+            log_soul("展开结果：成功")
         else:
-            print("[命魂任务] 展开决策：当前已经是展开态，不执行展开点击，直接继续。")
+            state_changed = False
+            verification_result = "已是展开态"
+            log_soul("展开决策：当前已经是展开态，不执行展开点击")
+            log_soul("展开结果：成功")
 
         output = output_dir_path / f"character-{selection.view_index}.png"
         save_png(frame, str(output))
@@ -197,12 +241,13 @@ def run_soul_task_claim_diagnosis(
             evidence=observation.evidence,
             screenshot_path=screenshot_path,
         )
+        log_soul(f"领取检测：{claim_status_text(observation.status)}；{format_score(observation.confidence)}")
         ok = observation.status in {
             SoulTaskStatus.CLAIMED,
             SoulTaskStatus.NOT_CLAIMED,
         }
     except Exception as exc:
-        error = f"{type(exc).__name__}: {exc}"
+        error = str(exc)
         ok = False
     finally:
         restore = guard.finish()
@@ -219,7 +264,13 @@ def run_soul_task_claim_diagnosis(
 
     if not foreground_unchanged:
         ok = False
-        error = (error + "; " if error else "") + "前台窗口在检测过程中发生了变化"
+        error = (error + "；" if error else "") + "前台窗口在检测过程中发生了变化"
+
+    log_soul(f"前台窗口：{'未变化' if foreground_unchanged else '已变化'}")
+    log_soul(f"Surface 恢复：{format_bool_cn(restored_surface)}")
+    log_soul(f"标签恢复：{format_bool_cn(restored_tab)}")
+    if verification_result:
+        log_soul(f"校验结论：{verification_result}")
 
     return SoulTaskClaimDiagnosisResult(
         ok=ok and error is None and restored_surface and restored_tab and foreground_unchanged,
@@ -233,4 +284,8 @@ def run_soul_task_claim_diagnosis(
         screenshot_path=screenshot_path,
         client_size=client_size,
         error=error,
+        state_changed=state_changed,
+        state_confident=state_confident,
+        click_dispatch_success=click_dispatch_success,
+        verification_result=verification_result,
     )

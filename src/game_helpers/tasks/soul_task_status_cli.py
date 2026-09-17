@@ -67,21 +67,17 @@ def main() -> int:
         output_dir=args.output_dir,
         require_baseline=True,
     )
-    print(f"client_size={result.client_size}")
-    print(f"soul_task_status={result.status.value}")
+    print(f"[命魂任务] 客户区：{result.client_size[0]}x{result.client_size[1]}" if result.client_size else "[命魂任务] 客户区：未知")
+    print(f"[命魂任务] 领取状态：{result.status.value}")
     if result.observation is not None:
-        print(f"detection_reason={result.observation.reason.value}")
-        print(f"confidence={result.observation.confidence:.3f}")
-        print(f"match_location={result.observation.match_location}")
-        for evidence in result.observation.evidence:
-            print(f"evidence={evidence}")
-    print(f"screenshot={result.screenshot_path}")
-    print(f"foreground_unchanged={result.foreground_unchanged}")
-    print(f"restored_surface={result.restored_surface}")
-    print(f"restored_tab={result.restored_tab}")
+        print(f"[命魂任务] 领取分数：score={result.observation.confidence:.3f}")
+    if result.screenshot_path:
+        print(f"[命魂任务] 截图：{result.screenshot_path}")
+    if result.verification_result:
+        print(f"[命魂任务] 校验结论：{result.verification_result}")
     print(result.message)
     if result.error:
-        print(f"error={result.error}")
+        print(f"[命魂任务] 错误摘要：{result.error}")
 
     print("[验证] 5/5 结果")
     if result.ok:

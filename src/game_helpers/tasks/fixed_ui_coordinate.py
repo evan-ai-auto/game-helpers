@@ -9,6 +9,10 @@ from pathlib import Path
 # ``path`` when collecting a new machine-specific sample.
 DEFAULT_COORDINATES_PATH = Path("data/assets/ui/fixed_coordinates.json")
 
+# Historical note: an earlier calibration sample stored shortcut_panel_toggle at
+# client=(34, 92). That point is obsolete. Production default is (14, 122).
+OBSOLETE_SHORTCUT_PANEL_CLICK = (34, 92)
+
 
 def load_fixed_ui_coordinate(
     target: str,
