@@ -7,7 +7,21 @@
 多分辨率目录已预留；等 800×600 功能全部完成、你再补其它分辨率资产并验证（见 [backlog.md](backlog.md) MULTI-RES）。
 
 写新流程前先看：[capabilities.md](capabilities.md)。  
-实机复验：[verification.md](verification.md)（以你本地日志为准）。
+实机复验：[verification.md](verification.md)（以你本地日志为准）。  
+命魂坐标与日志回归：[soul_task_regression.md](soul_task_regression.md)。
+
+---
+
+## 0. 固定 UI 点击坐标
+
+文件：`data/assets/ui/fixed_coordinates.json`
+
+| 目标 | 800×600 现行值 | 说明 |
+|---|---|---|
+| `shortcut_panel_toggle` | **client=(14, 122)** | 生产点击候选；勿用历史误点 `(34, 92)` |
+| 视觉匹配中心 | （检测结果） | 仅诊断，不写入此文件作为点击 |
+
+采点流程可写回本文件，但写入前须人工确认有效；连续验证流程默认不覆盖。
 
 ---
 

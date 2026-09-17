@@ -58,11 +58,14 @@ Agent **不**长时间挂机等待游戏前台交互或未满足条件的循环�
 
 **通过标准**
 
-- `client_size=(800, 600)`（或打印的 client 为 800x600）
-- `soul_task_status` 为 `claimed` / `not_claimed` / `unknown` 之一
-- `foreground_unchanged=True`
-- `restored_surface=True`、`restored_tab=True`
+- 客户区为 `800x600`
+- 领取状态可读（已领取 / 未领取 / 未知）
+- 日志含前台未变化、Surface/标签恢复成功
+- 折叠态展开时点击为 `client=(14, 122)`（勿再使用过时的 `(34, 92)`）
+- 视觉匹配位置与实际点击位置分离记录
 - `result=PASSED`（检测逻辑跑完且上下文恢复成功）
+
+更细的坐标约定、日志样例与回归矩阵见 [soul_task_regression.md](soul_task_regression.md)。日志格式规范见 [agent-coding.md](agent-coding.md)。
 
 ---
 
