@@ -12,20 +12,22 @@ from .manual_coordinate import collect_client_coordinate, screen_to_client
 from .verification_session import VerificationSession
 
 
+def _print_geometry(label: str, geometry: object) -> None:
+    print(
+        f"[命魂坐标] {label}: "
+        f"screen_left={geometry.screen_left}; screen_top={geometry.screen_top}; "
+        f"client={geometry.client_width}x{geometry.client_height}"
+    )
+
+
 def run_soul_task_coordinate_collection(
     parent_hwnd: int,
     selection: CharacterSelectionResult,
     *,
     output_dir: str | Path = "diagnostic/soul_task",
 ) -> tuple[int, int]:
-    """Collect the toggle point, remap it, click once, and let the operator confirm.
-
-    The screen coordinate is sampled while the game is temporarily foregrounded.
-    Before dispatching the background click, the same screen point is converted
-    again against the target character window so window movement or client-origin
-    changes do not silently reuse a stale client coordinate.
-    """
-    del output_dir  # Reserved for future before/after calibration screenshots.
+    """Collect the toggle point, remap it, click once, and let the operator confirm."""
+    del output_dir
     manager = GameViewManager(parent_hwnd, timeout=2.0)
     guard = BackgroundRunGuard.begin(manager)
     session = VerificationSession(
@@ -39,6 +41,7 @@ def run_soul_task_coordinate_collection(
         geometry = session.geometry()
         client_size = (geometry.client_width, geometry.client_height)
         print(f"[命魂坐标] 当前客户区={client_size[0]}x{client_size[1]}")
+        _print_geometry("target客户区原点", geometry)
         print(f"[命魂坐标] target_hwnd={selection.hwnd}; parent_hwnd={parent_hwnd}; foreground_hwnd={foreground_hwnd()}")
         print("[命魂坐标] 采集后会按采集坐标执行一次后台点击，供人工确认结果。")
         print("[命魂坐标] 不运行命魂状态检测，不自动重试点击。")
@@ -51,14 +54,19 @@ def run_soul_task_coordinate_collection(
         print(f"[命魂坐标] 采集时 foreground_hwnd={sample.foreground_hwnd_at_capture}")
         print(f"[命魂坐标] 建议保存为 shortcut_panel_toggle={sample.client}")
 
-        # The window/client origin may change when the temporary foreground assist
-        # ends. Re-map the unchanged screen point against the target HWND immediately
-        # before clicking instead of blindly reusing the sampled client coordinate.
+        before_click_geometry = session.geometry()
+        _print_geometry("点击前target客户区原点", before_click_geometry)
         remapped_client = screen_to_client(selection.hwnd, sample.screen[0], sample.screen[1])
         print(f"[命魂坐标] 点击前重新换算：screen={sample.screen} -> client={remapped_client}")
         print(f"[命魂坐标] 点击前 target_hwnd={selection.hwnd}; foreground_hwnd={foreground_hwnd()}")
         print(f"[命魂坐标] 测试点击：client={remapped_client}")
-        BackgroundInput(selection.hwnd).click(remapped_client[0], remapped_client[1])
+        dispatch_results = BackgroundInput(selection.hwnd).click(remapped_client[0], remapped_client[1])
+        print(
+            "[命魂坐标] 点击消息发送结果："
+            f"WM_MOUSEMOVE={dispatch_results[0]}; "
+            f"WM_LBUTTONDOWN={dispatch_results[1]}; "
+            f"WM_LBUTTONUP={dispatch_results[2]}"
+        )
         print("[命魂坐标] 测试点击已发送，请肉眼确认快捷图标集合是否发生展开/折叠变化。")
         try:
             confirmation = input("点击是否生效？按 Enter/y=生效，n=未生效：").strip().lower()
