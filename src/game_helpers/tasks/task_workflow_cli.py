@@ -9,7 +9,10 @@ from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character
 from .item_panel_flow import run_item_panel_detect_and_toggle
 from .soul_task import SOUL_TASK_BASELINE_SIZE
-from .soul_task_coordinate_flow import run_soul_task_coordinate_collection
+from .soul_task_coordinate_flow import (
+    run_soul_task_coordinate_collection,
+    run_soul_task_coordinate_continuous_verification,
+)
 from .soul_task_flow import run_soul_task_claim_diagnosis
 from .workflows import TaskWorkflowRegistry
 
@@ -89,6 +92,13 @@ def main() -> int:
     if workflow.id == "minghun_coordinate":
         print("task_execution_started=True")
         run_soul_task_coordinate_collection(parent.hwnd, selected, output_dir=f"{args.output_dir}/soul_task")
+        print("[链路] 6/6 结果")
+        print("result=PASSED")
+        return 0
+
+    if workflow.id == "minghun_coordinate_continuous":
+        print("task_execution_started=True")
+        run_soul_task_coordinate_continuous_verification(parent.hwnd, selected, output_dir=f"{args.output_dir}/soul_task_continuous")
         print("[链路] 6/6 结果")
         print("result=PASSED")
         return 0
