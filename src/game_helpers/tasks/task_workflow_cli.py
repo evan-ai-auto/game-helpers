@@ -13,13 +13,14 @@ from .soul_task_coordinate_flow import (
     run_soul_task_coordinate_collection,
     run_soul_task_coordinate_continuous_verification,
 )
+from .soul_task_detection_coordinate_flow import run_soul_task_detection_coordinate_validation
 from .soul_task_flow import run_soul_task_claim_diagnosis
 from .workflows import TaskWorkflowRegistry
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="选择角色与任务流程（800×600 基线）：命魂领取检测 / 坐标采集 / 道具栏状态检测与切换。"
+        description="选择角色与任务流程（800×600 基线）：命魂领取检测 / 坐标采集 / 图标检测坐标联合验证 / 道具栏状态检测与切换。"
     )
     parser.add_argument("title", nargs="?", default="梦幻西游 ONLINE")
     parser.add_argument("--output-dir", default="diagnostic/workflow_runs")
@@ -27,12 +28,7 @@ def main() -> int:
         "--coord-source",
         default="auto",
         choices=("auto", "manual", "auto_then_manual"),
-        help=(
-            "道具栏流程的点击坐标来源。"
-            "auto=模板（默认/正常流程）；"
-            "manual=人工 F9 采点；"
-            "auto_then_manual=模板失败再 F9。"
-        ),
+        help=("道具栏流程的点击坐标来源。auto=模板（默认/正常流程）；manual=人工 F9 采点；auto_then_manual=模板失败再 F9。"),
     )
     args = parser.parse_args()
 
@@ -99,6 +95,13 @@ def main() -> int:
     if workflow.id == "minghun_coordinate_continuous":
         print("task_execution_started=True")
         run_soul_task_coordinate_continuous_verification(parent.hwnd, selected, output_dir=f"{args.output_dir}/soul_task_continuous")
+        print("[链路] 6/6 结果")
+        print("result=PASSED")
+        return 0
+
+    if workflow.id == "minghun_detection_coordinate":
+        print("task_execution_started=True")
+        run_soul_task_detection_coordinate_validation(parent.hwnd, selected, output_dir=f"{args.output_dir}/soul_task_detection_coordinate")
         print("[链路] 6/6 结果")
         print("result=PASSED")
         return 0
