@@ -1,0 +1,128 @@
+{
+  "character": "相思微凉ヘ",
+  "samples": [
+    {
+      "screen": [
+        154,
+        359
+      ],
+      "sample_client": [
+        72,
+        126
+      ],
+      "remapped_client": [
+        72,
+        126
+      ],
+      "dispatch": [
+        1,
+        1,
+        1
+      ],
+      "before_collapsed": null,
+      "after_collapsed": null,
+      "state_changed": false,
+      "manual_confirmed": true
+    },
+    {
+      "screen": [
+        122,
+        352
+      ],
+      "sample_client": [
+        40,
+        119
+      ],
+      "remapped_client": [
+        40,
+        119
+      ],
+      "dispatch": [
+        1,
+        1,
+        1
+      ],
+      "before_collapsed": null,
+      "after_collapsed": null,
+      "state_changed": false,
+      "manual_confirmed": true
+    },
+    {
+      "screen": [
+        125,
+        360
+      ],
+      "sample_client": [
+        43,
+        127
+      ],
+      "remapped_client": [
+        43,
+        127
+      ],
+      "dispatch": [
+        1,
+        1,
+        1
+      ],
+      "before_collapsed": null,
+      "after_collapsed": null,
+      "state_changed": false,
+      "manual_confirmed": true
+    },
+    {
+      "screen": [
+        115,
+        360
+      ],
+      "sample_client": [
+        33,
+        127
+      ],
+      "remapped_client": [
+        33,
+        127
+      ],
+      "dispatch": [
+        1,
+        1,
+        1
+      ],
+      "before_collapsed": null,
+      "after_collapsed": null,
+      "state_changed": false
+    }
+  ],
+  "detection": {
+    "full_screenshot": "diagnostic\\workflow_runs\\soul_task_detection_coordinate\\character-1-full-before-detect.png",
+    "roi_screenshot": "diagnostic\\workflow_runs\\soul_task_detection_coordinate\\character-1-shortcut-roi.png",
+    "client_size": [
+      800,
+      600
+    ],
+    "roi_client": [
+      0,
+      80,
+      40,
+      128
+    ],
+    "matched_template": "right_light",
+    "match_score": 0.8675848268995098,
+    "second_template": "right_gray",
+    "second_score": 0.7720963571585862,
+    "match_location_client": [
+      0,
+      107
+    ],
+    "visual_center_client": [
+      8,
+      117
+    ],
+    "collapsed": true,
+    "evidence": [
+      "toggle matched=right_light score=0.868",
+      "toggle margin=0.095",
+      "right arrow means collapsed; left arrow means expanded"
+    ]
+  }
+}
