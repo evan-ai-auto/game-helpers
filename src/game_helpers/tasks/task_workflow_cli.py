@@ -9,13 +9,14 @@ from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character
 from .item_panel_flow import run_item_panel_detect_and_toggle
 from .soul_task import SOUL_TASK_BASELINE_SIZE
+from .soul_task_coordinate_flow import run_soul_task_coordinate_collection
 from .soul_task_flow import run_soul_task_claim_diagnosis
 from .workflows import TaskWorkflowRegistry
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="选择角色与任务流程（800×600 基线）：命魂领取检测 / 道具栏状态检测与切换。"
+        description="选择角色与任务流程（800×600 基线）：命魂领取检测 / 坐标采集 / 道具栏状态检测与切换。"
     )
     parser.add_argument("title", nargs="?", default="梦幻西游 ONLINE")
     parser.add_argument("--output-dir", default="diagnostic/workflow_runs")
@@ -24,10 +25,10 @@ def main() -> int:
         default="auto",
         choices=("auto", "manual", "auto_then_manual"),
         help=(
-            "仅道具栏流程：点击坐标来源。"
+            "道具栏流程的点击坐标来源。"
             "auto=模板（默认/正常流程）；"
-            "manual=人工 F8 采点；"
-            "auto_then_manual=模板失败再 F8。"
+            "manual=人工 F9 采点；"
+            "auto_then_manual=模板失败再 F9。"
         ),
     )
     args = parser.parse_args()
@@ -49,10 +50,7 @@ def main() -> int:
     for option, account in enumerate(accounts, start=1):
         resolution = account.expected_resolution
         res_text = f"{resolution[0]}x{resolution[1]}" if resolution else "unknown"
-        print(
-            f"  [{option}] {account.character_name!r} | "
-            f"实例=#{account.view_index} | client={res_text} | identity={account.identity!r}"
-        )
+        print(f"  [{option}] {account.character_name!r} | 实例=#{account.view_index} | client={res_text} | identity={account.identity!r}")
 
     print("[链路] 3/6 选择角色")
     try:
@@ -66,16 +64,9 @@ def main() -> int:
     selected = select_character(scan, accounts[choice - 1].view_index)
     resolution = selected.account.expected_resolution
     res_text = f"{resolution[0]}x{resolution[1]}" if resolution else "unknown"
-    print(
-        f"selected character={selected.character_name!r} "
-        f"view_index={selected.view_index} hwnd={selected.hwnd} "
-        f"client={res_text}"
-    )
+    print(f"selected character={selected.character_name!r} view_index={selected.view_index} hwnd={selected.hwnd} client={res_text}")
     if resolution != SOUL_TASK_BASELINE_SIZE:
-        print(
-            f"当前角色分辨率不是基线 {SOUL_TASK_BASELINE_SIZE[0]}x{SOUL_TASK_BASELINE_SIZE[1]}，"
-            "请先统一到 800×600 后再跑本链路（多分辨率后续优化）。"
-        )
+        print(f"当前角色分辨率不是基线 {SOUL_TASK_BASELINE_SIZE[0]}x{SOUL_TASK_BASELINE_SIZE[1]}，请先统一到 800×600 后再跑本链路（多分辨率后续优化）。")
         return 8
 
     print("[链路] 4/6 选择任务流程")
@@ -95,14 +86,16 @@ def main() -> int:
     print(f"workflow_id={workflow.id} workflow_name={workflow.name}")
 
     print("[链路] 5/6 执行流程")
+    if workflow.id == "minghun_coordinate":
+        print("task_execution_started=True")
+        run_soul_task_coordinate_collection(parent.hwnd, selected, output_dir=f"{args.output_dir}/soul_task")
+        print("[链路] 6/6 结果")
+        print("result=PASSED")
+        return 0
+
     if workflow.id == "minghun":
         print("task_execution_started=True")
-        result = run_soul_task_claim_diagnosis(
-            parent.hwnd,
-            selected,
-            output_dir=f"{args.output_dir}/soul_task",
-            require_baseline=True,
-        )
+        result = run_soul_task_claim_diagnosis(parent.hwnd, selected, output_dir=f"{args.output_dir}/soul_task", require_baseline=True)
         print(f"client_size={result.client_size}")
         print(f"soul_task_status={result.status.value}")
         if result.observation is not None:
@@ -124,13 +117,7 @@ def main() -> int:
 
     if workflow.id == "daoju_panel":
         print("task_execution_started=True")
-        result = run_item_panel_detect_and_toggle(
-            parent.hwnd,
-            selected,
-            output_dir=f"{args.output_dir}/item_panel",
-            require_baseline=True,
-            coord_source=args.coord_source,
-        )
+        result = run_item_panel_detect_and_toggle(parent.hwnd, selected, output_dir=f"{args.output_dir}/item_panel", require_baseline=True, coord_source=args.coord_source)
         if result.before is not None:
             print(f"item_panel_before_open={result.before.open}")
         if result.after is not None:
