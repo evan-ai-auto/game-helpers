@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from ..actions.background_input import BackgroundInput
-from ..capture import WindowsGraphicsCapture, save_png
+from ..capture import WindowsGraphicsCapture
 from ..core.view_manager import GameViewManager
 from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
@@ -48,13 +48,13 @@ def run_soul_task_detection_coordinate_validation(
         frame = session.capture_frame()
         image = as_pil_image(frame)
         full_path = output / f"character-{selection.view_index}-full-before-detect.png"
-        save_png(image, str(full_path))
+        image.save(full_path, format="PNG")
         panel = detect_shortcut_panel_state(image)
 
         roi_left, roi_top, roi_right, roi_bottom = 0, 80, 40, 128
         roi = image.crop((roi_left, roi_top, roi_right, roi_bottom))
         roi_path = output / f"character-{selection.view_index}-shortcut-roi.png"
-        save_png(roi, str(roi_path))
+        roi.save(roi_path, format="PNG")
 
         evidence = {
             "full_screenshot": str(full_path),
