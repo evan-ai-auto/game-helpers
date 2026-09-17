@@ -43,15 +43,17 @@ def default_workflows() -> tuple[TaskWorkflow, ...]:
             name="命魂任务",
             description="执行领取状态检测（800×600 基线）；不自动领取。",
             recipe=TaskRecipe(
-                id="minghun",
-                name="命魂任务",
-                category=TaskCategory.GENERAL,
-                metadata={
-                    "game": "梦幻西游",
-                    "diagnosis_only": True,
-                    "status_detector": "soul_task",
-                    "baseline_client": "800x600",
-                },
+                id="minghun", name="命魂任务", category=TaskCategory.GENERAL,
+                metadata={"game": "梦幻西游", "diagnosis_only": True, "status_detector": "soul_task", "baseline_client": "800x600"},
+            ),
+        ),
+        TaskWorkflow(
+            id="minghun_coordinate",
+            name="命魂任务坐标采集",
+            description="人工采集左上角快捷图标集合开关坐标；仅采点，不执行展开/折叠。",
+            recipe=TaskRecipe(
+                id="minghun_coordinate", name="命魂任务坐标采集", category=TaskCategory.GENERAL,
+                metadata={"game": "梦幻西游", "diagnosis_only": True, "calibration": "shortcut_panel_toggle", "baseline_client": "800x600"},
             ),
         ),
         TaskWorkflow(
@@ -59,33 +61,20 @@ def default_workflows() -> tuple[TaskWorkflow, ...]:
             name="道具栏状态检测",
             description="检测道具栏开/关并后台反转；默认模板定位，可用 --coord-source manual 人工采点（800×600）。",
             recipe=TaskRecipe(
-                id="daoju_panel",
-                name="道具栏状态检测",
-                category=TaskCategory.GENERAL,
-                metadata={
-                    "game": "梦幻西游",
-                    "baseline_client": "800x600",
-                    "status_detector": "item_panel_open",
-                    "supports_toggle": True,
-                },
+                id="daoju_panel", name="道具栏状态检测", category=TaskCategory.GENERAL,
+                metadata={"game": "梦幻西游", "baseline_client": "800x600", "status_detector": "item_panel_open", "supports_toggle": True},
             ),
         ),
         TaskWorkflow(
             id="shimen",
             name="师门任务",
             description="师门任务诊断流程（当前仅选择流程，不执行任务）。",
-            recipe=TaskRecipe(
-                id="shimen", name="师门任务", category=TaskCategory.GENERAL,
-                metadata={"game": "梦幻西游", "diagnosis_only": True},
-            ),
+            recipe=TaskRecipe(id="shimen", name="师门任务", category=TaskCategory.GENERAL, metadata={"game": "梦幻西游", "diagnosis_only": True}),
         ),
         TaskWorkflow(
             id="custom",
             name="自定义任务流程",
             description="用于后续接入用户自定义任务步骤的诊断入口。",
-            recipe=TaskRecipe(
-                id="custom", name="自定义任务流程", category=TaskCategory.GENERAL,
-                metadata={"game": "梦幻西游", "diagnosis_only": True},
-            ),
+            recipe=TaskRecipe(id="custom", name="自定义任务流程", category=TaskCategory.GENERAL, metadata={"game": "梦幻西游", "diagnosis_only": True}),
         ),
     )
