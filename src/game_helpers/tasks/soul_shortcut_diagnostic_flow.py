@@ -15,7 +15,7 @@ from PIL import Image, ImageChops
 from ..actions.background_input import BackgroundInput
 from ..capture import WindowsGraphicsCapture
 from ..core.view_manager import GameViewManager
-from .background_context import BackgroundRunGuard, foreground_hwnd
+from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
 from .manual_coordinate import (
     collect_client_coordinate,
@@ -185,7 +185,7 @@ def _hover_experiment(
     client, screen = _select_point(selection, parent_hwnd)
     anchor = client
     roi_rect = _fixed_level2_roi(anchor)
-    _save(_capture(session).crop(roi_rect), output / "level2-before-hover.png")
+    before = _capture(session)\n    _save(before.crop(roi_rect), output / "level2-before-hover.png")
 
     set_foreground(parent_hwnd)
     import ctypes
