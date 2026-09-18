@@ -1,0 +1,36 @@
+from PIL import Image
+
+from game_helpers.tasks.soul_shortcut_diagnostic_flow import (
+    SHORTCUT_DIAGNOSTIC_SUBTYPES,
+    classify_motion,
+    image_diff,
+)
+
+
+def test_subtypes_have_full_first_and_four_independent_experiments():
+    assert SHORTCUT_DIAGNOSTIC_SUBTYPES == (
+        ("full", "完整验证流程"),
+        ("motion", "角色运动状态验证"),
+        ("hover", "Hover 二级 ROI 隔离验证"),
+        ("postmessage_hover", "PostMessageW Hover 验证"),
+        ("click_hotspot", "后台 Click + Hotspot 验证"),
+    )
+
+
+def test_classify_motion_requires_two_valid_coordinates():
+    assert classify_motion(("四方城", 34, 44), ("四方城", 34, 44)) == "静止候选"
+    assert classify_motion(("四方城", 34, 44), ("四方城", 35, 44)) == "移动"
+    assert classify_motion(None, ("四方城", 35, 44)) == "未知"
+
+
+def test_image_diff_detects_identical_and_changed_images():
+    first = Image.new("RGB", (4, 4), 0)
+    same = Image.new("RGB", (4, 4), 0)
+    changed = Image.new("RGB", (4, 4), 0)
+    changed.putpixel((2, 1), (255, 255, 255))
+
+    assert image_diff(first, same).changed_pixels == 0
+    result = image_diff(first, changed)
+    assert result.changed_pixels == 1
+    assert result.bbox == (2, 1, 3, 2)
+    assert result.centroid == (2.0, 1.0)

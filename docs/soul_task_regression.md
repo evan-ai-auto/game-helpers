@@ -61,3 +61,17 @@
 | 日期 | 场景# | 结果 | 备注 |
 |---|---|---|---|
 | （待填） |  |  |  |
+
+
+## 快捷图标分层诊断任务
+
+新增单一任务类型「命魂快捷图标 Hover / 运动 / 后台输入分层验证」，进入后提供：
+1. 完整验证流程
+2. 角色运动状态验证
+3. Hover 二级 ROI 隔离验证
+4. PostMessageW Hover 验证
+5. 后台 Click + Hotspot 验证
+
+诊断输出独立写入 `diagnostic/workflow_runs/soul_shortcut_diagnostic/<subtype>/`，不修改生产默认坐标 `client=(14, 122)`、生产模板或现有后台点击实现。
+
+Windows OCR 依赖：Windows 环境通过 `windows` extra 安装 `winsdk>=1.0.0b10`。运动状态子实验使用 `Windows.Media.Ocr` + `player_location` ROI；OCR 原文、解析坐标与状态会写入诊断报告。Windows OCR 当前 binding 未提供稳定的 confidence 字段，因此报告中的 `ocr_confidence=0.0` 表示“未提供”，不表示识别置信度为零。
