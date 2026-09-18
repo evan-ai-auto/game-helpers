@@ -24,6 +24,10 @@ from .manual_coordinate import (
 from .shortcut_panel_vision import detect_shortcut_panel_state
 from .soul_task import SOUL_TASK_BASELINE_SIZE
 from .soul_task_match import as_pil_image
+from ..core.models import Rect
+from ..vision.ocr import OCRResult, parse_scene_coordinate
+from ..vision.regions import VisionRegionRegistry
+from ..vision.windows_ocr import WindowsNativeOCRBackend
 from .verification_session import VerificationSession
 
 SHORTCUT_DIAGNOSTIC_SUBTYPES = (
@@ -117,6 +121,26 @@ def _crop_roi(
     return image.crop(rect)
 
 
+def _motion_sample(
+    image: Image.Image,
+    *,
+    backend: WindowsNativeOCRBackend,
+    region: Rect,
+) -> dict[str, object]:
+    results: tuple[OCRResult, ...] = backend.read(image, region=region)
+    texts = tuple(result.text.strip() for result in results if result.text.strip())
+    raw_text = " ".join(texts)
+    parsed = parse_scene_coordinate(raw_text)
+    return {
+        "ocr_text": raw_text,
+        "ocr_confidence": min(
+            (result.confidence for result in results if result.text.strip()),
+            default=0.0,
+        ),
+        "parsed_coordinate": list(parsed) if parsed else None,
+    }
+
+
 def _motion_experiment(
     session: VerificationSession,
     output: Path,
@@ -127,20 +151,50 @@ def _motion_experiment(
     second_path = output / "motion-sample-2.png"
     first = _capture(session)
     _save(first, first_path)
+
+    assets = Path(__file__).resolve().parents[3] / "data" / "assets"
+    regions = VisionRegionRegistry.from_json(assets / "ui" / "vision_regions.json")
+    region = regions.resolve("player_location", first.width, first.height)
+    if region is None:
+        raise RuntimeError("未找到 player_location OCR ROI 配置。")
+
+    try:
+        backend = WindowsNativeOCRBackend(language="zh-Hans-CN")
+    except RuntimeError as exc:
+        result = {
+            "sample_1_screenshot": str(first_path),
+            "sample_2_screenshot": None,
+            "sample_1": None,
+            "sample_2": None,
+            "state": "未知",
+            "ocr_backend": "不可用",
+            "reason": str(exc),
+        }
+        print(f"[命魂诊断] 运动检测：OCR 后端不可用；原因={exc}；状态=未知")
+        return result
+
+    sample_1 = _motion_sample(first, backend=backend, region=region)
     time.sleep(wait_seconds)
     second = _capture(session)
     _save(second, second_path)
+    sample_2 = _motion_sample(second, backend=backend, region=region)
+
+    first_coordinate = tuple(sample_1["parsed_coordinate"]) if sample_1["parsed_coordinate"] else None
+    second_coordinate = tuple(sample_2["parsed_coordinate"]) if sample_2["parsed_coordinate"] else None
+    state = classify_motion(first_coordinate, second_coordinate)
     result = {
         "sample_1_screenshot": str(first_path),
         "sample_2_screenshot": str(second_path),
-        "sample_1": None,
-        "sample_2": None,
-        "state": "未知",
-        "ocr_backend": "未配置",
-        "reason": "仓库当前仅有角色坐标 OCR 解析契约，未提供可直接调用的 OCR 后端。",
+        "ocr_roi": [region.left, region.top, region.right, region.bottom],
+        "ocr_backend": "Windows.Media.Ocr",
+        "ocr_language": backend.language,
+        "sample_1": sample_1,
+        "sample_2": sample_2,
+        "state": state,
     }
-    print("[命魂诊断] 运动检测：OCR 后端未配置；状态=未知")
-    print("[命魂诊断] 运动检测：本次不作为 Hover/Click 的通过条件")
+    print(f"[命魂诊断] 运动检测：P1={sample_1['parsed_coordinate'] or '识别失败'}")
+    print(f"[命魂诊断] 运动检测：P2={sample_2['parsed_coordinate'] or '识别失败'}")
+    print(f"[命魂诊断] 运动检测：状态={state}")
     return result
 
 
