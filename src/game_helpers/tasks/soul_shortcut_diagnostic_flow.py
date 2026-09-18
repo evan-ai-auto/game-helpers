@@ -19,15 +19,12 @@ from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
 from .manual_coordinate import (
     collect_client_coordinate,
-    cursor_screen_pos,
-    screen_to_client,
     set_foreground,
 )
 from .shortcut_panel_vision import detect_shortcut_panel_state
 from .soul_task import SOUL_TASK_BASELINE_SIZE
 from .soul_task_match import as_pil_image
 from .verification_session import VerificationSession
-from ..vision.ocr import parse_scene_coordinate
 
 SHORTCUT_DIAGNOSTIC_SUBTYPES = (
     ("full", "完整验证流程"),
@@ -74,19 +71,6 @@ def classify_motion(
     return "静止候选" if first == second else "移动"
 
 
-def _client_to_screen(hwnd: int, client: tuple[int, int]) -> tuple[int, int]:
-    import ctypes
-    from ctypes import wintypes
-
-    class POINT(ctypes.Structure):
-        _fields_ = [("x", wintypes.LONG), ("y", wintypes.LONG)]
-
-    point = POINT(*map(int, client))
-    if not ctypes.windll.user32.ClientToScreen(int(hwnd), ctypes.byref(point)):
-        raise ctypes.WinError()
-    return int(point.x), int(point.y)
-
-
 def _save(image: Image.Image, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path, format="PNG")
@@ -100,7 +84,10 @@ def _status_text(collapsed: bool | None) -> str:
     return "未知"
 
 
-def _select_point(selection: CharacterSelectionResult, parent_hwnd: int) -> tuple[tuple[int, int], tuple[int, int]]:
+def _select_point(
+    selection: CharacterSelectionResult,
+    parent_hwnd: int,
+) -> tuple[tuple[int, int], tuple[int, int]]:
     sample = collect_client_coordinate(
         selection.hwnd,
         prompt="请把鼠标移到目标快捷图标上，按 F9 采集；按 ESC 取消。",
@@ -113,13 +100,20 @@ def _capture(session: VerificationSession) -> Image.Image:
     return as_pil_image(session.capture_frame()).convert("RGB")
 
 
-def _fixed_level2_roi(anchor: tuple[int, int], *, size: int = 24) -> tuple[int, int, int, int]:
+def _fixed_level2_roi(
+    anchor: tuple[int, int],
+    *,
+    size: int = 24,
+) -> tuple[int, int, int, int]:
     left = max(0, int(anchor[0]) - size // 2)
     top = max(0, int(anchor[1]) - size // 2)
     return left, top, left + size, top + size
 
 
-def _crop_roi(image: Image.Image, rect: tuple[int, int, int, int]) -> Image.Image:
+def _crop_roi(
+    image: Image.Image,
+    rect: tuple[int, int, int, int],
+) -> Image.Image:
     return image.crop(rect)
 
 
@@ -136,8 +130,6 @@ def _motion_experiment(
     time.sleep(wait_seconds)
     second = _capture(session)
     _save(second, second_path)
-    # The repository currently provides the scene-coordinate parser/asset
-    # contract, but no concrete OCR engine/backend. Do not invent one.
     result = {
         "sample_1_screenshot": str(first_path),
         "sample_2_screenshot": str(second_path),
@@ -183,12 +175,14 @@ def _hover_experiment(
     output: Path,
 ) -> dict[str, object]:
     client, screen = _select_point(selection, parent_hwnd)
-    anchor = client
-    roi_rect = _fixed_level2_roi(anchor)
-    before = _capture(session)\n    _save(before.crop(roi_rect), output / "level2-before-hover.png")
+    roi_rect = _fixed_level2_roi(client)
+
+    before = _capture(session)
+    _save(before.crop(roi_rect), output / "level2-before-hover.png")
 
     set_foreground(parent_hwnd)
     import ctypes
+
     ctypes.windll.user32.SetCursorPos(*screen)
     time.sleep(0.5)
     hover_frame = _capture(session)
@@ -200,12 +194,12 @@ def _hover_experiment(
     leave_frame = _capture(session)
     _save(leave_frame.crop(roi_rect), output / "level2-real-leave.png")
 
-    before = _capture(session).crop(roi_rect)
+    before_roi = before.crop(roi_rect)
     hover = hover_frame.crop(roi_rect)
     leave = leave_frame.crop(roi_rect)
-    ab = image_diff(before, hover)
+    ab = image_diff(before_roi, hover)
     bc = image_diff(hover, leave)
-    ac = image_diff(before, leave)
+    ac = image_diff(before_roi, leave)
     print(f"[命魂诊断] 二级 ROI：client=({roi_rect[0]}, {roi_rect[1]})-({roi_rect[2]}, {roi_rect[3]})")
     print(f"[命魂诊断] 真实鼠标 Hover：变化比例={ab.ratio:.3f}")
     print(f"[命魂诊断] 真实鼠标离开：变化比例={bc.ratio:.3f}")
@@ -231,10 +225,15 @@ def _postmessage_hover_experiment(
     client, screen = _select_point(selection, parent_hwnd)
     roi_rect = _fixed_level2_roi(client)
     import ctypes
-    ctypes.windll.user32.SetCursorPos(max(0, screen[0] - 160), max(0, screen[1] - 160))
+
+    ctypes.windll.user32.SetCursorPos(
+        max(0, screen[0] - 160),
+        max(0, screen[1] - 160),
+    )
     time.sleep(0.3)
     before = _capture(session)
     _save(before.crop(roi_rect), output / "level2-postmessage-before.png")
+
     BackgroundInput(selection.hwnd).mouse_move(*client)
     print("[命魂诊断] 输入方式：PostMessageW")
     print(f"[命魂诊断] WM_MOUSEMOVE：client=({client[0]}, {client[1]})；发送成功")
@@ -343,17 +342,25 @@ def run_soul_shortcut_diagnostic(
             report["hover"] = _hover_experiment(session, selection, parent_hwnd, output)
         elif subtype == "postmessage_hover":
             report["level1"] = _level1(session, output)
-            report["postmessage_hover"] = _postmessage_hover_experiment(session, selection, parent_hwnd, output)
+            report["postmessage_hover"] = _postmessage_hover_experiment(
+                session, selection, parent_hwnd, output
+            )
         elif subtype == "click_hotspot":
             report["level1"] = _level1(session, output)
-            report["click_hotspot"] = _click_hotspot_experiment(session, selection, parent_hwnd, output)
+            report["click_hotspot"] = _click_hotspot_experiment(
+                session, selection, parent_hwnd, output
+            )
         elif subtype == "full":
             report["level1"] = _level1(session, output)
-            # Motion OCR is currently unknown; still collect visual evidence
-            # for the remaining layers, but mark the full flow as diagnostic.
-            report["hover"] = _hover_experiment(session, selection, parent_hwnd, output)
-            report["postmessage_hover"] = _postmessage_hover_experiment(session, selection, parent_hwnd, output)
-            report["click_hotspot"] = _click_hotspot_experiment(session, selection, parent_hwnd, output)
+            report["hover"] = _hover_experiment(
+                session, selection, parent_hwnd, output
+            )
+            report["postmessage_hover"] = _postmessage_hover_experiment(
+                session, selection, parent_hwnd, output
+            )
+            report["click_hotspot"] = _click_hotspot_experiment(
+                session, selection, parent_hwnd, output
+            )
         return _finish(report, output)
     finally:
         restore = guard.finish()
@@ -364,7 +371,10 @@ def run_soul_shortcut_diagnostic(
 
 def _finish(report: dict[str, object], output: Path) -> dict[str, object]:
     report_path = output / "validation-report.json"
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    report_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     print(f"[命魂诊断] 报告：{report_path}")
     print("[命魂诊断] 生产默认坐标：未修改")
     return report
