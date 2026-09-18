@@ -14,6 +14,7 @@ from PIL import Image, ImageChops
 
 from ..actions.background_input import BackgroundInput
 from ..capture import WindowsGraphicsCapture
+from ..core.models import Rect
 from ..core.view_manager import GameViewManager
 from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
@@ -24,7 +25,6 @@ from .manual_coordinate import (
 from .shortcut_panel_vision import detect_shortcut_panel_state
 from .soul_task import SOUL_TASK_BASELINE_SIZE
 from .soul_task_match import as_pil_image
-from ..core.models import Rect
 from ..vision.ocr import OCRResult, parse_scene_coordinate
 from ..vision.regions import VisionRegionRegistry
 from ..vision.windows_ocr import WindowsNativeOCRBackend
