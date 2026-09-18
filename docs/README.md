@@ -4,6 +4,7 @@
 |---|---|---|
 | [requirements.md](requirements.md) | 人 + Agent | 产品需求（改需求主要改这里） |
 | [capabilities.md](capabilities.md) | 人 + Agent | **已验证可复用能力**（写新流程先看） |
+| [commands.md](commands.md) | **人** | **统一指令入口**（命令 / 菜单 / 子实验 / 输出） |
 | [verification.md](verification.md) | **人** | **逐项复验步骤**（前置 / 指令 / 通过标准） |
 | [maintain.md](maintain.md) | **人** | **人工扩展维护区**（资产 / 流程） |
 | [agent-coding.md](agent-coding.md) | Agent | 写代码时的短约定 |
