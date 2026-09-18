@@ -1,18 +1,18 @@
 {
-  "character": "相思微凉ヘ",
+  "character": "陌北．",
   "samples": [
     {
       "screen": [
-        154,
-        359
+        170,
+        215
       ],
       "sample_client": [
-        72,
-        126
+        39,
+        116
       ],
       "remapped_client": [
-        72,
-        126
+        39,
+        116
       ],
       "dispatch": [
         1,
@@ -26,15 +26,15 @@
     },
     {
       "screen": [
-        122,
-        352
+        179,
+        218
       ],
       "sample_client": [
-        40,
+        48,
         119
       ],
       "remapped_client": [
-        40,
+        48,
         119
       ],
       "dispatch": [
@@ -49,16 +49,16 @@
     },
     {
       "screen": [
-        125,
-        360
+        189,
+        216
       ],
       "sample_client": [
-        43,
-        127
+        58,
+        117
       ],
       "remapped_client": [
-        43,
-        127
+        58,
+        117
       ],
       "dispatch": [
         1,
@@ -72,16 +72,39 @@
     },
     {
       "screen": [
-        115,
-        360
+        188,
+        216
       ],
       "sample_client": [
-        33,
-        127
+        57,
+        117
       ],
       "remapped_client": [
-        33,
-        127
+        57,
+        117
+      ],
+      "dispatch": [
+        1,
+        1,
+        1
+      ],
+      "before_collapsed": null,
+      "after_collapsed": null,
+      "state_changed": false,
+      "manual_confirmed": true
+    },
+    {
+      "screen": [
+        194,
+        217
+      ],
+      "sample_client": [
+        63,
+        118
+      ],
+      "remapped_client": [
+        63,
+        118
       ],
       "dispatch": [
         1,
@@ -107,22 +130,22 @@
       128
     ],
     "matched_template": "right_light",
-    "match_score": 0.8675848268995098,
+    "match_score": 0.7914694393382353,
     "second_template": "right_gray",
-    "second_score": 0.7720963571585862,
+    "second_score": 0.774880158667471,
     "match_location_client": [
-      0,
+      5,
       107
     ],
     "visual_center_client": [
-      8,
+      13,
       117
     ],
-    "collapsed": true,
+    "collapsed": null,
     "evidence": [
-      "toggle matched=right_light score=0.868",
-      "toggle margin=0.095",
-      "right arrow means collapsed; left arrow means expanded"
+      "toggle best=right_light score=0.791",
+      "toggle second=right_gray score=0.775",
+      "toggle margin=0.017"
     ]
   }
 }
