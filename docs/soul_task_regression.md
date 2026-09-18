@@ -74,4 +74,4 @@
 
 诊断输出独立写入 `diagnostic/workflow_runs/soul_shortcut_diagnostic/<subtype>/`，不修改生产默认坐标 `client=(14, 122)`、生产模板或现有后台点击实现。
 
-注意：当前仓库只有场景坐标 OCR 的解析契约，尚无可直接调用的 OCR 后端，因此运动状态子实验目前会明确输出「未知」，并保留两次完整截图作为后续 OCR 后端接入的证据。
+Windows OCR 依赖：Windows 环境通过 `windows` extra 安装 `winsdk>=1.0.0b10`。运动状态子实验使用 `Windows.Media.Ocr` + `player_location` ROI；OCR 原文、解析坐标与状态会写入诊断报告。Windows OCR 当前 binding 未提供稳定的 confidence 字段，因此报告中的 `ocr_confidence=0.0` 表示“未提供”，不表示识别置信度为零。
