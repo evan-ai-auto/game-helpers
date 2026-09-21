@@ -11,6 +11,7 @@ def test_subtypes_have_full_first_and_four_independent_experiments():
     assert SHORTCUT_DIAGNOSTIC_SUBTYPES == (
         ("full", "完整验证流程"),
         ("motion", "角色运动状态验证"),
+        ("ocr_roi_compare", "800×600 OCR 多 ROI 对照验证"),
         ("hover", "Hover 二级 ROI 隔离验证"),
         ("postmessage_hover", "PostMessageW Hover 验证"),
         ("click_hotspot", "后台 Click + Hotspot 验证"),
