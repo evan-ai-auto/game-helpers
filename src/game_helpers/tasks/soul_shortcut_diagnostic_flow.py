@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageOps
 
 from ..actions.background_input import BackgroundInput
 from ..capture import WindowsGraphicsCapture
