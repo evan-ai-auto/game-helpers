@@ -14,151 +14,34 @@
     ],
     "backend": "Windows.Media.Ocr",
     "language": "zh-Hans-CN",
-    "candidates": [
-      {
-        "ocr_text": "。 ／ 刁 俯 0",
-        "ocr_confidence": 0.0,
-        "parsed_coordinate": null,
-        "name": "scaled_current",
-        "roi": [
-          0,
-          0,
-          117,
-          55
-        ],
-        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-scaled_current.png"
-      },
-      {
-        "ocr_text": "。 ／ 刁 俯 0",
-        "ocr_confidence": 0.0,
-        "parsed_coordinate": null,
-        "name": "reference_size",
-        "roi": [
-          0,
-          0,
-          150,
-          70
-        ],
-        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-reference_size.png"
-      },
-      {
-        "ocr_text": "。 ／ 刁 俯 0 口 Y ： 3 4",
-        "ocr_confidence": 0.0,
-        "parsed_coordinate": null,
-        "name": "expanded",
-        "roi": [
-          0,
-          0,
-          180,
-          80
-        ],
-        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-expanded.png"
-      },
-      {
-        "ocr_text": "",
-        "ocr_confidence": 0.0,
-        "parsed_coordinate": null,
-        "name": "precise_coordinate",
-        "roi": [
-          35,
-          58,
-          135,
-          96
-        ],
-        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-precise_coordinate.png"
-      },
-      {
-        "ocr_text": "",
-        "ocr_confidence": 0.0,
-        "parsed_coordinate": null,
-        "name": "coordinate_text_strip",
-        "roi": [
-          30,
-          60,
-          145,
-          90
-        ],
-        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-coordinate_text_strip.png"
-      },
-      {
-        "ocr_text": "： 7 上 一 ： 3",
-        "ocr_confidence": 0.0,
-        "parsed_coordinate": null,
-        "name": "coordinate_text_strip_upscaled",
-        "roi": [
-          30,
-          60,
-          145,
-          90
-        ],
-        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-coordinate_text_strip_upscaled.png"
-      },
-      {
-        "ocr_text": "： 7 1 一 Y ： 3 《",
-        "ocr_confidence": 0.0,
-        "parsed_coordinate": null,
-        "name": "coordinate_text_strip_threshold",
-        "roi": [
-          30,
-          60,
-          145,
-          90
-        ],
-        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-coordinate_text_strip_threshold.png"
-      },
-      {
-        "ocr_text": "",
-        "ocr_confidence": 0.0,
-        "parsed_coordinate": null,
-        "name": "coordinate_x_only",
-        "roi": [
-          40,
-          60,
-          82,
-          92
-        ],
-        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-coordinate_x_only.png"
-      },
-      {
-        "ocr_text": "",
-        "ocr_confidence": 0.0,
-        "parsed_coordinate": null,
-        "name": "coordinate_y_only",
-        "roi": [
-          82,
-          60,
-          128,
-          92
-        ],
-        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-coordinate_y_only.png"
-      },
-      {
-        "ocr_text": "",
-        "ocr_confidence": 0.0,
-        "parsed_coordinate": null,
-        "name": "coordinate_x_only_upscaled",
-        "roi": [
-          40,
-          60,
-          82,
-          92
-        ],
-        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-coordinate_x_only_upscaled.png"
-      },
-      {
-        "ocr_text": "",
-        "ocr_confidence": 0.0,
-        "parsed_coordinate": null,
-        "name": "coordinate_y_only_upscaled",
-        "roi": [
-          82,
-          60,
-          128,
-          92
-        ],
-        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-coordinate_y_only_upscaled.png"
-      }
-    ],
+    "scene_raw": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-scene-raw.png",
+    "scene_prepared": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-scene-prepared.png",
+    "coordinate_raw": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-coordinate-raw.png",
+    "coordinate_prepared": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-coordinate-prepared.png",
+    "reading": {
+      "scene_text": "花果山",
+      "coordinate_text": "X ： 10 Y ： 10",
+      "scene_box": [
+        26,
+        14,
+        106,
+        34
+      ],
+      "coordinate_box": [
+        26,
+        62,
+        112,
+        80
+      ],
+      "scene_ok": true,
+      "coordinate_ok": true,
+      "formatted": "花果山[10,10]",
+      "parsed_coordinate": [
+        "花果山",
+        10,
+        10
+      ]
+    },
     "production_coordinate_changed": false,
     "production_config_changed": false
   }
