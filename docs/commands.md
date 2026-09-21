@@ -109,14 +109,18 @@ diagnostic/workflow_runs/soul_shortcut_diagnostic/
   → 2. 角色运动状态验证
 ```
 
-该实验当前使用 Windows 原生 OCR：
+该实验从一张完整客户区截图分段识别：
 
 ```text
-player_location ROI
+完整截图
   ↓
-Windows.Media.Ocr
+转 RGB，裁场景名条 / 裁 X:n Y:n 坐标条
   ↓
-parse_scene_coordinate()
+提取浅色字形、去黑边和底纹、留白、放大 4 倍
+  ↓
+Windows.Media.Ocr（两段分别识别）
+  ↓
+组装为 地图名[x,y]
   ↓
 P1 / P2
   ↓

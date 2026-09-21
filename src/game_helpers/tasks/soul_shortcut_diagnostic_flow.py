@@ -10,12 +10,13 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageOps
+from PIL import Image, ImageChops
 
 from ..actions.background_input import BackgroundInput
 from ..capture import WindowsGraphicsCapture
-from ..core.models import Rect
 from ..core.view_manager import GameViewManager
+from ..vision.scene_coordinate import prepare_player_location, read_player_location
+from ..vision.windows_ocr import WindowsNativeOCRBackend
 from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
 from .manual_coordinate import (
@@ -25,9 +26,6 @@ from .manual_coordinate import (
 from .shortcut_panel_vision import detect_shortcut_panel_state
 from .soul_task import SOUL_TASK_BASELINE_SIZE
 from .soul_task_match import as_pil_image
-from ..vision.ocr import OCRResult, parse_scene_coordinate
-from ..vision.regions import VisionRegionRegistry
-from ..vision.windows_ocr import WindowsNativeOCRBackend
 from .verification_session import VerificationSession
 
 SHORTCUT_DIAGNOSTIC_SUBTYPES = (
@@ -122,50 +120,29 @@ def _crop_roi(
     return image.crop(rect)
 
 
-def _motion_sample(
-    image: Image.Image,
-    *,
-    backend: WindowsNativeOCRBackend,
-    region: Rect,
-) -> dict[str, object]:
-    results: tuple[OCRResult, ...] = backend.read(image, region=region)
-    texts = tuple(result.text.strip() for result in results if result.text.strip())
-    raw_text = " ".join(texts)
-    parsed = parse_scene_coordinate(raw_text)
+def _reading_payload(reading) -> dict[str, object]:
     return {
-        "ocr_text": raw_text,
-        "ocr_confidence": min(
-            (result.confidence for result in results if result.text.strip()),
-            default=0.0,
-        ),
-        "parsed_coordinate": list(parsed) if parsed else None,
+        "scene_text": reading.scene_text,
+        "coordinate_text": reading.coordinate_text,
+        "scene_box": list(reading.scene_box),
+        "coordinate_box": list(reading.coordinate_box),
+        "scene_ok": reading.scene_ok,
+        "coordinate_ok": reading.coordinate_ok,
+        "formatted": reading.formatted,
+        "parsed_coordinate": list(reading.parsed) if reading.parsed else None,
     }
 
 
-def _motion_sample_upscaled(
-    image: Image.Image,
-    *,
-    backend: WindowsNativeOCRBackend,
-    region: Rect,
-    scale: int = 4,
-    preprocess: str = "nearest",
-) -> dict[str, object]:
-    """OCR a small coordinate strip after enlargement and optional contrast preprocessing."""
-    if scale < 2:
-        raise ValueError("OCR upscale scale must be >= 2")
-    crop = image.crop((region.left, region.top, region.right, region.bottom))
-    if preprocess == "grayscale":
-        crop = ImageOps.grayscale(crop)
-    elif preprocess == "contrast":
-        crop = ImageOps.autocontrast(ImageOps.grayscale(crop))
-    elif preprocess == "threshold":
-        gray = ImageOps.autocontrast(ImageOps.grayscale(crop))
-        crop = gray.point(lambda value: 255 if value >= 150 else 0)
-    elif preprocess != "nearest":
-        raise ValueError(f"unknown OCR preprocess: {preprocess}")
-    enlarged = crop.resize((crop.width * scale, crop.height * scale), Image.Resampling.NEAREST)
-    enlarged_region = Rect(0, 0, enlarged.width, enlarged.height)
-    return _motion_sample(enlarged, backend=backend, region=enlarged_region)
+def _print_location_reading(label: str, reading) -> None:
+    print(f"[命魂诊断] {label}场景原文：{reading.scene_text or '空'}")
+    print(f"[命魂诊断] {label}坐标原文：{reading.coordinate_text or '空'}")
+    if reading.formatted:
+        print(f"[命魂诊断] {label}组装结果：{reading.formatted}")
+        return
+    if not reading.scene_ok:
+        print(f"[命魂诊断] {label}失败阶段：场景名")
+    if not reading.coordinate_ok:
+        print(f"[命魂诊断] {label}失败阶段：坐标")
 
 
 def _motion_experiment(
@@ -178,12 +155,6 @@ def _motion_experiment(
     second_path = output / "motion-sample-2.png"
     first = _capture(session)
     _save(first, first_path)
-
-    assets = Path(__file__).resolve().parents[3] / "data" / "assets"
-    regions = VisionRegionRegistry.from_json(assets / "ui" / "vision_regions.json")
-    region = regions.resolve("player_location", first.width, first.height)
-    if region is None:
-        raise RuntimeError("未找到 player_location OCR ROI 配置。")
 
     try:
         backend = WindowsNativeOCRBackend(language="zh-Hans-CN")
@@ -200,27 +171,23 @@ def _motion_experiment(
         print(f"[命魂诊断] 运动检测：OCR 后端不可用；原因={exc}；状态=未知")
         return result
 
-    sample_1 = _motion_sample(first, backend=backend, region=region)
+    sample_1 = read_player_location(first, backend)
     time.sleep(wait_seconds)
     second = _capture(session)
     _save(second, second_path)
-    sample_2 = _motion_sample(second, backend=backend, region=region)
-
-    first_coordinate = tuple(sample_1["parsed_coordinate"]) if sample_1["parsed_coordinate"] else None
-    second_coordinate = tuple(sample_2["parsed_coordinate"]) if sample_2["parsed_coordinate"] else None
-    state = classify_motion(first_coordinate, second_coordinate)
+    sample_2 = read_player_location(second, backend)
+    state = classify_motion(sample_1.parsed, sample_2.parsed)
     result = {
         "sample_1_screenshot": str(first_path),
         "sample_2_screenshot": str(second_path),
-        "ocr_roi": [region.left, region.top, region.right, region.bottom],
         "ocr_backend": "Windows.Media.Ocr",
         "ocr_language": backend.language,
-        "sample_1": sample_1,
-        "sample_2": sample_2,
+        "sample_1": _reading_payload(sample_1),
+        "sample_2": _reading_payload(sample_2),
         "state": state,
     }
-    print(f"[命魂诊断] 运动检测：P1={sample_1['parsed_coordinate'] or '识别失败'}")
-    print(f"[命魂诊断] 运动检测：P2={sample_2['parsed_coordinate'] or '识别失败'}")
+    _print_location_reading("运动检测 P1 ", sample_1)
+    _print_location_reading("运动检测 P2 ", sample_2)
     print(f"[命魂诊断] 运动检测：状态={state}")
     return result
 
@@ -229,82 +196,50 @@ def _ocr_roi_compare_experiment(
     session: VerificationSession,
     output: Path,
 ) -> dict[str, object]:
-    """Compare candidate player-location OCR ROIs without changing production config."""
+    """Read scene name and X/Y from one full screenshot, then assemble 地图名[x,y]."""
     image = _capture(session)
-    candidates = (
-        ("scaled_current", (0, 0, 117, 55)),
-        ("reference_size", (0, 0, 150, 70)),
-        ("expanded", (0, 0, 180, 80)),
-        ("precise_coordinate", (35, 58, 135, 96)),
-        ("coordinate_text_strip", (30, 60, 145, 90)),
-        ("coordinate_text_strip_upscaled", (30, 60, 145, 90)),
-        ("coordinate_text_strip_threshold", (30, 60, 145, 90)),
-        ("coordinate_x_only", (40, 60, 82, 92)),
-        ("coordinate_y_only", (82, 60, 128, 92)),
-        ("coordinate_x_only_upscaled", (40, 60, 82, 92)),
-        ("coordinate_y_only_upscaled", (82, 60, 128, 92)),
-    )
     source_path = output / "ocr-roi-source.png"
     _save(image, source_path)
     try:
         backend = WindowsNativeOCRBackend(language="zh-Hans-CN")
     except RuntimeError as exc:
-        print(f"[命魂诊断] OCR ROI 对照：后端不可用；原因={exc}")
+        print(f"[命魂诊断] OCR 分段识别：后端不可用；原因={exc}")
         return {
             "screenshot": str(source_path),
             "backend": "不可用",
-            "candidates": [],
             "production_coordinate_changed": False,
             "production_config_changed": False,
             "reason": str(exc),
         }
 
-    results: list[dict[str, object]] = []
-    for name, box in candidates:
-        left, top, right, bottom = box
-        if right > image.width or bottom > image.height:
-            results.append({"name": name, "roi": list(box), "status": "越界"})
-            continue
-        roi_path = output / f"ocr-roi-{name}.png"
-        _save(image.crop(box), roi_path)
-        preprocess = {
-            "coordinate_text_strip_upscaled": "nearest",
-            "coordinate_text_strip_threshold": "threshold",
-            "coordinate_x_only_upscaled": "nearest",
-            "coordinate_y_only_upscaled": "nearest",
-        }.get(name)
-        if preprocess is not None:
-            sample = _motion_sample_upscaled(
-                image,
-                backend=backend,
-                region=Rect(left, top, right, bottom),
-                scale=4,
-                preprocess=preprocess,
-            )
-        else:
-            sample = _motion_sample(
-                image,
-                backend=backend,
-                region=Rect(left, top, right, bottom),
-            )
-        sample["name"] = name
-        sample["roi"] = list(box)
-        sample["screenshot"] = str(roi_path)
-        results.append(sample)
-        print(f"[命魂诊断] OCR ROI：{name}；roi=({left},{top})-({right},{bottom})")
-        print(f"[命魂诊断] OCR ROI：{name}；文本={sample['ocr_text'] or '空'}；解析={sample['parsed_coordinate'] or '失败'}")
+    scene, coordinate = prepare_player_location(image)
+    _save(scene.raw, output / "ocr-scene-raw.png")
+    _save(scene.prepared.convert("RGB"), output / "ocr-scene-prepared.png")
+    _save(coordinate.raw, output / "ocr-coordinate-raw.png")
+    _save(coordinate.prepared.convert("RGB"), output / "ocr-coordinate-prepared.png")
+    print(
+        "[命魂诊断] 预处理：整图转 RGB；"
+        f"场景名 client=({scene.box[0]}, {scene.box[1]})-({scene.box[2]}, {scene.box[3]})；"
+        f"坐标 client=({coordinate.box[0]}, {coordinate.box[1]})-({coordinate.box[2]}, {coordinate.box[3]})"
+    )
+    print("[命魂诊断] 预处理：提取浅色字形、去掉黑边和底纹、四周留白、放大 4 倍后再识别")
 
-    report = {
+    reading = read_player_location(image, backend)
+    _print_location_reading("", reading)
+    print("[命魂诊断] OCR 分段识别：完成；未修改生产配置")
+    return {
         "screenshot": str(source_path),
         "client_size": [image.width, image.height],
         "backend": "Windows.Media.Ocr",
         "language": backend.language,
-        "candidates": results,
+        "scene_raw": str(output / "ocr-scene-raw.png"),
+        "scene_prepared": str(output / "ocr-scene-prepared.png"),
+        "coordinate_raw": str(output / "ocr-coordinate-raw.png"),
+        "coordinate_prepared": str(output / "ocr-coordinate-prepared.png"),
+        "reading": _reading_payload(reading),
         "production_coordinate_changed": False,
         "production_config_changed": False,
     }
-    print("[命魂诊断] OCR ROI 对照：完成；未修改生产配置")
-    return report
 
 
 def _level1(session: VerificationSession, output: Path) -> dict[str, object]:
