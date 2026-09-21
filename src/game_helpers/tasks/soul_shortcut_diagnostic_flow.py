@@ -142,6 +142,22 @@ def _motion_sample(
     }
 
 
+def _motion_sample_upscaled(
+    image: Image.Image,
+    *,
+    backend: WindowsNativeOCRBackend,
+    region: Rect,
+    scale: int = 4,
+) -> dict[str, object]:
+    """OCR a small coordinate strip after nearest-neighbor enlargement."""
+    if scale < 2:
+        raise ValueError("OCR upscale scale must be >= 2")
+    crop = image.crop((region.left, region.top, region.right, region.bottom))
+    enlarged = crop.resize((crop.width * scale, crop.height * scale), Image.Resampling.NEAREST)
+    enlarged_region = Rect(0, 0, enlarged.width, enlarged.height)
+    return _motion_sample(enlarged, backend=backend, region=enlarged_region)
+
+
 def _motion_experiment(
     session: VerificationSession,
     output: Path,
@@ -210,6 +226,7 @@ def _ocr_roi_compare_experiment(
         ("reference_size", (0, 0, 150, 70)),
         ("expanded", (0, 0, 180, 80)),
         ("precise_coordinate", (35, 58, 135, 96)),
+        ("precise_coordinate_upscaled", (35, 58, 135, 96)),
     )
     source_path = output / "ocr-roi-source.png"
     _save(image, source_path)
@@ -234,11 +251,19 @@ def _ocr_roi_compare_experiment(
             continue
         roi_path = output / f"ocr-roi-{name}.png"
         _save(image.crop(box), roi_path)
-        sample = _motion_sample(
-            image,
-            backend=backend,
-            region=Rect(left, top, right, bottom),
-        )
+        if name == "precise_coordinate_upscaled":
+            sample = _motion_sample_upscaled(
+                image,
+                backend=backend,
+                region=Rect(left, top, right, bottom),
+                scale=4,
+            )
+        else:
+            sample = _motion_sample(
+                image,
+                backend=backend,
+                region=Rect(left, top, right, bottom),
+            )
         sample["name"] = name
         sample["roi"] = list(box)
         sample["screenshot"] = str(roi_path)
