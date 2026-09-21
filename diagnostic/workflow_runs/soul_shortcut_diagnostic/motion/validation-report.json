@@ -1,0 +1,32 @@
+{
+  "subtype": "motion",
+  "character": "划下、？线",
+  "client_size": [
+    800,
+    600
+  ],
+  "production_coordinate_changed": false,
+  "motion": {
+    "sample_1_screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-1.png",
+    "sample_2_screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-2.png",
+    "ocr_roi": [
+      0,
+      0,
+      117,
+      55
+    ],
+    "ocr_backend": "Windows.Media.Ocr",
+    "ocr_language": "zh-Hans-CN",
+    "sample_1": {
+      "ocr_text": "",
+      "ocr_confidence": 0.0,
+      "parsed_coordinate": null
+    },
+    "sample_2": {
+      "ocr_text": "",
+      "ocr_confidence": 0.0,
+      "parsed_coordinate": null
+    },
+    "state": "未知"
+  }
+}
