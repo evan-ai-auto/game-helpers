@@ -209,6 +209,7 @@ def _ocr_roi_compare_experiment(
         ("scaled_current", (0, 0, 117, 55)),
         ("reference_size", (0, 0, 150, 70)),
         ("expanded", (0, 0, 180, 80)),
+        ("precise_coordinate", (35, 58, 135, 96)),
     )
     source_path = output / "ocr-roi-source.png"
     _save(image, source_path)
