@@ -148,11 +148,21 @@ def _motion_sample_upscaled(
     backend: WindowsNativeOCRBackend,
     region: Rect,
     scale: int = 4,
+    preprocess: str = "nearest",
 ) -> dict[str, object]:
-    """OCR a small coordinate strip after nearest-neighbor enlargement."""
+    """OCR a small coordinate strip after enlargement and optional contrast preprocessing."""
     if scale < 2:
         raise ValueError("OCR upscale scale must be >= 2")
     crop = image.crop((region.left, region.top, region.right, region.bottom))
+    if preprocess == "grayscale":
+        crop = ImageOps.grayscale(crop)
+    elif preprocess == "contrast":
+        crop = ImageOps.autocontrast(ImageOps.grayscale(crop))
+    elif preprocess == "threshold":
+        gray = ImageOps.autocontrast(ImageOps.grayscale(crop))
+        crop = gray.point(lambda value: 255 if value >= 150 else 0)
+    elif preprocess != "nearest":
+        raise ValueError(f"unknown OCR preprocess: {preprocess}")
     enlarged = crop.resize((crop.width * scale, crop.height * scale), Image.Resampling.NEAREST)
     enlarged_region = Rect(0, 0, enlarged.width, enlarged.height)
     return _motion_sample(enlarged, backend=backend, region=enlarged_region)
@@ -227,6 +237,9 @@ def _ocr_roi_compare_experiment(
         ("expanded", (0, 0, 180, 80)),
         ("precise_coordinate", (35, 58, 135, 96)),
         ("precise_coordinate_upscaled", (35, 58, 135, 96)),
+        ("precise_coordinate_grayscale", (35, 58, 135, 96)),
+        ("precise_coordinate_contrast", (35, 58, 135, 96)),
+        ("precise_coordinate_threshold", (35, 58, 135, 96)),
     )
     source_path = output / "ocr-roi-source.png"
     _save(image, source_path)
@@ -251,12 +264,19 @@ def _ocr_roi_compare_experiment(
             continue
         roi_path = output / f"ocr-roi-{name}.png"
         _save(image.crop(box), roi_path)
-        if name == "precise_coordinate_upscaled":
+        preprocess = {
+            "precise_coordinate_upscaled": "nearest",
+            "precise_coordinate_grayscale": "grayscale",
+            "precise_coordinate_contrast": "contrast",
+            "precise_coordinate_threshold": "threshold",
+        }.get(name)
+        if preprocess is not None:
             sample = _motion_sample_upscaled(
                 image,
                 backend=backend,
                 region=Rect(left, top, right, bottom),
                 scale=4,
+                preprocess=preprocess,
             )
         else:
             sample = _motion_sample(
