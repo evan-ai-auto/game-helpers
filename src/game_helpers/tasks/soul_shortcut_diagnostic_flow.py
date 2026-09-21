@@ -236,10 +236,9 @@ def _ocr_roi_compare_experiment(
         ("reference_size", (0, 0, 150, 70)),
         ("expanded", (0, 0, 180, 80)),
         ("precise_coordinate", (35, 58, 135, 96)),
-        ("precise_coordinate_upscaled", (35, 58, 135, 96)),
-        ("precise_coordinate_grayscale", (35, 58, 135, 96)),
-        ("precise_coordinate_contrast", (35, 58, 135, 96)),
-        ("precise_coordinate_threshold", (35, 58, 135, 96)),
+        ("coordinate_text_strip", (30, 60, 145, 90)),
+        ("coordinate_text_strip_upscaled", (30, 60, 145, 90)),
+        ("coordinate_text_strip_threshold", (30, 60, 145, 90)),
     )
     source_path = output / "ocr-roi-source.png"
     _save(image, source_path)
@@ -265,10 +264,8 @@ def _ocr_roi_compare_experiment(
         roi_path = output / f"ocr-roi-{name}.png"
         _save(image.crop(box), roi_path)
         preprocess = {
-            "precise_coordinate_upscaled": "nearest",
-            "precise_coordinate_grayscale": "grayscale",
-            "precise_coordinate_contrast": "contrast",
-            "precise_coordinate_threshold": "threshold",
+            "coordinate_text_strip_upscaled": "nearest",
+            "coordinate_text_strip_threshold": "threshold",
         }.get(name)
         if preprocess is not None:
             sample = _motion_sample_upscaled(
