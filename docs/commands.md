@@ -84,9 +84,10 @@ python -m game_helpers.tasks.task_workflow_cli
 |---|---|
 | 1. 完整验证流程 | 按顺序执行全部诊断阶段 |
 | 2. 角色运动状态验证 | 两次识别角色场景坐标，判断静止候选/移动/未知 |
-| 3. Hover 二级 ROI 隔离验证 | 验证目标图标自身 Hover 变化 |
-| 4. PostMessageW Hover 验证 | 验证后台鼠标移动消息是否触发 Hover |
-| 5. 后台 Click + Hotspot 验证 | 逐点验证后台点击与实际热区 |
+| 3. 800×600 OCR 多 ROI 对照验证 | 对比 117×55、150×70、180×80 三组场景坐标 OCR ROI |
+| 4. Hover 二级 ROI 隔离验证 | 验证目标图标自身 Hover 变化 |
+| 5. PostMessageW Hover 验证 | 验证后台鼠标移动消息是否触发 Hover |
+| 6. 后台 Click + Hotspot 验证 | 逐点验证后台点击与实际热区 |
 
 诊断输出：
 
