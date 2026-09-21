@@ -33,6 +33,7 @@ from .verification_session import VerificationSession
 SHORTCUT_DIAGNOSTIC_SUBTYPES = (
     ("full", "完整验证流程"),
     ("motion", "角色运动状态验证"),
+    ("ocr_roi_compare", "800×600 OCR 多 ROI 对照验证"),
     ("hover", "Hover 二级 ROI 隔离验证"),
     ("postmessage_hover", "PostMessageW Hover 验证"),
     ("click_hotspot", "后台 Click + Hotspot 验证"),
@@ -196,6 +197,65 @@ def _motion_experiment(
     print(f"[命魂诊断] 运动检测：P2={sample_2['parsed_coordinate'] or '识别失败'}")
     print(f"[命魂诊断] 运动检测：状态={state}")
     return result
+
+
+def _ocr_roi_compare_experiment(
+    session: VerificationSession,
+    output: Path,
+) -> dict[str, object]:
+    """Compare candidate player-location OCR ROIs without changing production config."""
+    image = _capture(session)
+    candidates = (
+        ("scaled_current", (0, 0, 117, 55)),
+        ("reference_size", (0, 0, 150, 70)),
+        ("expanded", (0, 0, 180, 80)),
+    )
+    source_path = output / "ocr-roi-source.png"
+    _save(image, source_path)
+    try:
+        backend = WindowsNativeOCRBackend(language="zh-Hans-CN")
+    except RuntimeError as exc:
+        print(f"[命魂诊断] OCR ROI 对照：后端不可用；原因={exc}")
+        return {
+            "screenshot": str(source_path),
+            "backend": "不可用",
+            "candidates": [],
+            "production_coordinate_changed": False,
+            "production_config_changed": False,
+            "reason": str(exc),
+        }
+
+    results: list[dict[str, object]] = []
+    for name, box in candidates:
+        left, top, right, bottom = box
+        if right > image.width or bottom > image.height:
+            results.append({"name": name, "roi": list(box), "status": "越界"})
+            continue
+        roi_path = output / f"ocr-roi-{name}.png"
+        _save(image.crop(box), roi_path)
+        sample = _motion_sample(
+            image,
+            backend=backend,
+            region=Rect(left, top, right, bottom),
+        )
+        sample["name"] = name
+        sample["roi"] = list(box)
+        sample["screenshot"] = str(roi_path)
+        results.append(sample)
+        print(f"[命魂诊断] OCR ROI：{name}；roi=({left},{top})-({right},{bottom})")
+        print(f"[命魂诊断] OCR ROI：{name}；文本={sample['ocr_text'] or '空'}；解析={sample['parsed_coordinate'] or '失败'}")
+
+    report = {
+        "screenshot": str(source_path),
+        "client_size": [image.width, image.height],
+        "backend": "Windows.Media.Ocr",
+        "language": backend.language,
+        "candidates": results,
+        "production_coordinate_changed": False,
+        "production_config_changed": False,
+    }
+    print("[命魂诊断] OCR ROI 对照：完成；未修改生产配置")
+    return report
 
 
 def _level1(session: VerificationSession, output: Path) -> dict[str, object]:
@@ -387,6 +447,9 @@ def run_soul_shortcut_diagnostic(
         geometry = session.geometry()
         if (geometry.client_width, geometry.client_height) != SOUL_TASK_BASELINE_SIZE:
             raise RuntimeError("当前客户区不是 800x600，诊断任务停止。")
+        if subtype == "ocr_roi_compare":
+            report["ocr_roi_compare"] = _ocr_roi_compare_experiment(session, output)
+            return _finish(report, output)
         if subtype in {"motion", "full"}:
             report["motion"] = _motion_experiment(session, output)
             if subtype == "motion":
