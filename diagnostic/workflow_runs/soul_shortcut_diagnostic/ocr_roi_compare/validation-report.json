@@ -1,6 +1,6 @@
 {
   "subtype": "ocr_roi_compare",
-  "character": "陌北．",
+  "character": "相思微凉ヘ",
   "client_size": [
     800,
     600
@@ -19,8 +19,8 @@
     "coordinate_raw": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-coordinate-raw.png",
     "coordinate_prepared": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-coordinate-prepared.png",
     "reading": {
-      "scene_text": "花果山",
-      "coordinate_text": "X ： 10 Y ： 10",
+      "scene_text": "朱紫皇宫",
+      "coordinate_text": "X ： 6 5 Y ： 29",
       "scene_box": [
         26,
         14,
@@ -35,11 +35,11 @@
       ],
       "scene_ok": true,
       "coordinate_ok": true,
-      "formatted": "花果山[10,10]",
+      "formatted": "朱紫皇宫[65,29]",
       "parsed_coordinate": [
-        "花果山",
-        10,
-        10
+        "朱紫皇宫",
+        65,
+        29
       ]
     },
     "production_coordinate_changed": false,
