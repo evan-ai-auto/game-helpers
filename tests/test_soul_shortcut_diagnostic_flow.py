@@ -19,10 +19,35 @@ def test_subtypes_list_full_then_independent_experiments():
     )
 
 
-def test_classify_motion_requires_two_valid_coordinates():
+def test_classify_motion_uses_coordinates_and_playfield():
     assert classify_motion(("四方城", 34, 44), ("四方城", 34, 44)) == "静止候选"
     assert classify_motion(("四方城", 34, 44), ("四方城", 35, 44)) == "移动"
     assert classify_motion(None, ("四方城", 35, 44)) == "未知"
+    assert (
+        classify_motion(("四方城", 34, 44), ("四方城", 34, 44), playfield_ratio=0.0)
+        == "静止候选"
+    )
+    assert (
+        classify_motion(("四方城", 34, 44), ("四方城", 34, 44), playfield_ratio=0.01)
+        == "同格运动候选"
+    )
+    assert (
+        classify_motion(("四方城", 34, 44), ("四方城", 35, 44), playfield_ratio=0.01)
+        == "移动"
+    )
+    assert (
+        classify_motion(
+            ("四方城", 34, 44),
+            ("四方城", 34, 44),
+            playfield_ratio=0.0,
+            right_edge_ratio=0.05,
+        )
+        == "画面未刷新"
+    )
+    assert (
+        classify_motion(None, None, playfield_ratio=0.0, right_edge_ratio=0.05)
+        == "画面未刷新"
+    )
 
 
 def test_image_diff_detects_identical_and_changed_images():

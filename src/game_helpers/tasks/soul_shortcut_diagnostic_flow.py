@@ -37,6 +37,14 @@ SHORTCUT_DIAGNOSTIC_SUBTYPES = (
     ("click_hotspot", "后台 Click + Hotspot 验证"),
 )
 
+# 800×600 playfield used for motion: skip left HUD and the right chrome strip.
+MOTION_PLAYFIELD_BOX = (80, 100, 720, 520)
+MOTION_RIGHT_EDGE_BOX = (768, 0, 800, 600)
+MOTION_WAIT_SECONDS = 3.0
+MOTION_SAMPLE_INTERVAL = 0.25
+MOTION_PLAYFIELD_RATIO = 0.002
+MOTION_RIGHT_EDGE_RATIO = 0.02
+
 
 @dataclass(frozen=True)
 class ImageDiff:
@@ -68,10 +76,41 @@ def image_diff(before: Image.Image, after: Image.Image, *, threshold: int = 8) -
 def classify_motion(
     first: tuple[str, int, int] | None,
     second: tuple[str, int, int] | None,
+    *,
+    playfield_ratio: float | None = None,
+    right_edge_ratio: float | None = None,
+    playfield_threshold: float = MOTION_PLAYFIELD_RATIO,
+    right_edge_threshold: float = MOTION_RIGHT_EDGE_RATIO,
 ) -> str:
+    """Combine HUD coordinates with playfield / right-edge pixel change.
+
+    - Either OCR side missing → 未知
+    - Map cell changed → 移动
+    - Same cell, playfield changed enough → 同格运动候选
+    - Same cell, playfield frozen but right chrome moves → 画面未刷新
+    - Same cell, both quiet → 静止候选
+    """
     if first is None or second is None:
+        if (
+            playfield_ratio is not None
+            and playfield_ratio < playfield_threshold
+            and right_edge_ratio is not None
+            and right_edge_ratio >= right_edge_threshold
+        ):
+            return "画面未刷新"
         return "未知"
-    return "静止候选" if first == second else "移动"
+    if first != second:
+        return "移动"
+    if playfield_ratio is not None and playfield_ratio >= playfield_threshold:
+        return "同格运动候选"
+    if (
+        playfield_ratio is not None
+        and playfield_ratio < playfield_threshold
+        and right_edge_ratio is not None
+        and right_edge_ratio >= right_edge_threshold
+    ):
+        return "画面未刷新"
+    return "静止候选"
 
 
 def _save(image: Image.Image, path: Path) -> None:
@@ -101,6 +140,36 @@ def _select_point(
 
 def _capture(session: VerificationSession) -> Image.Image:
     return as_pil_image(session.capture_frame()).convert("RGB")
+
+
+def _refresh_capture_surface(session: VerificationSession) -> dict[str, object]:
+    """Nudge the selected WSGAME to present a fresh frame without stealing focus.
+
+    Multi-view hosts: switch Surface away and back (known background repaint).
+    Always follow with RedrawWindow on the child and parent.
+    """
+    import ctypes
+
+    from .background_context import foreground_hwnd
+    from .background_item_panel_open_probe_visual import refresh_surface_for_capture
+
+    foreground = foreground_hwnd()
+    switched = False
+    try:
+        switched = refresh_surface_for_capture(
+            session.manager,
+            session.selected.view_index,
+            foreground,
+        )
+    except RuntimeError as exc:
+        return {"ok": False, "switched": False, "reason": str(exc)}
+
+    user32 = ctypes.windll.user32
+    flags = 0x0001 | 0x0004 | 0x0100 | 0x0080  # invalidate/erase/updatenow/allchildren
+    user32.RedrawWindow(session.selected.hwnd, None, None, flags)
+    user32.RedrawWindow(session.parent_hwnd, None, None, flags)
+    time.sleep(0.15)
+    return {"ok": True, "switched": switched, "reason": None}
 
 
 def _fixed_level2_roi(
@@ -149,45 +218,197 @@ def _motion_experiment(
     session: VerificationSession,
     output: Path,
     *,
-    wait_seconds: float = 0.8,
+    wait_seconds: float = MOTION_WAIT_SECONDS,
+    sample_interval: float = MOTION_SAMPLE_INTERVAL,
 ) -> dict[str, object]:
-    first_path = output / "motion-sample-1.png"
-    second_path = output / "motion-sample-2.png"
-    first = _capture(session)
-    _save(first, first_path)
+    playfield_box = MOTION_PLAYFIELD_BOX
+    right_box = MOTION_RIGHT_EDGE_BOX
+    print(
+        "[命魂诊断] 运动检测："
+        f"总时长={wait_seconds:.1f}s；采样间隔={sample_interval:.2f}s；"
+        f"主画面 client=({playfield_box[0]}, {playfield_box[1]})-({playfield_box[2]}, {playfield_box[3]})；"
+        f"右侧条 client=({right_box[0]}, {right_box[1]})-({right_box[2]}, {right_box[3]})"
+    )
+    print("[命魂诊断] 运动检测：请在采样期间保持目标状态（站立或持续移动）")
+
+    refreshes: list[dict[str, object]] = []
+    warm = _refresh_capture_surface(session)
+    refreshes.append({"when": "before_sampling", **warm})
+    print(
+        "[命魂诊断] 运动检测：开采前刷新 Surface："
+        f"{'成功' if warm['ok'] else '失败'}"
+        f"；切换他窗={'是' if warm.get('switched') else '否'}"
+        + (f"；原因={warm['reason']}" if warm.get("reason") else "")
+    )
+
+    samples: list[dict[str, object]] = []
+    images: list[Image.Image] = []
+    frame_count = max(2, int(wait_seconds / sample_interval) + 1)
+    mid_refresh_at = max(2, frame_count // 2)
+    mid_refreshed = False
+    started = time.monotonic()
+    for index in range(frame_count):
+        if index > 0:
+            target = started + index * sample_interval
+            delay = target - time.monotonic()
+            if delay > 0:
+                time.sleep(delay)
+        if (
+            index == mid_refresh_at
+            and not mid_refreshed
+            and samples
+            and max(float(sample["playfield_ratio"]) for sample in samples) < MOTION_PLAYFIELD_RATIO
+        ):
+            mid = _refresh_capture_surface(session)
+            refreshes.append({"when": f"before_frame_{index + 1}", **mid})
+            mid_refreshed = True
+            print(
+                "[命魂诊断] 运动检测：中途刷新 Surface（主画面仍未变）："
+                f"{'成功' if mid['ok'] else '失败'}"
+                f"；切换他窗={'是' if mid.get('switched') else '否'}"
+                + (f"；原因={mid['reason']}" if mid.get("reason") else "")
+            )
+        image = _capture(session)
+        elapsed = time.monotonic() - started
+        path = output / f"motion-sample-{index + 1:02d}.png"
+        _save(image, path)
+        if index == 0:
+            play_ratio = 0.0
+            right_ratio = 0.0
+            play_pixels = 0
+            right_pixels = 0
+        else:
+            play = image_diff(_crop_roi(images[0], playfield_box), _crop_roi(image, playfield_box))
+            right = image_diff(_crop_roi(images[0], right_box), _crop_roi(image, right_box))
+            play_ratio = play.ratio
+            right_ratio = right.ratio
+            play_pixels = play.changed_pixels
+            right_pixels = right.changed_pixels
+        sample = {
+            "index": index + 1,
+            "elapsed_seconds": round(elapsed, 3),
+            "screenshot": str(path),
+            "playfield_changed_pixels": play_pixels,
+            "playfield_ratio": play_ratio,
+            "right_edge_changed_pixels": right_pixels,
+            "right_edge_ratio": right_ratio,
+        }
+        samples.append(sample)
+        images.append(image)
+        print(
+            f"[命魂诊断] 运动检测：第 {index + 1}/{frame_count} 帧 "
+            f"t={elapsed:.2f}s 主画面={play_ratio:.3f} 右侧={right_ratio:.3f}"
+        )
+
+    first_play = next(
+        (
+            sample
+            for sample in samples[1:]
+            if float(sample["playfield_ratio"]) >= MOTION_PLAYFIELD_RATIO
+        ),
+        None,
+    )
+    first_right = next(
+        (
+            sample
+            for sample in samples[1:]
+            if float(sample["right_edge_ratio"]) >= MOTION_RIGHT_EDGE_RATIO
+        ),
+        None,
+    )
+    max_play = max(float(sample["playfield_ratio"]) for sample in samples)
+    max_right = max(float(sample["right_edge_ratio"]) for sample in samples)
+    if first_play is not None:
+        print(
+            "[命魂诊断] 运动检测：主画面首次变化："
+            f"第 {first_play['index']} 帧 / {first_play['elapsed_seconds']}s 后；"
+            f"比例={float(first_play['playfield_ratio']):.3f}"
+        )
+    else:
+        print("[命魂诊断] 运动检测：主画面全程未达变化阈值")
+    if first_right is not None:
+        print(
+            "[命魂诊断] 运动检测：右侧条首次变化："
+            f"第 {first_right['index']} 帧 / {first_right['elapsed_seconds']}s 后；"
+            f"比例={float(first_right['right_edge_ratio']):.3f}"
+        )
+
+    # Keep legacy filenames pointing at first / last for older reports.
+    _save(images[0], output / "motion-sample-1.png")
+    _save(images[-1], output / "motion-sample-2.png")
 
     try:
         backend = WindowsNativeOCRBackend(language="zh-Hans-CN")
     except RuntimeError as exc:
+        state = classify_motion(
+            None,
+            None,
+            playfield_ratio=max_play,
+            right_edge_ratio=max_right,
+        )
         result = {
-            "sample_1_screenshot": str(first_path),
-            "sample_2_screenshot": None,
+            "sample_1_screenshot": str(output / "motion-sample-1.png"),
+            "sample_2_screenshot": str(output / "motion-sample-2.png"),
             "sample_1": None,
             "sample_2": None,
-            "state": "未知",
+            "wait_seconds": wait_seconds,
+            "sample_interval": sample_interval,
+            "frame_count": len(samples),
+            "playfield_box": list(playfield_box),
+            "right_edge_box": list(right_box),
+            "playfield_ratio": max_play,
+            "right_edge_ratio": max_right,
+            "first_playfield_change": first_play,
+            "first_right_edge_change": first_right,
+            "surface_refreshes": refreshes,
+            "samples": samples,
+            "state": state,
             "ocr_backend": "不可用",
             "reason": str(exc),
         }
-        print(f"[命魂诊断] 运动检测：OCR 后端不可用；原因={exc}；状态=未知")
+        print(f"[命魂诊断] 运动检测：OCR 后端不可用；原因={exc}；状态={state}")
         return result
 
-    sample_1 = read_player_location(first, backend)
-    time.sleep(wait_seconds)
-    second = _capture(session)
-    _save(second, second_path)
-    sample_2 = read_player_location(second, backend)
-    state = classify_motion(sample_1.parsed, sample_2.parsed)
+    sample_1 = read_player_location(images[0], backend)
+    sample_2 = read_player_location(images[-1], backend)
+    state = classify_motion(
+        sample_1.parsed,
+        sample_2.parsed,
+        playfield_ratio=max_play,
+        right_edge_ratio=max_right,
+    )
     result = {
-        "sample_1_screenshot": str(first_path),
-        "sample_2_screenshot": str(second_path),
+        "sample_1_screenshot": str(output / "motion-sample-1.png"),
+        "sample_2_screenshot": str(output / "motion-sample-2.png"),
         "ocr_backend": "Windows.Media.Ocr",
         "ocr_language": backend.language,
         "sample_1": _reading_payload(sample_1),
         "sample_2": _reading_payload(sample_2),
+        "wait_seconds": wait_seconds,
+        "sample_interval": sample_interval,
+        "frame_count": len(samples),
+        "playfield_box": list(playfield_box),
+        "right_edge_box": list(right_box),
+        "playfield_changed_pixels": int(
+            max(int(sample["playfield_changed_pixels"]) for sample in samples)
+        ),
+        "playfield_ratio": max_play,
+        "right_edge_changed_pixels": int(
+            max(int(sample["right_edge_changed_pixels"]) for sample in samples)
+        ),
+        "right_edge_ratio": max_right,
+        "first_playfield_change": first_play,
+        "first_right_edge_change": first_right,
+        "surface_refreshes": refreshes,
+        "samples": samples,
         "state": state,
     }
     _print_location_reading("运动检测 P1 ", sample_1)
     _print_location_reading("运动检测 P2 ", sample_2)
+    print(
+        f"[命魂诊断] 运动检测：帧数={len(samples)}；"
+        f"主画面最大比例={max_play:.3f}；右侧最大比例={max_right:.3f}"
+    )
     print(f"[命魂诊断] 运动检测：状态={state}")
     return result
 
@@ -486,6 +707,12 @@ def list_subtypes() -> tuple[tuple[str, str], ...]:
 
 
 __all__ = [
+    "MOTION_PLAYFIELD_BOX",
+    "MOTION_PLAYFIELD_RATIO",
+    "MOTION_RIGHT_EDGE_BOX",
+    "MOTION_RIGHT_EDGE_RATIO",
+    "MOTION_SAMPLE_INTERVAL",
+    "MOTION_WAIT_SECONDS",
     "SHORTCUT_DIAGNOSTIC_SUBTYPES",
     "classify_motion",
     "image_diff",
