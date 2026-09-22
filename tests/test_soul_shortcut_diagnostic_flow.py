@@ -16,6 +16,7 @@ def test_subtypes_list_full_then_independent_experiments():
         ("hover", "Hover 二级 ROI 隔离验证"),
         ("postmessage_hover", "PostMessageW Hover 验证"),
         ("click_hotspot", "后台 Click + Hotspot 验证"),
+        ("background_capture_freshness", "后台覆盖捕获新鲜度分层验证"),
     )
 
 
