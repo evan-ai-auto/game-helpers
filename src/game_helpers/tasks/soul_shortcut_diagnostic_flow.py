@@ -17,6 +17,7 @@ from ..capture import WindowsGraphicsCapture
 from ..core.view_manager import GameViewManager
 from ..vision.scene_coordinate import prepare_player_location, read_player_location
 from ..vision.windows_ocr import WindowsNativeOCRBackend
+from .background_capture_freshness import run_background_capture_freshness
 from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
 from .manual_coordinate import (
@@ -35,6 +36,7 @@ SHORTCUT_DIAGNOSTIC_SUBTYPES = (
     ("hover", "Hover 二级 ROI 隔离验证"),
     ("postmessage_hover", "PostMessageW Hover 验证"),
     ("click_hotspot", "后台 Click + Hotspot 验证"),
+    ("background_capture_freshness", "后台覆盖捕获新鲜度分层验证"),
 )
 
 # 800×600 playfield used for motion: skip left HUD and the right chrome strip.
@@ -654,6 +656,24 @@ def run_soul_shortcut_diagnostic(
             raise RuntimeError("当前客户区不是 800x600，诊断任务停止。")
         if subtype == "ocr_roi_compare":
             report["ocr_roi_compare"] = _ocr_roi_compare_experiment(session, output)
+            return _finish(report, output)
+        if subtype == "background_capture_freshness":
+            report["background_capture_freshness"] = {
+                "covered": run_background_capture_freshness(
+                    session,
+                    output / "covered",
+                    wait_seconds=5.0,
+                    sample_interval=0.25,
+                    refresh_before_sampling=False,
+                ),
+                "refresh": run_background_capture_freshness(
+                    session,
+                    output / "refresh",
+                    wait_seconds=5.0,
+                    sample_interval=0.25,
+                    refresh_before_sampling=True,
+                ),
+            }
             return _finish(report, output)
         if subtype in {"motion", "full"}:
             report["motion"] = _motion_experiment(session, output)
