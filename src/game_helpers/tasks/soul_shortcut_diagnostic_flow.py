@@ -17,7 +17,6 @@ from ..capture import WindowsGraphicsCapture
 from ..core.view_manager import GameViewManager
 from ..vision.scene_coordinate import prepare_player_location, read_player_location
 from ..vision.windows_ocr import WindowsNativeOCRBackend
-from .background_capture_freshness import run_background_capture_freshness
 from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
 from .manual_coordinate import (
@@ -658,6 +657,7 @@ def run_soul_shortcut_diagnostic(
             report["ocr_roi_compare"] = _ocr_roi_compare_experiment(session, output)
             return _finish(report, output)
         if subtype == "background_capture_freshness":
+            from .background_capture_freshness import run_background_capture_freshness
             report["background_capture_freshness"] = {
                 "covered": run_background_capture_freshness(
                     session,
