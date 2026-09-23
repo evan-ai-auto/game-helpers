@@ -78,14 +78,23 @@ def _run_basic_capability_session(session, capability_id: str, output_dir: str |
 
     if capability_id == "shortcut_state_vision":
         observation = detect_shortcut_panel_state(image)
+        if observation.collapsed is True:
+            state = "折叠"
+        elif observation.collapsed is False:
+            state = "展开"
+        else:
+            state = "未知"
         return {
-            "ok": observation.collapsed is not None,
+            # UNKNOWN is a valid detection result, not a guessed state.
+            "ok": True,
             "capability": capability.id,
+            "state": state,
             "collapsed": observation.collapsed,
             "template": observation.matched_template,
             "score": observation.match_score,
             "confidence": observation.confidence,
             "reason": getattr(observation.reason, "value", str(observation.reason)),
+            "evidence": list(observation.evidence),
             "match_location": list(observation.match_location) if observation.match_location else None,
             "second_template": observation.second_template,
             "second_score": observation.second_score,
