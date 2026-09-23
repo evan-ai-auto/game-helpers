@@ -17,6 +17,7 @@ surface_transition_sampling_probe.py
 # Local diagnostic / probe outputs (keep generating locally; do not commit)
 # diagnostic/
 diagnostic/workflow_runs/
+diagnostic/workflow_runs/
 surface-probe/
 surface-probe-2/
 background-hover-1/
