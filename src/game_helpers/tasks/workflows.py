@@ -32,6 +32,7 @@ class TaskWorkflowRegistry:
 
 def default_workflows():
     return (
+        TaskWorkflow(id="minghun_basic_capabilities", name="基础能力列表", description="单独测试各项最基础可复用能力；仅调用现有实现，不修改能力实现本身。", recipe=TaskRecipe(id="minghun_basic_capabilities", name="基础能力列表", category=TaskCategory.GENERAL, metadata={"game": "梦幻西游", "diagnosis_only": True, "baseline_client": "800x600"})),
         TaskWorkflow(id="minghun", name="命魂任务", description="执行领取状态检测（800×600 基线）；不自动领取。", recipe=TaskRecipe(id="minghun", name="命魂任务", category=TaskCategory.GENERAL, metadata={"game": "梦幻西游", "diagnosis_only": True, "status_detector": "soul_task", "baseline_client": "800x600"})),
         TaskWorkflow(id="minghun_coordinate", name="命魂任务坐标采集", description="保留原有单次 F9 坐标采集与单次后台点击确认流程。", recipe=TaskRecipe(id="minghun_coordinate", name="命魂任务坐标采集", category=TaskCategory.GENERAL, metadata={"game": "梦幻西游", "diagnosis_only": True, "calibration": "shortcut_panel_toggle", "baseline_client": "800x600"})),
         TaskWorkflow(id="minghun_coordinate_continuous", name="命魂快捷图标开关连续坐标验证", description="连续 F9 采点并后台点击；仅人工确认有效的坐标计入样本，ESC 结束，不覆盖默认坐标。", recipe=TaskRecipe(id="minghun_coordinate_continuous", name="命魂快捷图标开关连续坐标验证", category=TaskCategory.GENERAL, metadata={"game": "梦幻西游", "diagnosis_only": True, "calibration": "shortcut_panel_toggle_continuous", "baseline_client": "800x600"})),
