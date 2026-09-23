@@ -27,6 +27,10 @@ from .visual_state import (
 )
 
 
+class ItemPanelFlowCancelled(Exception):
+    """User selected 返回 from the interactive item-panel submenu."""
+
+
 @dataclass(frozen=True)
 class ItemPanelObservation:
     open: bool
@@ -216,20 +220,7 @@ def run_item_panel_detect_and_toggle(
         if target_selector is not None:
             selected_target = target_selector(before)
             if selected_target is None:
-                return ItemPanelFlowResult(
-                    ok=True,
-                    before=before,
-                    after=None,
-                    toggled=False,
-                    toggle_verified=False,
-                    message="用户返回道具栏相关菜单。",
-                    foreground_unchanged=True,
-                    restored_surface=True,
-                    restored_tab=True,
-                    click_client=None,
-                    coord_source_requested=requested,
-                    resolution_key=resolution_key,
-                )
+                raise ItemPanelFlowCancelled()
             target_open = bool(selected_target)
         print(f"item_panel_before={_status_text(before.open)}")
         print(f"item_panel_before_status={before.status}")
@@ -291,12 +282,17 @@ def run_item_panel_detect_and_toggle(
                 f"期望道具栏为「{_status_text(target_open)}」，"
                 f"检测仍为「{_status_text(after.open)}」。"
             )
+    except ItemPanelFlowCancelled:
+        error = "cancelled"
     except Exception as exc:
         error = f"{type(exc).__name__}: {exc}"
     finally:
         restore = guard.finish()
 
-    if error:
+    if error == "cancelled":
+        message = "用户返回道具栏相关菜单。"
+        ok = False
+    elif error:
         message = f"道具栏流程失败：{error}"
         ok = False
     elif before is None or after is None:
