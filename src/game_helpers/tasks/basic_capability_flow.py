@@ -63,7 +63,7 @@ def run_basic_capability(parent_hwnd: int, selection: CharacterSelectionResult, 
         run_dir = _new_run_dir(output_dir)
         image = _capture(session)
         image.save(run_dir / "capture.png")
-        result = _run_basic_capability_session(session, capability_id, run_dir)
+        result = _run_basic_capability_session(session, capability_id, run_dir, image)
         _write_json(run_dir / "result.json", result)
         _write_json(run_dir / "run.json", {
             "capability": capability.id,
@@ -77,12 +77,10 @@ def run_basic_capability(parent_hwnd: int, selection: CharacterSelectionResult, 
         guard.finish()
 
 
-def _run_basic_capability_session(session, capability_id: str, output_dir: str | Path):
+def _run_basic_capability_session(session, capability_id: str, output_dir: str | Path, image):
     capability = get_basic_capability(capability_id)
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
-    image = _capture(session)
-
     if capability_id == "host_capture":
         host = as_pil_image(session.capture.capture(session.parent_hwnd)).convert("RGB")
         path = output / "host.png"
