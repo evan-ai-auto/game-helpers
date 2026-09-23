@@ -6,6 +6,7 @@ import argparse
 from ..core.window import find_window
 from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character
+from .basic_capability_flow import BASIC_CAPABILITIES, run_basic_capability
 from .item_panel_flow import run_item_panel_detect_and_toggle
 from .soul_shortcut_diagnostic_flow import (
     SHORTCUT_DIAGNOSTIC_SUBTYPES,
@@ -19,6 +20,24 @@ from .soul_task_coordinate_flow import (
 from .soul_task_detection_coordinate_flow import run_soul_task_detection_coordinate_validation
 from .soul_task_flow import run_soul_task_claim_diagnosis
 from .workflows import TaskWorkflowRegistry
+
+
+def _choose_basic_capability() -> str | None:
+    print("[基础能力] 请选择基础能力单项测试")
+    for option, capability in enumerate(BASIC_CAPABILITIES, start=1):
+        print(f"  [{option}] {capability.name} | {capability.description}")
+    print("  [0] 返回")
+    try:
+        choice = int(input("请选择基础能力编号：").strip())
+    except (EOFError, ValueError):
+        print("[基础能力] 编号无效")
+        return None
+    if choice == 0:
+        return None
+    if not 1 <= choice <= len(BASIC_CAPABILITIES):
+        print(f"[基础能力] 编号必须在 1 到 {len(BASIC_CAPABILITIES)} 之间")
+        return None
+    return BASIC_CAPABILITIES[choice - 1].id
 
 
 def _choose_soul_shortcut_subtype() -> str | None:
@@ -106,6 +125,31 @@ def main() -> int:
     print(f"workflow_id={workflow.id} workflow_name={workflow.name}")
 
     print("[链路] 5/6 执行流程")
+    if workflow.id == "minghun_basic_capabilities":
+        capability_id = _choose_basic_capability()
+        if capability_id is None:
+            print("[链路] 6/6 结果")
+            print("result=SKIPPED")
+            return 0
+        print(f"[基础能力] 单项测试={dict((item.id, item.name) for item in BASIC_CAPABILITIES)[capability_id]}")
+        print("task_execution_started=True")
+        try:
+            result = run_basic_capability(
+                parent.hwnd,
+                selected,
+                capability_id,
+                f"{args.output_dir}/basic_capabilities/{capability_id}",
+            )
+        except RuntimeError as exc:
+            print(f"[基础能力] 阶段=执行；原因={exc}")
+            print("[链路] 6/6 结果")
+            print("result=FAILED")
+            return 1
+        print(f"[基础能力] result={result}")
+        print("[链路] 6/6 结果")
+        print("result=PASSED")
+        return 0
+
     if workflow.id == "minghun_shortcut_diagnostic":
         subtype = _choose_soul_shortcut_subtype()
         if subtype is None:
