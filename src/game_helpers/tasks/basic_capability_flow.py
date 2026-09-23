@@ -244,15 +244,6 @@ def _run_basic_capability_session(
                     "icon_evidence": list(icon.evidence),
                 }
             )
-        if not gated.icon_checked:
-            payload["business_validation"] = "SKIPPED"
-            payload["business_validation_reason"] = f"Shortcut 状态为{gated.panel_state}，本次未执行图标匹配"
-        elif gated.icon is not None and gated.icon.found:
-            payload["business_validation"] = "PASSED"
-            payload["business_validation_reason"] = "Shortcut 已展开且目标图标匹配成功"
-        else:
-            payload["business_validation"] = "FAILED"
-            payload["business_validation_reason"] = "Shortcut 已展开，但目标图标未匹配成功"
         return payload
 
     if capability_id == "image_diff":

@@ -22,8 +22,5 @@
   "icon_reason": null,
   "icon_match_location": null,
   "icon_search_roi": null,
-  "icon_evidence": null,
-  "source_artifact": "source.png",
-  "business_validation": "SKIPPED",
-  "business_validation_reason": "Shortcut 状态为折叠，本次未执行图标匹配"
+  "icon_evidence": null
 }

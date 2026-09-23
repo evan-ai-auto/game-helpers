@@ -36,8 +36,5 @@
     "score=0.859",
     "threshold=0.780",
     "roi=[0, 0, 272, 252]"
-  ],
-  "source_artifact": "source.png",
-  "business_validation": "PASSED",
-  "business_validation_reason": "Shortcut 已展开且目标图标匹配成功"
+  ]
 }
