@@ -59,16 +59,29 @@ def run_basic_capability(parent_hwnd: int, selection: CharacterSelectionResult, 
         geometry = session.geometry()
         if (geometry.client_width, geometry.client_height) != (800, 600):
             raise RuntimeError("当前客户区不是 800x600，基础能力测试停止。")
-        return _run_basic_capability_session(session, capability_id, output_dir)
+        capability = get_basic_capability(capability_id)
+        run_dir = _new_run_dir(output_dir)
+        image = _capture(session)
+        image.save(run_dir / "capture.png")
+        result = _run_basic_capability_session(session, capability_id, run_dir)
+        _write_json(run_dir / "result.json", result)
+        _write_json(run_dir / "run.json", {
+            "capability": capability.id,
+            "name": capability.name,
+            "description": capability.description,
+            "implementation": capability.implementation,
+            "artifacts": sorted(p.name for p in run_dir.iterdir()),
+        })
+        return {**result, "artifact_dir": str(run_dir)}
     finally:
         guard.finish()
 
 
 def _run_basic_capability_session(session, capability_id: str, output_dir: str | Path):
     capability = get_basic_capability(capability_id)
-    output = _new_run_dir(output_dir)
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
     image = _capture(session)
-    image.save(output / "capture.png")
 
     if capability_id == "host_capture":
         host = as_pil_image(session.capture.capture(session.parent_hwnd)).convert("RGB")
