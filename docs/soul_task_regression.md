@@ -104,6 +104,9 @@
 4. Hover 二级 ROI 隔离验证
 5. PostMessageW Hover 验证
 6. 后台 Click + Hotspot 验证
+7. 后台覆盖捕获新鲜度分层验证
+
+子实验与需求的对应关系以 [`docs/commands.md`](commands.md) 顶部“需求—子实验对应关系”为唯一维护来源；本页只保留当前执行顺序，不另行维护映射表。
 
 诊断输出独立写入 `diagnostic/workflow_runs/soul_shortcut_diagnostic/<subtype>/`，不修改生产默认坐标 `client=(14, 122)`、生产模板或现有后台点击实现。
 
