@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "capability": "shortcut_state_vision",
+  "state": "未知",
+  "collapsed": null,
+  "template": "right_light",
+  "score": 0.8076533897250306,
+  "confidence": 0.8076533897250306,
+  "reason": "panel_state_unknown",
+  "evidence": [
+    "toggle best=right_light score=0.808",
+    "toggle second=right_gray score=0.794",
+    "toggle margin=0.013"
+  ],
+  "match_location": [
+    4,
+    107
+  ],
+  "second_template": "right_gray",
+  "second_score": 0.7944971121993719,
+  "roi": [
+    0,
+    80,
+    40,
+    128
+  ]
+}
