@@ -10,6 +10,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from PIL import Image
+
 from ..actions.background_input import BackgroundInput
 from ..vision.scene_coordinate import read_player_location
 from ..vision.windows_ocr import WindowsNativeOCRBackend
@@ -17,12 +19,14 @@ from ..capture import WindowsGraphicsCapture
 from ..core.view_manager import GameViewManager
 from .background_capture_freshness import run_background_capture_freshness
 from .background_context import BackgroundRunGuard
-from .basic_capabilities import BASIC_CAPABILITIES, get_basic_capability
+from .basic_capabilities import get_basic_capability
 from .character_selection import CharacterSelectionResult, sync_selected_character
 from .verification_session import VerificationSession
 from .soul_shortcut_diagnostic_flow import image_diff, _refresh_capture_surface
 from .soul_task_match import as_pil_image
 from .shortcut_panel_vision import SHORTCUT_PANEL_TOGGLE_REGION, detect_shortcut_panel_state
+from .ui_icon_targets import DEFAULT_ICON_TARGET_ID
+from .ui_icon_vision import detect_ui_icon_with_shortcut_gate
 
 
 
@@ -49,7 +53,16 @@ def _write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
 
-def run_basic_capability(parent_hwnd: int, selection: CharacterSelectionResult, capability_id: str, output_dir: str | Path) -> dict[str, object]:
+def run_basic_capability(
+    parent_hwnd: int,
+    selection: CharacterSelectionResult,
+    capability_id: str,
+    output_dir: str | Path,
+    *,
+    ui_icon_target_id: str | None = None,
+    ui_icon_source_mode: str | None = None,
+    ui_icon_source_path: str | Path | None = None,
+) -> dict[str, object]:
     """Run exactly one capability smoke test using existing implementations."""
     manager = GameViewManager(parent_hwnd, timeout=2.0)
     guard = BackgroundRunGuard.begin(manager)
@@ -61,9 +74,25 @@ def run_basic_capability(parent_hwnd: int, selection: CharacterSelectionResult, 
             raise RuntimeError("当前客户区不是 800x600，基础能力测试停止。")
         capability = get_basic_capability(capability_id)
         run_dir = _new_run_dir(output_dir)
-        image = _capture(session)
-        image.save(run_dir / "capture.png")
-        result = _run_basic_capability_session(session, capability_id, run_dir, image)
+        # ui_icon_vision only keeps the selected detection image as source.png.
+        if capability_id == "ui_icon_vision":
+            image = (
+                _capture(session)
+                if (ui_icon_source_mode or "live_capture") == "live_capture"
+                else None
+            )
+        else:
+            image = _capture(session)
+            image.save(run_dir / "capture.png")
+        result = _run_basic_capability_session(
+            session,
+            capability_id,
+            run_dir,
+            image,
+            ui_icon_target_id=ui_icon_target_id,
+            ui_icon_source_mode=ui_icon_source_mode,
+            ui_icon_source_path=ui_icon_source_path,
+        )
         _write_json(run_dir / "result.json", result)
         _write_json(run_dir / "run.json", {
             "capability": capability.id,
@@ -77,7 +106,16 @@ def run_basic_capability(parent_hwnd: int, selection: CharacterSelectionResult, 
         guard.finish()
 
 
-def _run_basic_capability_session(session, capability_id: str, output_dir: str | Path, image):
+def _run_basic_capability_session(
+    session,
+    capability_id: str,
+    output_dir: str | Path,
+    image,
+    *,
+    ui_icon_target_id: str | None = None,
+    ui_icon_source_mode: str | None = None,
+    ui_icon_source_path: str | Path | None = None,
+):
     capability = get_basic_capability(capability_id)
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -129,6 +167,73 @@ def _run_basic_capability_session(session, capability_id: str, output_dir: str |
             "second_score": observation.second_score,
             "roi": list(roi_box),
         }
+
+    if capability_id == "ui_icon_vision":
+        target_id = ui_icon_target_id or DEFAULT_ICON_TARGET_ID
+        source_mode = ui_icon_source_mode or "live_capture"
+        if source_mode == "file":
+            if ui_icon_source_path is None:
+                raise RuntimeError("ui_icon_vision file 模式必须提供 source_path")
+            source_path = Path(ui_icon_source_path)
+            if not source_path.is_file():
+                raise RuntimeError(f"检测图源不存在: {source_path}")
+            source_image = Image.open(source_path).convert("RGB")
+            recorded_source = str(source_path)
+        elif source_mode == "live_capture":
+            if image is None:
+                raise RuntimeError("ui_icon_vision live_capture 模式缺少实时截图")
+            source_image = image
+            recorded_source = "live_capture"
+        else:
+            raise RuntimeError(f"未知 ui_icon_vision source_mode: {source_mode}")
+
+        # Only persist the image actually used for detection.
+        source_image.save(output / "source.png")
+
+        try:
+            gated = detect_ui_icon_with_shortcut_gate(source_image, target_id=target_id)
+        except KeyError as exc:
+            raise RuntimeError(str(exc)) from exc
+        panel = gated.panel
+        toggle_roi = SHORTCUT_PANEL_TOGGLE_REGION.pixel(source_image.width, source_image.height)
+        source_image.crop(toggle_roi).save(output / "shortcut-toggle-roi.png")
+        payload: dict[str, object] = {
+            "ok": True,
+            "capability": capability.id,
+            "target_id": gated.target_id,
+            "target_name": gated.target_name,
+            "source_mode": source_mode,
+            "source_path": recorded_source,
+            "source_artifact": "source.png",
+            "panel_state": gated.panel_state,
+            "collapsed": panel.collapsed,
+            "panel_template": panel.matched_template,
+            "panel_score": panel.match_score,
+            "panel_reason": getattr(panel.reason, "value", str(panel.reason)),
+            "panel_evidence": list(panel.evidence),
+            "icon_checked": gated.icon_checked,
+            "icon_found": None,
+            "icon_score": None,
+            "icon_reason": None,
+            "icon_match_location": None,
+            "icon_search_roi": None,
+            "icon_evidence": None,
+        }
+        if gated.icon is not None:
+            icon = gated.icon
+            left, top, right, bottom = icon.search_roi
+            source_image.crop((left, top, right, bottom)).save(output / "icon-search-roi.png")
+            payload.update(
+                {
+                    "icon_found": icon.found,
+                    "icon_score": icon.score,
+                    "icon_reason": icon.reason,
+                    "icon_match_location": list(icon.match_location) if icon.match_location else None,
+                    "icon_search_roi": list(icon.search_roi),
+                    "icon_evidence": list(icon.evidence),
+                }
+            )
+        return payload
 
     if capability_id == "image_diff":
         before = image

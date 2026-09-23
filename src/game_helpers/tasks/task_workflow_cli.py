@@ -20,6 +20,7 @@ from .soul_task_coordinate_flow import (
 )
 from .soul_task_detection_coordinate_flow import run_soul_task_detection_coordinate_validation
 from .soul_task_flow import run_soul_task_claim_diagnosis
+from .ui_icon_vision import choose_icon_source_interactive, choose_icon_target_interactive
 from .workflows import TaskWorkflowRegistry
 
 
@@ -134,12 +135,29 @@ def main() -> int:
             return 0
         print(f"[基础能力] 单项测试={dict((item.id, item.name) for item in BASIC_CAPABILITIES)[capability_id]}")
         print("task_execution_started=True")
+        ui_icon_kwargs: dict[str, object] = {}
+        if capability_id == "ui_icon_vision":
+            try:
+                target_id = choose_icon_target_interactive()
+                source_mode, source_path = choose_icon_source_interactive()
+            except RuntimeError as exc:
+                print(f"[基础能力] 阶段=参数选择；原因={exc}")
+                print("[链路] 6/6 结果")
+                print("result=FAILED")
+                return 1
+            ui_icon_kwargs = {
+                "ui_icon_target_id": target_id,
+                "ui_icon_source_mode": source_mode,
+                "ui_icon_source_path": source_path,
+            }
+            print(f"[图标检测] target={target_id}; source_mode={source_mode}; source={source_path}")
         try:
             result = run_basic_capability(
                 parent.hwnd,
                 selected,
                 capability_id,
                 f"{args.output_dir}/basic_capabilities/{capability_id}",
+                **ui_icon_kwargs,
             )
         except RuntimeError as exc:
             print(f"[基础能力] 阶段=执行；原因={exc}")
@@ -147,8 +165,13 @@ def main() -> int:
             print("result=FAILED")
             return 1
         print(f"[基础能力] result={result}")
-        if workflow.id == "minghun_basic_capabilities" and capability_id == "shortcut_state_vision":
+        if capability_id == "shortcut_state_vision":
             print(f"[Shortcut状态] 当前状态={result.get('state', '未知')} | 置信度={result.get('confidence', 0.0):.3f} | 原因={result.get('reason', 'unknown')}")
+        if capability_id == "ui_icon_vision":
+            print(
+                f"[图标检测] panel={result.get('panel_state')} | checked={result.get('icon_checked')} "
+                f"| found={result.get('icon_found')} | score={result.get('icon_score')}"
+            )
         print("[链路] 6/6 结果")
         print("result=PASSED")
         return 0

@@ -147,6 +147,7 @@ Windows OCR 依赖：Windows 环境通过 `windows` extra 安装 `winsdk>=1.0.0b
 | 检查游戏画面 Surface | `verification_session.py:VerificationSession.health` | `surface_health` |
 | 读取场景与地图坐标 | `scene_coordinate.py:read_player_location` | `scene_coordinate_ocr` |
 | 识别 Shortcut 当前状态 | `shortcut_panel_vision.py:detect_shortcut_panel_state` | `shortcut_state_vision` |
+| 识别 UI 图标（依赖 Shortcut 状态） | `ui_icon_vision.py:detect_ui_icon_with_shortcut_gate` | `ui_icon_vision` |
 | 执行图像差分 | `soul_shortcut_diagnostic_flow.py:image_diff` | `image_diff` |
 | 执行 Surface 刷新 | `soul_shortcut_diagnostic_flow.py:_refresh_capture_surface` | `surface_refresh` |
 | 发送后台鼠标移动 | `platform/windows/input.py:BackgroundInput.mouse_move` | `background_mouse_move` |

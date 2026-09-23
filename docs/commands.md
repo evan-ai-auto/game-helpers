@@ -264,16 +264,18 @@ python -m pip install -e ".[windows]"
 | 3 | 检查游戏画面 Surface | `core/surface.py` / `verification_session.py` | 验证当前 Surface 捕获条件 |
 | 4 | 读取场景与地图坐标 | `vision/scene_coordinate.py` + `vision/windows_ocr.py` | 单独验证 OCR |
 | 5 | 识别 Shortcut 当前状态 | `tasks/shortcut_panel_vision.py` | 单独验证 Shortcut 视觉状态识别；结果明确输出「折叠 / 展开 / 未知」 |
-| 6 | 执行图像差分 | `tasks/soul_shortcut_diagnostic_flow.py:image_diff` | 单独验证基础差分能力 |
-| 7 | 执行 Surface 刷新 | `tasks/soul_shortcut_diagnostic_flow.py:_refresh_capture_surface` | 单独验证现有刷新尝试 |
-| 8 | 发送后台鼠标移动 | `actions/background_input.py` | 仅发送 WM_MOUSEMOVE，不执行点击 |
-| 9 | 暂未验证通过 验证捕获新鲜度 | `tasks/background_capture_freshness.py` | 单独验证 Host / WSGAME / Playfield / RightEdge 新鲜度 |
+| 6 | 识别 UI 图标（依赖 Shortcut 状态） | `tasks/ui_icon_vision.py` | 参数化：目标图标（默认命魂已领取）+ 人工选图源；折叠/未知早退，展开则模板匹配 |
+| 7 | 执行图像差分 | `tasks/soul_shortcut_diagnostic_flow.py:image_diff` | 单独验证基础差分能力 |
+| 8 | 执行 Surface 刷新 | `tasks/soul_shortcut_diagnostic_flow.py:_refresh_capture_surface` | 单独验证现有刷新尝试 |
+| 9 | 发送后台鼠标移动 | `actions/background_input.py` | 仅发送 WM_MOUSEMOVE，不执行点击 |
+| 10 | 暂未验证通过 验证捕获新鲜度 | `tasks/background_capture_freshness.py` | 单独验证 Host / WSGAME / Playfield / RightEdge 新鲜度 |
 
 基础能力输出统一写入 `diagnostic/workflow_runs/basic_capabilities/<capability-id>/<run-id>/`，每次执行独立落盘，不覆盖历史证据。运行时至少保存：
 - `run.json`：基础能力 ID、名称、当前实现绑定、证据文件清单
-- `capture.png`：本次基础能力测试使用的游戏画面
+- `capture.png`：本次基础能力测试使用的游戏画面（多数能力）
 - `result.json`：本次结构化测试结果
 - Shortcut 状态识别额外保存 `shortcut-toggle-roi.png`：实际识别 ROI 原图
+- UI 图标检测**不写**无关的 `capture.png`：只保存实际检测图 `source.png`，以及 `shortcut-toggle-roi.png`；展开匹配时再保存 `icon-search-roi.png`
 
 目录示例：
 
@@ -289,6 +291,7 @@ diagnostic/workflow_runs/basic_capabilities/
 │       ├── shortcut-toggle-roi.png
 │       ├── result.json
 │       └── run.json
+├── ui_icon_vision/
 ├── image_diff/
 ├── surface_refresh/
 ├── background_mouse_move/
