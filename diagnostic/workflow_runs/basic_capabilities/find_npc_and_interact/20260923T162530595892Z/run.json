@@ -1,0 +1,10 @@
+{
+  "capability": "find_npc_and_interact",
+  "name": "寻找指定 NPC 角色并交互",
+  "description": "基础能力占位：后续补充 NPC 定位、对话与选项交互。",
+  "implementation": "tasks.basic_capability_flow:placeholder",
+  "artifacts": [
+    "capture.png",
+    "result.json"
+  ]
+}
