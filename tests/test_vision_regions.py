@@ -944,6 +944,56 @@ def test_correct_scene_name_rewrites_jing():
     assert correct_scene_name("竟", plain) == "竟"
 
 
+def test_correct_scene_name_rewrites_di():
+    from game_helpers.vision.scene_coordinate import correct_scene_name
+
+    page = Image.new("L", (36, 16), 255)
+    # 地: left 土 stem + crossbar, right 也-like body
+    _stamp(
+        page,
+        0,
+        (
+            "..#.....#....",
+            "..#..#######.",
+            "#####.#...#..",
+            "..#....#.#...",
+            "..#.....#....",
+            "..#....##....",
+            "..#...#.#....",
+            "..#..#..#....",
+            "..#.#...#..#.",
+            "..##....#.#..",
+            "..#.....#....",
+            "..#.....#...#",
+            "..#......####",
+            ".............",
+        ),
+    )
+    _stamp(page, 16, ("#####", "#...#", "#...#", "#####", "#...#", "#...#", "#####"))
+    assert correct_scene_name("也府", page) == "地府"
+
+    plain = Image.new("L", (16, 14), 255)
+    # plain 也: no isolated left 土 stem
+    _stamp(
+        plain,
+        0,
+        (
+            ".#######.",
+            "#.....#..",
+            ".....#...",
+            "....#....",
+            "...##....",
+            "..#.#....",
+            ".#..#..#.",
+            "#...#.#..",
+            "....#....",
+            "....#...#",
+            ".....####",
+        ),
+    )
+    assert correct_scene_name("也", plain) == "也"
+
+
 def test_restore_non_digit_y_reads_four_and_nine():
     from game_helpers.vision.scene_coordinate import _known_digit, restore_non_digit_y
 

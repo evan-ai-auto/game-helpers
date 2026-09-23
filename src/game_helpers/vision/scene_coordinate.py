@@ -145,9 +145,9 @@ def correct_scene_name(text: str, ink: Image.Image) -> str:
 
     Windows OCR splits this pixel font into spaced characters and may read
     朱 as 耒. A light UI fragment to the right of the name is not part of it,
-    so only the character run is kept. 耒 is rewritten to 朱, 皋 to 寨, and 竟 to 境,
-    only when the glyph still has that character's strokes. A dropped 唐 is
-    inserted only when that unread cell sits between 大 and 官.
+    so only the character run is kept. 耒 is rewritten to 朱, 皋 to 寨, 竟 to 境,
+    and 也 to 地, only when the glyph still has that character's strokes. A
+    dropped 唐 is inserted only when that unread cell sits between 大 and 官.
     """
     characters = re.findall(r"[\u4e00-\u9fff]", text)
     if not characters:
@@ -161,6 +161,8 @@ def correct_scene_name(text: str, ink: Image.Image) -> str:
             corrected.append("寨")
         elif character == "竟" and index < len(glyphs) and _looks_like_jing(glyphs[index]):
             corrected.append("境")
+        elif character == "也" and index < len(glyphs) and _looks_like_di(glyphs[index]):
+            corrected.append("地")
         else:
             corrected.append(character)
     corrected = _insert_dropped_tang(corrected, glyphs)
@@ -254,6 +256,33 @@ def _looks_like_jing(crop: Image.Image) -> bool:
         if counts[x - 1] <= counts[x] * 0.4 and counts[x + 1] <= counts[x] * 0.4:
             return True
     return False
+
+
+def _looks_like_di(crop: Image.Image) -> bool:
+    """地 keeps a left 土 stem beside the 也 body. Plain 也 is one component."""
+    tight = _tight_crop(crop)
+    if tight is None or tight.width < 10 or tight.height < 10:
+        return False
+    rows = _ink_rows(tight)
+    counts = [sum(x in cols for cols in rows) for x in range(tight.width)]
+    stem: int | None = None
+    for x in range(1, max(2, tight.width // 3)):
+        if counts[x] < tight.height * 0.65:
+            continue
+        if counts[x - 1] <= counts[x] * 0.4 and counts[x + 1] <= counts[x] * 0.45:
+            stem = x
+            break
+    if stem is None:
+        return False
+    right_rows = sum(1 for cols in rows if any(x >= tight.width * 0.45 for x in cols))
+    if right_rows < tight.height * 0.5:
+        return False
+    ink_rows = [index for index, cols in enumerate(rows) if cols]
+    upper = ink_rows[: max(1, len(ink_rows) // 2)]
+    return any(
+        len(rows[index]) >= 3 and min(rows[index]) <= stem <= max(rows[index])
+        for index in upper
+    )
 
 
 def _looks_like_tang(crop: Image.Image) -> bool:
