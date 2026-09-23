@@ -6,6 +6,8 @@ same functions unchanged.
 """
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from ..actions.background_input import BackgroundInput
@@ -20,7 +22,7 @@ from .character_selection import CharacterSelectionResult, sync_selected_charact
 from .verification_session import VerificationSession
 from .soul_shortcut_diagnostic_flow import image_diff, _refresh_capture_surface
 from .soul_task_match import as_pil_image
-from .shortcut_panel_vision import detect_shortcut_panel_state
+from .shortcut_panel_vision import SHORTCUT_PANEL_TOGGLE_REGION, detect_shortcut_panel_state
 
 
 
@@ -34,6 +36,17 @@ def _shortcut_state_label(collapsed: bool | None) -> str:
     if collapsed is False:
         return "展开"
     return "未知"
+
+
+def _new_run_dir(output_dir: str | Path) -> Path:
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    run_dir = Path(output_dir) / run_id
+    run_dir.mkdir(parents=True, exist_ok=False)
+    return run_dir
+
+
+def _write_json(path: Path, payload: object) -> None:
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
 
 def run_basic_capability(parent_hwnd: int, selection: CharacterSelectionResult, capability_id: str, output_dir: str | Path) -> dict[str, object]:
@@ -53,9 +66,9 @@ def run_basic_capability(parent_hwnd: int, selection: CharacterSelectionResult, 
 
 def _run_basic_capability_session(session, capability_id: str, output_dir: str | Path):
     capability = get_basic_capability(capability_id)
-    output = Path(output_dir)
-    output.mkdir(parents=True, exist_ok=True)
+    output = _new_run_dir(output_dir)
     image = _capture(session)
+    image.save(output / "capture.png")
 
     if capability_id == "host_capture":
         host = as_pil_image(session.capture.capture(session.parent_hwnd)).convert("RGB")
@@ -87,6 +100,8 @@ def _run_basic_capability_session(session, capability_id: str, output_dir: str |
     if capability_id == "shortcut_state_vision":
         observation = detect_shortcut_panel_state(image)
         state = _shortcut_state_label(observation.collapsed)
+        roi_box = SHORTCUT_PANEL_TOGGLE_REGION.pixel(image.width, image.height)
+        image.crop(roi_box).save(output / "shortcut-toggle-roi.png")
         return {
             # UNKNOWN is a valid detection result, not a guessed state.
             "ok": True,
@@ -101,6 +116,7 @@ def _run_basic_capability_session(session, capability_id: str, output_dir: str |
             "match_location": list(observation.match_location) if observation.match_location else None,
             "second_template": observation.second_template,
             "second_score": observation.second_score,
+            "roi": list(roi_box),
         }
 
     if capability_id == "image_diff":
