@@ -165,6 +165,10 @@ def main() -> int:
             print("result=FAILED")
             return 1
         print(f"[基础能力] result={result}")
+        if capability_id == "dao_ju_lan" and result.get("error") == "cancelled":
+            print("[链路] 6/6 结果")
+            print("result=SKIPPED")
+            return 0
         if capability_id == "shortcut_state_vision":
             print(f"[Shortcut状态] 当前状态={result.get('state', '未知')} | 置信度={result.get('confidence', 0.0):.3f} | 原因={result.get('reason', 'unknown')}")
         if capability_id == "ui_icon_vision":
