@@ -269,7 +269,34 @@ python -m pip install -e ".[windows]"
 | 8 | 发送后台鼠标移动 | `actions/background_input.py` | 仅发送 WM_MOUSEMOVE，不执行点击 |
 | 9 | 验证捕获新鲜度 | `tasks/background_capture_freshness.py` | 单独验证 Host / WSGAME / Playfield / RightEdge 新鲜度 |
 
-基础能力输出统一写入 `diagnostic/workflow_runs/basic_capabilities/<capability-id>/`，不覆盖生产坐标、模板或其他任务输出。
+基础能力输出统一写入 `diagnostic/workflow_runs/basic_capabilities/<capability-id>/<run-id>/`，每次执行独立落盘，不覆盖历史证据。运行时至少保存：
+- `run.json`：基础能力 ID、名称、当前实现绑定、证据文件清单
+- `capture.png`：本次基础能力测试使用的游戏画面
+- `result.json`：本次结构化测试结果
+- Shortcut 状态识别额外保存 `shortcut-toggle-roi.png`：实际识别 ROI 原图
+
+目录示例：
+
+```text
+diagnostic/workflow_runs/basic_capabilities/
+├── host_capture/
+├── game_view_capture/
+├── surface_health/
+├── scene_coordinate_ocr/
+├── shortcut_state_vision/
+│   └── <run-id>/
+│       ├── capture.png
+│       ├── shortcut-toggle-roi.png
+│       ├── result.json
+│       └── run.json
+├── image_diff/
+├── surface_refresh/
+├── background_mouse_move/
+└── capture_freshness/
+```
+
+这些运行证据默认由 `.gitignore` 忽略，保留在本机用于人工复盘和后续视觉算法调试，不进入生产配置。
+
 
 能力注册表：`src/game_helpers/tasks/basic_capabilities.py`。命魂 Shortcut Flow 通过 `SHORTCUT_DIAGNOSTIC_CAPABILITY_IDS` 声明其基础能力依赖；单项测试菜单直接使用同一注册表，因此“Flow 实际依赖什么”与“菜单测试什么”不会形成两套能力清单。
 
