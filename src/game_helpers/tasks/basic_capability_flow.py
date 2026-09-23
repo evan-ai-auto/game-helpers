@@ -275,6 +275,18 @@ def _run_basic_capability_session(
             "client_point": list(target),
         }
 
+    if capability_id in {"demon_repellent_incense", "find_npc_and_interact"}:
+        messages = {
+            "demon_repellent_incense": "摄妖香能力尚在路上，先来报个到；真正的检查与使用本领后续补上。",
+            "find_npc_and_interact": "NPC 寻访能力尚在路上，先记下目标；定位、对话和选项交互后续补上。",
+        }
+        return {
+            "ok": True,
+            "capability": capability.id,
+            "status": "not_implemented",
+            "message": messages[capability_id],
+        }
+
     if capability_id == "capture_freshness":
         result = run_background_capture_freshness(
             session,
