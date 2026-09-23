@@ -12,7 +12,12 @@ from pathlib import Path
 from ..actions.background_input import BackgroundInput
 from ..vision.scene_coordinate import read_player_location
 from ..vision.windows_ocr import WindowsNativeOCRBackend
+from ..capture import WindowsGraphicsCapture
+from ..core.view_manager import GameViewManager
 from .background_capture_freshness import run_background_capture_freshness
+from .background_context import BackgroundRunGuard
+from .character_selection import CharacterSelectionResult, sync_selected_character
+from .verification_session import VerificationSession
 from .background_item_panel_open_probe_visual import refresh_surface_for_capture
 from .soul_shortcut_diagnostic_flow import image_diff, _refresh_capture_surface
 from .soul_task_match import as_pil_image
@@ -43,8 +48,22 @@ def _capture(session):
     return as_pil_image(session.capture_frame()).convert("RGB")
 
 
-def run_basic_capability(session, capability_id: str, output_dir: str | Path) -> dict[str, object]:
+def run_basic_capability(parent_hwnd: int, selection: CharacterSelectionResult, capability_id: str, output_dir: str | Path) -> dict[str, object]:
     """Run exactly one capability smoke test using existing implementations."""
+    manager = GameViewManager(parent_hwnd, timeout=2.0)
+    guard = BackgroundRunGuard.begin(manager)
+    session = VerificationSession(parent_hwnd=parent_hwnd, selected=selection, manager=manager, capture=WindowsGraphicsCapture())
+    try:
+        sync_selected_character(parent_hwnd, selection)
+        geometry = session.geometry()
+        if (geometry.client_width, geometry.client_height) != (800, 600):
+            raise RuntimeError("当前客户区不是 800x600，基础能力测试停止。")
+        return _run_basic_capability_session(session, capability_id, output_dir)
+    finally:
+        guard.finish()
+
+
+def _run_basic_capability_session(session, capability_id: str, output_dir: str | Path):
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     image = _capture(session)
