@@ -14,7 +14,7 @@ __pycache__/
 # Legacy root probe copy (package entry is under src/)
 surface_transition_sampling_probe.py
 
-# Local diagnostic / probe outputs (keep generating locally; do not commit)
+# Local diagnostic / probe outputs
 # diagnostic/
 surface-probe/
 surface-probe-2/

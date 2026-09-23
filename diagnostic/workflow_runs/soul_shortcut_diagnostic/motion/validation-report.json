@@ -1,0 +1,226 @@
+{
+  "subtype": "motion",
+  "character": "相思微凉ヘ",
+  "client_size": [
+    800,
+    600
+  ],
+  "production_coordinate_changed": false,
+  "motion": {
+    "sample_1_screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-1.png",
+    "sample_2_screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-2.png",
+    "ocr_backend": "Windows.Media.Ocr",
+    "ocr_language": "zh-Hans-CN",
+    "sample_1": {
+      "scene_text": "地府",
+      "coordinate_text": "X ： 7 5 Y ： 5 3",
+      "scene_box": [
+        26,
+        14,
+        106,
+        34
+      ],
+      "coordinate_box": [
+        26,
+        62,
+        112,
+        80
+      ],
+      "scene_ok": true,
+      "coordinate_ok": true,
+      "formatted": "地府[75,53]",
+      "parsed_coordinate": [
+        "地府",
+        75,
+        53
+      ]
+    },
+    "sample_2": {
+      "scene_text": "地府",
+      "coordinate_text": "X ： 7 5 Y ： 5 3",
+      "scene_box": [
+        26,
+        14,
+        106,
+        34
+      ],
+      "coordinate_box": [
+        26,
+        62,
+        112,
+        80
+      ],
+      "scene_ok": true,
+      "coordinate_ok": true,
+      "formatted": "地府[75,53]",
+      "parsed_coordinate": [
+        "地府",
+        75,
+        53
+      ]
+    },
+    "wait_seconds": 3.0,
+    "sample_interval": 0.25,
+    "frame_count": 13,
+    "playfield_box": [
+      80,
+      100,
+      720,
+      520
+    ],
+    "right_edge_box": [
+      768,
+      0,
+      800,
+      600
+    ],
+    "playfield_changed_pixels": 0,
+    "playfield_ratio": 0.0,
+    "right_edge_changed_pixels": 14770,
+    "right_edge_ratio": 0.7692708333333333,
+    "first_playfield_change": null,
+    "first_right_edge_change": {
+      "index": 2,
+      "elapsed_seconds": 0.297,
+      "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-02.png",
+      "playfield_changed_pixels": 0,
+      "playfield_ratio": 0.0,
+      "right_edge_changed_pixels": 9611,
+      "right_edge_ratio": 0.5005729166666667
+    },
+    "surface_refreshes": [
+      {
+        "when": "before_sampling",
+        "ok": true,
+        "switched": true,
+        "reason": null
+      },
+      {
+        "when": "before_frame_7",
+        "ok": true,
+        "switched": true,
+        "reason": null
+      }
+    ],
+    "samples": [
+      {
+        "index": 1,
+        "elapsed_seconds": 0.078,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-01.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 0,
+        "right_edge_ratio": 0.0
+      },
+      {
+        "index": 2,
+        "elapsed_seconds": 0.297,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-02.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 9611,
+        "right_edge_ratio": 0.5005729166666667
+      },
+      {
+        "index": 3,
+        "elapsed_seconds": 0.547,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-03.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 11147,
+        "right_edge_ratio": 0.5805729166666667
+      },
+      {
+        "index": 4,
+        "elapsed_seconds": 0.812,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-04.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 11393,
+        "right_edge_ratio": 0.5933854166666667
+      },
+      {
+        "index": 5,
+        "elapsed_seconds": 1.062,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-05.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 12987,
+        "right_edge_ratio": 0.67640625
+      },
+      {
+        "index": 6,
+        "elapsed_seconds": 1.312,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-06.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 13574,
+        "right_edge_ratio": 0.7069791666666667
+      },
+      {
+        "index": 7,
+        "elapsed_seconds": 1.718,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-07.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 13203,
+        "right_edge_ratio": 0.68765625
+      },
+      {
+        "index": 8,
+        "elapsed_seconds": 1.797,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-08.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 13601,
+        "right_edge_ratio": 0.7083854166666667
+      },
+      {
+        "index": 9,
+        "elapsed_seconds": 2.062,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-09.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 14192,
+        "right_edge_ratio": 0.7391666666666666
+      },
+      {
+        "index": 10,
+        "elapsed_seconds": 2.312,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-10.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 14770,
+        "right_edge_ratio": 0.7692708333333333
+      },
+      {
+        "index": 11,
+        "elapsed_seconds": 2.562,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-11.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 14744,
+        "right_edge_ratio": 0.7679166666666667
+      },
+      {
+        "index": 12,
+        "elapsed_seconds": 2.812,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-12.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 14698,
+        "right_edge_ratio": 0.7655208333333333
+      },
+      {
+        "index": 13,
+        "elapsed_seconds": 3.062,
+        "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\motion\\motion-sample-13.png",
+        "playfield_changed_pixels": 0,
+        "playfield_ratio": 0.0,
+        "right_edge_changed_pixels": 14385,
+        "right_edge_ratio": 0.74921875
+      }
+    ],
+    "state": "画面未刷新"
+  }
+}

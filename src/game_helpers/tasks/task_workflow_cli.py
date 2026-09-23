@@ -1,5 +1,4 @@
 """Interactive CLI: select character + workflow; run supported diagnosis flows."""
-
 from __future__ import annotations
 
 import argparse
@@ -7,7 +6,13 @@ import argparse
 from ..core.window import find_window
 from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character
+from .basic_capabilities import BASIC_CAPABILITIES
+from .basic_capability_flow import run_basic_capability
 from .item_panel_flow import run_item_panel_detect_and_toggle
+from .soul_shortcut_diagnostic_flow import (
+    SHORTCUT_DIAGNOSTIC_SUBTYPES,
+    run_soul_shortcut_diagnostic,
+)
 from .soul_task import SOUL_TASK_BASELINE_SIZE
 from .soul_task_coordinate_flow import (
     run_soul_task_coordinate_collection,
@@ -15,12 +20,49 @@ from .soul_task_coordinate_flow import (
 )
 from .soul_task_detection_coordinate_flow import run_soul_task_detection_coordinate_validation
 from .soul_task_flow import run_soul_task_claim_diagnosis
+from .ui_icon_vision import choose_icon_source_interactive, choose_icon_target_interactive
 from .workflows import TaskWorkflowRegistry
+
+
+def _choose_basic_capability() -> str | None:
+    print("[基础能力] 请选择基础能力单项测试")
+    for option, capability in enumerate(BASIC_CAPABILITIES, start=1):
+        print(f"  [{option}] {capability.name} | {capability.description}")
+    print("  [0] 返回")
+    try:
+        choice = int(input("请选择基础能力编号：").strip())
+    except (EOFError, ValueError):
+        print("[基础能力] 编号无效")
+        return None
+    if choice == 0:
+        return None
+    if not 1 <= choice <= len(BASIC_CAPABILITIES):
+        print(f"[基础能力] 编号必须在 1 到 {len(BASIC_CAPABILITIES)} 之间")
+        return None
+    return BASIC_CAPABILITIES[choice - 1].id
+
+
+def _choose_soul_shortcut_subtype() -> str | None:
+    print("[命魂诊断] 请选择子实验")
+    for option, (_, name) in enumerate(SHORTCUT_DIAGNOSTIC_SUBTYPES, start=1):
+        print(f"  [{option}] {name}")
+    print("  [0] 返回")
+    try:
+        choice = int(input("请选择子实验编号：").strip())
+    except (EOFError, ValueError):
+        print("[命魂诊断] 子实验编号无效")
+        return None
+    if choice == 0:
+        return None
+    if not 1 <= choice <= len(SHORTCUT_DIAGNOSTIC_SUBTYPES):
+        print(f"[命魂诊断] 子实验编号必须在 1 到 {len(SHORTCUT_DIAGNOSTIC_SUBTYPES)} 之间")
+        return None
+    return SHORTCUT_DIAGNOSTIC_SUBTYPES[choice - 1][0]
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="选择角色与任务流程（800×600 基线）：命魂领取检测 / 坐标采集 / 图标检测坐标联合验证 / 道具栏状态检测与切换。"
+        description="选择角色与任务流程（800×600 基线）：命魂领取检测 / 坐标采集 / 快捷图标分层诊断 / 道具栏状态检测与切换。"
     )
     parser.add_argument("title", nargs="?", default="梦幻西游 ONLINE")
     parser.add_argument("--output-dir", default="diagnostic/workflow_runs")
@@ -28,7 +70,7 @@ def main() -> int:
         "--coord-source",
         default="auto",
         choices=("auto", "manual", "auto_then_manual"),
-        help=("道具栏流程的点击坐标来源。auto=模板（默认/正常流程）；manual=人工 F9 采点；auto_then_manual=模板失败再 F9。"),
+        help="道具栏流程的点击坐标来源。",
     )
     args = parser.parse_args()
 
@@ -85,6 +127,84 @@ def main() -> int:
     print(f"workflow_id={workflow.id} workflow_name={workflow.name}")
 
     print("[链路] 5/6 执行流程")
+    if workflow.id == "minghun_basic_capabilities":
+        capability_id = _choose_basic_capability()
+        if capability_id is None:
+            print("[链路] 6/6 结果")
+            print("result=SKIPPED")
+            return 0
+        print(f"[基础能力] 单项测试={dict((item.id, item.name) for item in BASIC_CAPABILITIES)[capability_id]}")
+        print("task_execution_started=True")
+        ui_icon_kwargs: dict[str, object] = {}
+        if capability_id == "ui_icon_vision":
+            try:
+                target_id = choose_icon_target_interactive()
+                source_mode, source_path = choose_icon_source_interactive()
+            except RuntimeError as exc:
+                print(f"[基础能力] 阶段=参数选择；原因={exc}")
+                print("[链路] 6/6 结果")
+                print("result=FAILED")
+                return 1
+            ui_icon_kwargs = {
+                "ui_icon_target_id": target_id,
+                "ui_icon_source_mode": source_mode,
+                "ui_icon_source_path": source_path,
+            }
+            print(f"[图标检测] target={target_id}; source_mode={source_mode}; source={source_path}")
+        try:
+            result = run_basic_capability(
+                parent.hwnd,
+                selected,
+                capability_id,
+                f"{args.output_dir}/basic_capabilities/{capability_id}",
+                **ui_icon_kwargs,
+            )
+        except RuntimeError as exc:
+            print(f"[基础能力] 阶段=执行；原因={exc}")
+            print("[链路] 6/6 结果")
+            print("result=FAILED")
+            return 1
+        print(f"[基础能力] result={result}")
+        if capability_id in {"dao_ju_lan", "demon_repellent_incense"} and result.get("error") == "cancelled":
+            print("[链路] 6/6 结果")
+            print("result=SKIPPED")
+            return 0
+        if capability_id == "shortcut_state_vision":
+            print(f"[Shortcut状态] 当前状态={result.get('state', '未知')} | 置信度={result.get('confidence', 0.0):.3f} | 原因={result.get('reason', 'unknown')}")
+        if capability_id == "ui_icon_vision":
+            print(
+                f"[图标检测] panel={result.get('panel_state')} | checked={result.get('icon_checked')} "
+                f"| found={result.get('icon_found')} | score={result.get('icon_score')}"
+            )
+            print(f"[图标检测] icon_found={result.get('icon_found')}")
+        print("[链路] 6/6 结果")
+        print("result=PASSED")
+        return 0
+
+    if workflow.id == "minghun_shortcut_diagnostic":
+        subtype = _choose_soul_shortcut_subtype()
+        if subtype is None:
+            print("[链路] 6/6 结果")
+            print("result=SKIPPED")
+            return 0
+        print(f"[命魂诊断] 子实验={dict(SHORTCUT_DIAGNOSTIC_SUBTYPES)[subtype]}")
+        print("task_execution_started=True")
+        try:
+            run_soul_shortcut_diagnostic(
+                parent.hwnd,
+                selected,
+                subtype=subtype,
+                output_dir=f"{args.output_dir}/soul_shortcut_diagnostic",
+            )
+        except RuntimeError as exc:
+            print(f"[命魂诊断] 阶段=执行；原因={exc}；下一步策略=保持生产配置不变并根据诊断报告调整实验")
+            print("[链路] 6/6 结果")
+            print("result=FAILED")
+            return 1
+        print("[链路] 6/6 结果")
+        print("result=PASSED")
+        return 0
+
     if workflow.id == "minghun_coordinate":
         print("task_execution_started=True")
         run_soul_task_coordinate_collection(parent.hwnd, selected, output_dir=f"{args.output_dir}/soul_task")
@@ -127,11 +247,7 @@ def main() -> int:
         if result.error:
             print(f"[命魂任务] 错误摘要：{result.error}")
         print("[链路] 6/6 结果")
-        if result.ok:
-            print("result=PASSED")
-            return 0
-        print("result=FAILED")
-        return 1
+        return 0 if result.ok else 1
 
     if workflow.id == "daoju_panel":
         print("task_execution_started=True")
@@ -154,11 +270,7 @@ def main() -> int:
         if result.error:
             print(f"error={result.error}")
         print("[链路] 6/6 结果")
-        if result.ok:
-            print("result=PASSED")
-            return 0
-        print("result=FAILED")
-        return 1
+        return 0 if result.ok else 1
 
     print(f"「{workflow.name}」尚未实现执行。")
     print("task_execution_started=False")

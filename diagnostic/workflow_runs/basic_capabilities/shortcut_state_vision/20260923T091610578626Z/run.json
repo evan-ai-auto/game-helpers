@@ -1,0 +1,11 @@
+{
+  "capability": "shortcut_state_vision",
+  "name": "识别 Shortcut 当前状态",
+  "description": "识别 Shortcut 折叠/展开状态。",
+  "implementation": "tasks.shortcut_panel_vision:detect_shortcut_panel_state",
+  "artifacts": [
+    "capture.png",
+    "result.json",
+    "shortcut-toggle-roi.png"
+  ]
+}

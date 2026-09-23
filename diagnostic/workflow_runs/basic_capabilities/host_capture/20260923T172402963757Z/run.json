@@ -1,0 +1,11 @@
+{
+  "capability": "host_capture",
+  "name": "获取宿主窗口画面",
+  "description": "单次 Host WGC 捕获。",
+  "implementation": "capture.wgc:WindowsGraphicsCapture.capture",
+  "artifacts": [
+    "capture.png",
+    "host.png",
+    "result.json"
+  ]
+}

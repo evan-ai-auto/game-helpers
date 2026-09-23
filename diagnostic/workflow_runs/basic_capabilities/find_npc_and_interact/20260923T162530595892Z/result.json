@@ -1,0 +1,6 @@
+{
+  "ok": true,
+  "capability": "find_npc_and_interact",
+  "status": "not_implemented",
+  "message": "NPC 寻访能力尚在路上，先记下目标；定位、对话和选项交互后续补上。"
+}

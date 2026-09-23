@@ -16,8 +16,9 @@ from PIL import Image
 
 from game_helpers.capture.models import Frame
 from game_helpers.core.agent_protocol import Observation
-from game_helpers.vision.ocr import OCRBackend, OCRResult, parse_integer, parse_scene_coordinate
+from game_helpers.vision.ocr import OCRBackend, OCRResult, parse_integer
 from game_helpers.vision.regions import VisionRegionRegistry
+from game_helpers.vision.scene_coordinate import read_player_location
 from game_helpers.vision.template_matching import load_template_asset, match_template
 
 from .scene import DreamSceneRecognizer
@@ -95,19 +96,21 @@ class DreamObservationBuilder:
         # swapped without changing the Agent, GameState, or runtime.
         roi_text: list[str] = []
         roi_metadata: dict[str, Any] = {}
-        location_results = self._read_roi(image, frame, "player_location")
-        location_text = self._ocr_text(location_results)
-        roi_text.extend(location_text)
-        location = parse_scene_coordinate(" ".join(location_text))
-        if location:
-            map_name, x, y = location
-            roi_metadata["player_location"] = {
-                "scene_name": map_name,
-                "x": x,
-                "y": y,
-                "confidence": min((r.confidence for r in location_results if r.text.strip()), default=0.0),
-                "source": "ocr",
-            }
+        if self.ocr_backend:
+            location = read_player_location(image.convert("RGB"), self.ocr_backend)
+            if location.formatted:
+                roi_text.append(location.formatted)
+            if location.parsed:
+                map_name, x, y = location.parsed
+                roi_metadata["player_location"] = {
+                    "scene_name": map_name,
+                    "x": x,
+                    "y": y,
+                    "formatted": location.formatted,
+                    "scene_text": location.scene_text,
+                    "coordinate_text": location.coordinate_text,
+                    "source": "ocr",
+                }
 
         cash_results = self._read_roi(image, frame, "economy")
         cash_text = self._ocr_text(cash_results)

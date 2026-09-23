@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "capability": "shortcut_state_vision",
+  "state": "折叠",
+  "collapsed": true,
+  "template": "right_gray",
+  "score": 0.8225899341059666,
+  "confidence": 0.9112949670529833,
+  "reason": "panel_collapsed",
+  "evidence": [
+    "toggle matched=right_gray score=0.823",
+    "toggle margin=0.027",
+    "right arrow means collapsed; left arrow means expanded"
+  ],
+  "match_location": [
+    9,
+    91
+  ],
+  "second_template": "right_light",
+  "second_score": 0.7956281923780254,
+  "roi": [
+    0,
+    80,
+    40,
+    128
+  ]
+}

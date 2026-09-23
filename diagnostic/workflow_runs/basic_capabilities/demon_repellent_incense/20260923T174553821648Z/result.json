@@ -1,0 +1,27 @@
+{
+  "ok": false,
+  "capability": "demon_repellent_incense",
+  "subtask": "usage",
+  "usage": {
+    "usage": "panel_collapsed",
+    "remaining_minutes": null,
+    "panel_collapsed": true,
+    "clock_found": false,
+    "clock_score": 0.0,
+    "clock_location": null,
+    "hover_point": null,
+    "tooltip_text": "",
+    "evidence": [
+      "panel_collapsed=True",
+      "panel_template=right_gray",
+      "panel_score=0.832",
+      "toggle matched=right_gray score=0.832",
+      "decide=template-class",
+      "arrow-direction=unknown score=0.000",
+      "right arrow means collapsed; left arrow means expanded",
+      "右侧条为折叠态，未悬停闹钟"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260923T174553821648Z",
+  "message": "使用状态识别完成：panel_collapsed"
+}
