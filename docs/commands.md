@@ -263,7 +263,7 @@ python -m pip install -e ".[windows]"
 | 2 | 获取选中游戏画面 | `tasks/verification_session.py` | 验证 Host 捕获 + WSGAME 裁剪 |
 | 3 | 检查游戏画面 Surface | `core/surface.py` / `verification_session.py` | 验证当前 Surface 捕获条件 |
 | 4 | 读取场景与地图坐标 | `vision/scene_coordinate.py` + `vision/windows_ocr.py` | 单独验证 OCR |
-| 5 | 识别 Shortcut 当前状态 | `tasks/shortcut_panel_vision.py` | 单独验证 Shortcut 视觉状态识别 |
+| 5 | 识别 Shortcut 当前状态 | `tasks/shortcut_panel_vision.py` | 单独验证 Shortcut 视觉状态识别；结果明确输出「折叠 / 展开 / 未知」 |
 | 6 | 执行图像差分 | `tasks/soul_shortcut_diagnostic_flow.py:image_diff` | 单独验证基础差分能力 |
 | 7 | 执行 Surface 刷新 | `tasks/soul_shortcut_diagnostic_flow.py:_refresh_capture_surface` | 单独验证现有刷新尝试 |
 | 8 | 发送后台鼠标移动 | `actions/background_input.py` | 仅发送 WM_MOUSEMOVE，不执行点击 |
