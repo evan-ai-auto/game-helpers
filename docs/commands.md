@@ -107,7 +107,7 @@ python -m game_helpers.tasks.task_workflow_cli --output-dir diagnostic/workflow_
 |---|---|---|
 | 命魂领取相关任务 | 命魂领取/检测流程 | 进入任务菜单后选择对应命魂任务 |
 | 阻塞 - 命魂快捷图标完整闭环 - 覆盖窗口画面刷新问题阻塞，进入后按需求分层验证 | 快捷图标诊断 | 任务菜单 → 选择该任务 → 按需求选择分层验证 |
-| 道具栏检测与切换 | 道具栏状态检测与切换 | 任务菜单 → 选择道具栏任务 |
+| 基础能力列表 | 单独测试各项最基础可复用能力 | 任务菜单 → 基础能力列表 → 选择基础能力单项测试 |\n| 道具栏检测与切换 | 道具栏状态检测与切换 | 任务菜单 → 选择道具栏任务 |
 
 **不要把这里的数字编号当作固定 API。** 任务注册表发生变化时，菜单编号可能变化；优先按任务名称选择。
 
@@ -251,3 +251,22 @@ python -m pip install -e ".[windows]"
 需求验收状态变更时，只改本页「需求验收看板」；引用文件变更时，改 [soul_task_regression.md](soul_task_regression.md) 对应表。
 
 这样执行任务时不需要依赖聊天记录记忆命令。
+
+
+## 基础能力列表
+
+> 本菜单只提供基础能力的**单项测试入口**。测试适配层不复制或改写基础能力实现；现有任务 Flow 继续引用原实现，因此单项测试不会改变其他任务流程的复用关系。
+
+| # | 基础能力 | 实现来源 | 单项测试目的 |
+|---|---|---|---|
+| 1 | 获取宿主窗口画面 | `capture/wgc.py` | 验证单次 Host WGC 捕获 |
+| 2 | 获取选中游戏画面 | `tasks/verification_session.py` | 验证 Host 捕获 + WSGAME 裁剪 |
+| 3 | 检查游戏画面 Surface | `core/surface.py` / `verification_session.py` | 验证当前 Surface 捕获条件 |
+| 4 | 读取场景与地图坐标 | `vision/scene_coordinate.py` + `vision/windows_ocr.py` | 单独验证 OCR |
+| 5 | 识别 Shortcut 当前状态 | `tasks/shortcut_panel_vision.py` | 单独验证 Shortcut 视觉状态识别 |
+| 6 | 执行图像差分 | `tasks/soul_shortcut_diagnostic_flow.py:image_diff` | 单独验证基础差分能力 |
+| 7 | 执行 Surface 刷新 | `tasks/soul_shortcut_diagnostic_flow.py:_refresh_capture_surface` | 单独验证现有刷新尝试 |
+| 8 | 发送后台鼠标移动 | `actions/background_input.py` | 仅发送 WM_MOUSEMOVE，不执行点击 |
+| 9 | 验证捕获新鲜度 | `tasks/background_capture_freshness.py` | 单独验证 Host / WSGAME / Playfield / RightEdge 新鲜度 |
+
+基础能力输出统一写入 `diagnostic/workflow_runs/basic_capabilities/<capability-id>/`，不覆盖生产坐标、模板或其他任务输出。
