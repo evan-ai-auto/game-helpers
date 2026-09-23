@@ -18,6 +18,7 @@ from ..core.view_manager import GameViewManager
 from ..vision.scene_coordinate import prepare_player_location, read_player_location
 from ..vision.windows_ocr import WindowsNativeOCRBackend
 from .background_context import BackgroundRunGuard
+from .basic_capabilities import SHORTCUT_DIAGNOSTIC_CAPABILITY_IDS, get_basic_capability
 from .character_selection import CharacterSelectionResult, sync_selected_character
 from .manual_coordinate import (
     collect_client_coordinate,
@@ -27,6 +28,11 @@ from .shortcut_panel_vision import detect_shortcut_panel_state
 from .soul_task import SOUL_TASK_BASELINE_SIZE
 from .soul_task_match import as_pil_image
 from .verification_session import VerificationSession
+
+SHORTCUT_DIAGNOSTIC_CAPABILITIES = tuple(
+    get_basic_capability(capability_id) for capability_id in SHORTCUT_DIAGNOSTIC_CAPABILITY_IDS
+)
+
 
 SHORTCUT_DIAGNOSTIC_SUBTYPES = (
     ("full", "[阻塞] Shortcut 功能能够完整闭环"),
