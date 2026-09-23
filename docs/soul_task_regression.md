@@ -152,5 +152,8 @@ Windows OCR 依赖：Windows 环境通过 `windows` extra 安装 `winsdk>=1.0.0b
 | 执行 Surface 刷新 | `soul_shortcut_diagnostic_flow.py:_refresh_capture_surface` | `surface_refresh` |
 | 发送后台鼠标移动 | `platform/windows/input.py:BackgroundInput.mouse_move` | `background_mouse_move` |
 | 暂未验证通过 验证捕获新鲜度 | `background_capture_freshness.py:run_background_capture_freshness` | `capture_freshness` |
+| 道具栏相关 | `item_panel_flow.py:run_item_panel_detect_and_toggle` | `dao_ju_lan` |
+| 摄妖香相关 | `incense_capability_flow.py:run_demon_repellent_incense` | `demon_repellent_incense` |
+| 寻找指定 NPC 角色并交互 | （占位） | `find_npc_and_interact` |
 
 **复用隔离规则**：能力注册表只描述能力契约和当前实现绑定，不承载测试编排；基础能力菜单与任务 Flow 共用注册表，但任务 Flow 不依赖菜单入口。删除基础能力菜单不会影响任何任务执行；替换底层实现时优先更新注册表绑定并执行受影响 Flow 的重新验收。

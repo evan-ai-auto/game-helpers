@@ -165,7 +165,7 @@ def main() -> int:
             print("result=FAILED")
             return 1
         print(f"[基础能力] result={result}")
-        if capability_id == "dao_ju_lan" and result.get("error") == "cancelled":
+        if capability_id in {"dao_ju_lan", "demon_repellent_incense"} and result.get("error") == "cancelled":
             print("[链路] 6/6 结果")
             print("result=SKIPPED")
             return 0

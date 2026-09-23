@@ -34,7 +34,12 @@ BASIC_CAPABILITIES = (
     BasicCapability("background_mouse_move", "发送后台鼠标移动", "仅发送 WM_MOUSEMOVE，不执行点击。", "actions.background_input:BackgroundInput.mouse_move"),
     BasicCapability("capture_freshness", "暂未验证通过 验证捕获新鲜度", "验证 Host/WSGAME/Playfield/RightEdge 分层新鲜度。", "tasks.background_capture_freshness:run_background_capture_freshness"),
     BasicCapability("dao_ju_lan", "道具栏相关", "检测道具栏打开/关闭状态，并根据用户选择执行打开或关闭。", "tasks.item_panel_flow:run_item_panel_detect_and_toggle"),
-    BasicCapability("demon_repellent_incense", "摄妖香相关", "基础能力占位：后续补充摄妖香检查、使用与结果验证。", "tasks.basic_capability_flow:placeholder"),
+    BasicCapability(
+        "demon_repellent_incense",
+        "摄妖香相关",
+        "子菜单：完整流程 / 使用状态识别 / 道具栏摄妖香检索（缺闹钟或道具模板时 asset_missing）。",
+        "tasks.incense_capability_flow:run_demon_repellent_incense",
+    ),
     BasicCapability("find_npc_and_interact", "寻找指定 NPC 角色并交互", "基础能力占位：后续补充 NPC 定位、对话与选项交互。", "tasks.basic_capability_flow:placeholder"),
 )
 

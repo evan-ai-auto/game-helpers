@@ -28,7 +28,7 @@ from .shortcut_panel_vision import SHORTCUT_PANEL_TOGGLE_REGION, detect_shortcut
 from .ui_icon_targets import DEFAULT_ICON_TARGET_ID
 from .ui_icon_vision import detect_ui_icon_with_shortcut_gate
 from .item_panel_flow import run_item_panel_detect_and_toggle
-
+from .incense_capability_flow import run_demon_repellent_incense
 
 
 def _capture(session):
@@ -104,6 +104,8 @@ def run_basic_capability(
             output_dir=output_dir,
             target_selector=_choose_dao_ju_lan_target,
         ).__dict__
+    if capability_id == "demon_repellent_incense":
+        return run_demon_repellent_incense(parent_hwnd, selection, output_dir)
     manager = GameViewManager(parent_hwnd, timeout=2.0)
     guard = BackgroundRunGuard.begin(manager)
     session = VerificationSession(parent_hwnd=parent_hwnd, selected=selection, manager=manager, capture=WindowsGraphicsCapture())
@@ -303,16 +305,12 @@ def _run_basic_capability_session(
             "client_point": list(target),
         }
 
-    if capability_id in {"demon_repellent_incense", "find_npc_and_interact"}:
-        messages = {
-            "demon_repellent_incense": "摄妖香能力尚在路上，先来报个到；真正的检查与使用本领后续补上。",
-            "find_npc_and_interact": "NPC 寻访能力尚在路上，先记下目标；定位、对话和选项交互后续补上。",
-        }
+    if capability_id == "find_npc_and_interact":
         return {
             "ok": True,
             "capability": capability.id,
             "status": "not_implemented",
-            "message": messages[capability_id],
+            "message": "NPC 寻访能力尚在路上，先记下目标；定位、对话和选项交互后续补上。",
         }
 
     if capability_id == "capture_freshness":

@@ -269,6 +269,27 @@ python -m pip install -e ".[windows]"
 | 8 | 执行 Surface 刷新 | `tasks/soul_shortcut_diagnostic_flow.py:_refresh_capture_surface` | 单独验证现有刷新尝试 |
 | 9 | 发送后台鼠标移动 | `actions/background_input.py` | 仅发送 WM_MOUSEMOVE，不执行点击 |
 | 10 | 暂未验证通过 验证捕获新鲜度 | `tasks/background_capture_freshness.py` | 单独验证 Host / WSGAME / Playfield / RightEdge 新鲜度 |
+| 11 | 道具栏相关 | `tasks/item_panel_flow.py` | 检测打开/关闭并可选择打开或关闭 |
+| 12 | 摄妖香相关 | `tasks/incense_capability_flow.py` | 子菜单：完整流程 / 使用状态识别 / 道具栏检索；缺模板时 `asset_missing` |
+| 13 | 寻找指定 NPC 角色并交互 | （占位） | 后续补充 NPC 定位与对话 |
+
+#### 摄妖香相关子任务
+
+进入「摄妖香相关」后：
+
+| # | 状态 | 名称 | 说明 |
+|---|------|------|------|
+| 1 | `[未验收]` | 完整流程 | 先识别使用态；未使用则开道具栏并检索摄妖香栏位 |
+| 2 | `[未验收]` | 使用状态识别 | 右侧条折叠/展开 → 悬停闹钟 → OCR tooltip（ROI 暂定，待实机校正） |
+| 3 | `[未验收]` | 道具栏摄妖香检索 | 依赖「未使用」；复用 `dao_ju_lan` 打开后扫格 |
+| 0 | | 返回 | 回到基础能力列表 |
+
+预留资产（缺失则明确失败，不假成功）：
+
+- `data/assets/ui/resolutions/800x600/incense_clock_icon.png`
+- `data/assets/ui/resolutions/800x600/incense_item_icon.png`
+
+证据目录：`diagnostic/workflow_runs/basic_capabilities/demon_repellent_incense/<run-id>/`，含 `usage/`（`capture.png`、`right-toggle-roi.png`、`clock-roi.png`、`tooltip-roi.png`）与可选 `inventory/`（`incense-slot-crop.png`）。
 
 基础能力输出统一写入 `diagnostic/workflow_runs/basic_capabilities/<capability-id>/<run-id>/`，每次执行独立落盘，不覆盖历史证据。运行时至少保存：
 - `run.json`：基础能力 ID、名称、当前实现绑定、证据文件清单
@@ -295,7 +316,10 @@ diagnostic/workflow_runs/basic_capabilities/
 ├── image_diff/
 ├── surface_refresh/
 ├── background_mouse_move/
-└── capture_freshness/
+├── capture_freshness/
+├── dao_ju_lan/
+├── demon_repellent_incense/
+└── find_npc_and_interact/
 ```
 
 这些运行证据允许提交到 Git，用于人工复盘、问题定位和后续视觉算法回归；它们不属于生产配置。
