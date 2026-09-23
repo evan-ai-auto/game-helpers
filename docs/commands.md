@@ -255,7 +255,7 @@ python -m pip install -e ".[windows]"
 
 ## 基础能力列表
 
-> 本菜单只提供基础能力的**单项测试入口**。测试适配层不复制或改写基础能力实现；现有任务 Flow 继续引用原实现，因此单项测试不会改变其他任务流程的复用关系。
+> 本菜单只提供基础能力的**单项测试入口**。`basic_capabilities.py` 是基础能力注册表：定义稳定的能力 ID、用户名称、契约说明和当前实现绑定；菜单测试与任务 Flow 共用这份注册表。注册表不承载具体实现，因此切换底层实现时保持能力 ID 稳定，不会复制测试逻辑。
 
 | # | 基础能力 | 实现来源 | 单项测试目的 |
 |---|---|---|---|
@@ -270,6 +270,8 @@ python -m pip install -e ".[windows]"
 | 9 | 验证捕获新鲜度 | `tasks/background_capture_freshness.py` | 单独验证 Host / WSGAME / Playfield / RightEdge 新鲜度 |
 
 基础能力输出统一写入 `diagnostic/workflow_runs/basic_capabilities/<capability-id>/`，不覆盖生产坐标、模板或其他任务输出。
+
+能力注册表：`src/game_helpers/tasks/basic_capabilities.py`。命魂 Shortcut Flow 通过 `SHORTCUT_DIAGNOSTIC_CAPABILITY_IDS` 声明其基础能力依赖；单项测试菜单直接使用同一注册表，因此“Flow 实际依赖什么”与“菜单测试什么”不会形成两套能力清单。
 
 
 ### 顶层任务菜单命名规则
