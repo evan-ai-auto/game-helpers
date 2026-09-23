@@ -15,15 +15,17 @@
 
 ### 命魂快捷图标需求树
 
-| 状态 | 需求 | 当前实现方式 |
-|---|---|---|
-| 部分完成 | Shortcut 功能能够完整闭环 | 完整诊断流程 |
-| 部分完成 | 能够可靠识别角色是否移动 | Playfield 图像差分 + OCR + RightEdge |
-| 部分完成 | 能够可靠识别场景与地图坐标 | 800×600 多 ROI + Windows.Media.Ocr + 字符纠错 |
-| 部分完成 | 鼠标悬停能够触发并识别 Shortcut 二级状态 | 真实鼠标 Hover + 二级 ROI 隔离 |
-| 部分完成 | 后台消息能够触发并识别 Shortcut 悬停状态 | PostMessageW Hover |
-| 部分完成 | 后台点击能够触发并确认 Shortcut 状态变化 | Background Click + Hotspot |
-| 验收失败 | 窗口被覆盖时仍能获得持续刷新的游戏画面 | WGC Host/WSGAME Crop + Surface 切换 + RedrawWindow |
+| ID | 状态 | 需求 | 当前实现方式 |
+|---|---|---|---|
+| R1 | 阻塞 | Shortcut 功能能够完整闭环 | 完整诊断流程；当前被 R7 阻塞 |
+| R2 | 部分完成（未过点） | 能够可靠识别角色是否移动 | Playfield 图像差分 + OCR + RightEdge |
+| R3 | 部分完成（未过点） | 能够可靠识别场景与地图坐标 | 800×600 多 ROI + Windows.Media.Ocr + 字符纠错 |
+| R4 | 部分完成 | 鼠标悬停能够触发并识别 Shortcut 二级状态 | 真实鼠标 Hover + 二级 ROI 隔离 |
+| R5 | 部分完成 | 后台消息能够触发并识别 Shortcut 悬停状态 | PostMessageW Hover |
+| R6 | 部分完成 | 后台点击能够触发并确认 Shortcut 状态变化 | Background Click + Hotspot |
+| R7 | 验收失败 | 窗口被覆盖时仍能获得持续刷新的游戏画面 | WGC Host/WSGAME Crop + Surface 切换 + RedrawWindow |
+
+> **需求—子实验对应关系（本表为单一维护来源）**：R1 ← E1、E2、E4、E5、E6；R2 ← E2；R3 ← E3；R4 ← E4；R5 ← E5；R6 ← E6；R7 ← E7。需求名称与 R 编号保持稳定；子实验实现方式可变更时，只更新本表及对应子实验说明。
 
 > 验收状态不会因为代码文件变更自动改变；只有业务人工验收结果或后续证据才能推动状态变化。若已验收结论被后续证据推翻，应记录方案/结论变化，而不是静默覆盖历史。
 
@@ -103,17 +105,22 @@ python -m game_helpers.tasks.task_workflow_cli
 选择子实验
 ```
 
-当前子实验：
+当前子实验与需求对应关系：
 
-| 子实验 | 用途 |
-|---|---|
-| 1. 完整验证流程 | 依次跑运动检测 + Hover / PostMessageW / Click 分层阶段（不含 OCR 对照） |
-| 2. 角色运动状态验证 | 约 3s 内每 0.25s 采样；坐标 + 主画面/右侧条差分，并报告首次变化帧 |
-| 3. 800×600 OCR 多 ROI 对照验证 | 一张整图裁场景名条与坐标条，分段 OCR 后组装 `地图名[x,y]` |
-| 4. Hover 二级 ROI 隔离验证 | 验证目标图标自身 Hover 变化 |
-| 5. PostMessageW Hover 验证 | 验证后台鼠标移动消息是否触发 Hover |
-| 6. 后台 Click + Hotspot 验证 | 逐点验证后台点击与实际热区 |
-| 7. 后台覆盖捕获新鲜度分层验证 | 对比窗口被覆盖时的 Host / WSGAME / Playfield / RightEdge 刷新情况，并验证 Surface/RedrawWindow 刷新是否有效 |
+| 子实验 ID | 子实验 | 对应需求 | 用途 |
+|---|---|---|---|
+| E1 | 1. 完整验证流程 | R1、R2、R4、R5、R6 | 依次跑运动检测 + Hover / PostMessageW / Click 分层阶段（不含 OCR 对照） |
+| E2 | 2. 角色运动状态验证 | R2 | 约 3s 内每 0.25s 采样；坐标 + 主画面/右侧条差分，并报告首次变化帧 |
+| E3 | 3. 800×600 OCR 多 ROI 对照验证 | R3 | 一张整图裁场景名条与坐标条，分段 OCR 后组装 `地图名[x,y]` |
+| E4 | 4. Hover 二级 ROI 隔离验证 | R4 | 验证目标图标自身 Hover 变化 |
+| E5 | 5. PostMessageW Hover 验证 | R5 | 验证后台鼠标移动消息是否触发 Hover |
+| E6 | 6. 后台 Click + Hotspot 验证 | R6 | 逐点验证后台点击与实际热区 |
+| E7 | 7. 后台覆盖捕获新鲜度分层验证 | R7 | 对比窗口被覆盖时的 Host / WSGAME / Playfield / RightEdge 刷新情况，并验证 Surface/RedrawWindow 刷新是否有效 |
+
+**维护约束：**
+- R1–R7 是稳定的需求 ID；E1–E7 是稳定的子实验 ID。
+- 新增、删除或拆分需求/子实验时，先更新上面的对应关系，再同步各章节的命令说明。
+- 任何子实验变更都必须明确它覆盖哪个需求；需求状态仍以“当前需求验收状态”表为准。
 
 诊断输出：
 
