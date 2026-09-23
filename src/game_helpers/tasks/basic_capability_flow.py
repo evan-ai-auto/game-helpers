@@ -86,7 +86,8 @@ def _run_basic_capability_session(session, capability_id: str, output_dir: str |
 
     if capability_id == "shortcut_state_vision":
         observation = detect_shortcut_panel_state(image)
-        state = _shortcut_state_label(observation.collapsed)        return {
+        state = _shortcut_state_label(observation.collapsed)
+        return {
             # UNKNOWN is a valid detection result, not a guessed state.
             "ok": True,
             "capability": capability.id,
