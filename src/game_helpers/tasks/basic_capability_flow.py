@@ -27,6 +27,7 @@ from .soul_task_match import as_pil_image
 from .shortcut_panel_vision import SHORTCUT_PANEL_TOGGLE_REGION, detect_shortcut_panel_state
 from .ui_icon_targets import DEFAULT_ICON_TARGET_ID
 from .ui_icon_vision import detect_ui_icon_with_shortcut_gate
+from .item_panel_flow import run_item_panel_detect_and_toggle
 
 
 
@@ -64,6 +65,26 @@ def _record_source_path(source_path: Path) -> str:
         return f"<external>/{path.name}"
 
 
+def _choose_dao_ju_lan_target(before) -> bool | None:
+    print("[道具栏相关] 当前状态：{}".format("打开" if before.open else "关闭"))
+    print("  [1] 打开道具栏")
+    print("  [2] 关闭道具栏")
+    print("  [0] 返回")
+    try:
+        choice = int(input("请选择道具栏操作：").strip())
+    except (EOFError, ValueError):
+        print("[道具栏相关] 操作编号无效")
+        return None
+    if choice == 0:
+        return None
+    if choice == 1:
+        return True
+    if choice == 2:
+        return False
+    print("[道具栏相关] 操作编号无效")
+    return None
+
+
 def run_basic_capability(
     parent_hwnd: int,
     selection: CharacterSelectionResult,
@@ -75,6 +96,14 @@ def run_basic_capability(
     ui_icon_source_path: str | Path | None = None,
 ) -> dict[str, object]:
     """Run exactly one capability smoke test using existing implementations."""
+    capability = get_basic_capability(capability_id)
+    if capability_id == "dao_ju_lan":
+        return run_item_panel_detect_and_toggle(
+            parent_hwnd,
+            selection,
+            output_dir=output_dir,
+            target_selector=_choose_dao_ju_lan_target,
+        ).__dict__
     manager = GameViewManager(parent_hwnd, timeout=2.0)
     guard = BackgroundRunGuard.begin(manager)
     session = VerificationSession(parent_hwnd=parent_hwnd, selected=selection, manager=manager, capture=WindowsGraphicsCapture())
@@ -83,7 +112,6 @@ def run_basic_capability(
         geometry = session.geometry()
         if (geometry.client_width, geometry.client_height) != (800, 600):
             raise RuntimeError("当前客户区不是 800x600，基础能力测试停止。")
-        capability = get_basic_capability(capability_id)
         run_dir = _new_run_dir(output_dir)
         # ui_icon_vision only keeps the selected detection image as source.png.
         if capability_id == "ui_icon_vision":
