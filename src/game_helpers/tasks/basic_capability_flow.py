@@ -147,11 +147,17 @@ def _run_basic_capability_session(session, capability_id: str, output_dir: str |
         return {"ok": bool(result.get("ok")), "capability": capability.id, **result}
 
     if capability_id == "background_mouse_move":
-        BackgroundInput(session.selected.hwnd).mouse_move(
-            session.selected.client_rect.left + session.selected.client_rect.width // 2,
-            session.selected.client_rect.top + session.selected.client_rect.height // 2,
-        )
-        return {"ok": True, "capability": capability.id, "effect": "WM_MOUSEMOVE only"}
+        # BackgroundInput posts client-relative coords; CharacterSelectionResult
+        # has no client_rect — use the selected WSGAME surface geometry.
+        geometry = session.geometry()
+        target = (geometry.client_width // 2, geometry.client_height // 2)
+        BackgroundInput(session.selected.hwnd).mouse_move(*target)
+        return {
+            "ok": True,
+            "capability": capability.id,
+            "effect": "WM_MOUSEMOVE only",
+            "client_point": list(target),
+        }
 
     if capability_id == "capture_freshness":
         result = run_background_capture_freshness(

@@ -26,7 +26,7 @@ BASIC_CAPABILITIES = (
     BasicCapability("image_diff", "执行图像差分", "比较连续画面的像素变化。", "tasks.soul_shortcut_diagnostic_flow:image_diff"),
     BasicCapability("surface_refresh", "执行 Surface 刷新", "调用现有 Surface 切换/RedrawWindow 刷新能力。", "tasks.soul_shortcut_diagnostic_flow:_refresh_capture_surface"),
     BasicCapability("background_mouse_move", "发送后台鼠标移动", "仅发送 WM_MOUSEMOVE，不执行点击。", "actions.background_input:BackgroundInput.mouse_move"),
-    BasicCapability("capture_freshness", "验证捕获新鲜度", "验证 Host/WSGAME/Playfield/RightEdge 分层新鲜度。", "tasks.background_capture_freshness:run_background_capture_freshness"),
+    BasicCapability("capture_freshness", "暂未验证通过 验证捕获新鲜度", "验证 Host/WSGAME/Playfield/RightEdge 分层新鲜度。", "tasks.background_capture_freshness:run_background_capture_freshness"),
 )
 
 

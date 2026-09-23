@@ -267,7 +267,7 @@ python -m pip install -e ".[windows]"
 | 6 | 执行图像差分 | `tasks/soul_shortcut_diagnostic_flow.py:image_diff` | 单独验证基础差分能力 |
 | 7 | 执行 Surface 刷新 | `tasks/soul_shortcut_diagnostic_flow.py:_refresh_capture_surface` | 单独验证现有刷新尝试 |
 | 8 | 发送后台鼠标移动 | `actions/background_input.py` | 仅发送 WM_MOUSEMOVE，不执行点击 |
-| 9 | 验证捕获新鲜度 | `tasks/background_capture_freshness.py` | 单独验证 Host / WSGAME / Playfield / RightEdge 新鲜度 |
+| 9 | 暂未验证通过 验证捕获新鲜度 | `tasks/background_capture_freshness.py` | 单独验证 Host / WSGAME / Playfield / RightEdge 新鲜度 |
 
 基础能力输出统一写入 `diagnostic/workflow_runs/basic_capabilities/<capability-id>/<run-id>/`，每次执行独立落盘，不覆盖历史证据。运行时至少保存：
 - `run.json`：基础能力 ID、名称、当前实现绑定、证据文件清单
