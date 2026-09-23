@@ -52,27 +52,37 @@ def _largest_bright_component(mask: np.ndarray) -> list[tuple[int, int]]:
     return best
 
 
+# Arrow geometry must be strong enough before it can override template class.
+ARROW_DIRECTION_MIN_ABS_SCORE = 0.55
+# Gray/white toggle arrows stay; saturated icon colors (blue/yellow) are excluded.
+ARROW_MAX_CHROMA = 35.0
+
+
 def _arrow_pointing_from_roi(roi: np.ndarray) -> tuple[str | None, float]:
-    """Infer arrow pointing direction from bright pixels under the 指引 tab.
+    """Infer arrow pointing direction from bright low-chroma pixels under 指引.
 
     Returns ``(\"right\"|\"left\"|None, score)``. Right-pointing => collapsed;
     left-pointing => expanded. Uses tip-vs-base geometry on the largest bright
-    blob so noisy side UI does not dominate.
+    gray blob so colorful shortcut icons do not dominate.
     """
     if roi.ndim != 3 or roi.shape[0] < 8 or roi.shape[1] < 8:
         return None, 0.0
-    luminance = roi.mean(axis=2)
-    height, width = luminance.shape
+    height, width = roi.shape[:2]
     y0 = int(height * 0.42)
     x1 = max(12, int(width * 0.70))
-    band = luminance[y0:height, 0:x1]
-    threshold = max(200.0, float(np.percentile(band, 90)))
-    mask = band >= threshold
-    cells = _largest_bright_component(mask)
+    band_rgb = roi[y0:height, 0:x1]
+    luminance = band_rgb.mean(axis=2)
+    chroma = band_rgb.max(axis=2) - band_rgb.min(axis=2)
+    low_chroma = chroma <= ARROW_MAX_CHROMA
+
+    def _cells_for_threshold(min_luma: float, percentile: float) -> list[tuple[int, int]]:
+        threshold = max(min_luma, float(np.percentile(luminance, percentile)))
+        mask = (luminance >= threshold) & low_chroma
+        return _largest_bright_component(mask)
+
+    cells = _cells_for_threshold(200.0, 90.0)
     if len(cells) < 12:
-        threshold = max(170.0, float(np.percentile(band, 82)))
-        mask = band >= threshold
-        cells = _largest_bright_component(mask)
+        cells = _cells_for_threshold(170.0, 82.0)
     if len(cells) < 12:
         return None, 0.0
 
@@ -111,8 +121,9 @@ def detect_soul_task_panel_collapsed(
       * right-pointing arrow (light or grey) = collapsed
       * left-pointing arrow (light) = expanded
 
-    Direction of the bright arrow blob is preferred when clear; template NCC
-    remains for match location / scores and as fallback when geometry is weak.
+    Direction of a strong low-chroma arrow blob is preferred when clear;
+    template NCC remains for match location / scores and as fallback when
+    geometry is weak. Evidence records template disagreement when present.
 
     ``match_location`` / ``click_location`` describe the *visual* match only.
     Production clicks must use the calibrated fixed coordinate, not these fields.
@@ -160,19 +171,36 @@ def detect_soul_task_panel_collapsed(
     expanded_matches = [item for item in matches if not item[2]]
     best_collapsed = max(collapsed_matches, key=lambda item: item[0])
     best_expanded = max(expanded_matches, key=lambda item: item[0])
+    collapsed_score = best_collapsed[0]
+    expanded_score = best_expanded[0]
 
     pointing, point_score = _arrow_pointing_from_roi(roi)
-    if pointing == "right":
-        chosen = best_collapsed
-        is_collapsed = True
-        decide = "arrow-direction"
-    elif pointing == "left":
-        chosen = best_expanded
-        is_collapsed = False
-        decide = "arrow-direction"
-    else:
-        collapsed_score = best_collapsed[0]
-        expanded_score = best_expanded[0]
+    decide: str | None = None
+    arrow_rejected: str | None = None
+    chosen: tuple[float, str, bool, tuple[int, int] | None, tuple[int, int]] | None = None
+    is_collapsed: bool | None = None
+
+    # After low-chroma filtering, strong geometry is trusted: polluted colorful
+    # icons often still inflate the wrong template class on expanded strips.
+    if pointing is not None and abs(point_score) >= ARROW_DIRECTION_MIN_ABS_SCORE:
+        if pointing == "right":
+            chosen = best_collapsed
+            is_collapsed = True
+            decide = "arrow-direction"
+        else:
+            chosen = best_expanded
+            is_collapsed = False
+            decide = "arrow-direction"
+        template_agrees = (
+            (pointing == "right" and collapsed_score >= expanded_score)
+            or (pointing == "left" and expanded_score >= collapsed_score)
+        )
+        if not template_agrees:
+            arrow_rejected = "disagree"
+    elif pointing is not None:
+        arrow_rejected = "weak"
+
+    if chosen is None:
         class_margin = collapsed_score - expanded_score
         if (
             collapsed_score >= profile.toggle_match_threshold
@@ -198,8 +226,13 @@ def detect_soul_task_panel_collapsed(
             evidence = (
                 f"toggle best={best_name} score={best_score:.3f}",
                 f"toggle second={second_name} score={second_score:.3f}",
-                f"collapsed={best_collapsed[0]:.3f} expanded={best_expanded[0]:.3f}",
-                f"arrow-direction=unknown score={point_score:.3f}",
+                f"collapsed={collapsed_score:.3f} expanded={expanded_score:.3f}",
+                f"arrow-direction={pointing or 'unknown'} score={point_score:.3f}",
+                *(
+                    (f"arrow-rejected={arrow_rejected}",)
+                    if arrow_rejected
+                    else ()
+                ),
             )
             return SoulTaskPanelObservation(
                 None,
@@ -214,6 +247,7 @@ def detect_soul_task_panel_collapsed(
                 second_score=float(second_score),
             )
 
+    assert chosen is not None and is_collapsed is not None and decide is not None
     chosen_score, chosen_name, _, chosen_location, chosen_size = chosen
     absolute = (
         (left + chosen_location[0], top + chosen_location[1]) if chosen_location else None
@@ -233,6 +267,11 @@ def detect_soul_task_panel_collapsed(
         f"toggle matched={chosen_name} score={chosen_score:.3f}",
         f"decide={decide}",
         f"arrow-direction={pointing or 'unknown'} score={point_score:.3f}",
+        *(
+            (f"arrow-rejected={arrow_rejected}",)
+            if arrow_rejected
+            else ()
+        ),
         "right arrow means collapsed; left arrow means expanded",
     )
     return SoulTaskPanelObservation(

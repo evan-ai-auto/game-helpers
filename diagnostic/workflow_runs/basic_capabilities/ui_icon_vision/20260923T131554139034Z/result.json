@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "capability": "ui_icon_vision",
+  "target_id": "soul_task_claimed",
+  "target_name": "命魂任务已领取图标",
+  "source_mode": "file",
+  "source_path": "diagnostic/workflow_runs/basic_capabilities/ui_icon_vision/20260923T125018314809Z/source.png",
+  "source_artifact": "source.png",
+  "panel_state": "展开",
+  "collapsed": false,
+  "panel_template": "left_light",
+  "panel_score": 0.6949097278071386,
+  "panel_reason": "panel_expanded",
+  "panel_evidence": [
+    "toggle matched=left_light score=0.695",
+    "decide=arrow-direction",
+    "arrow-direction=left score=-0.750",
+    "arrow-rejected=disagree",
+    "right arrow means collapsed; left arrow means expanded"
+  ],
+  "icon_checked": true,
+  "icon_found": false,
+  "icon_score": 0.5103520154953003,
+  "icon_reason": "icon_not_found",
+  "icon_match_location": [
+    63,
+    106
+  ],
+  "icon_search_roi": [
+    0,
+    0,
+    272,
+    252
+  ],
+  "icon_evidence": [
+    "target=soul_task_claimed",
+    "template=E:\\work\\dev_workspace\\my_windows\\game-helpers\\data\\assets\\ui\\soul_task_claimed_icon.json",
+    "score=0.510",
+    "threshold=0.780",
+    "roi=[0, 0, 272, 252]"
+  ]
+}

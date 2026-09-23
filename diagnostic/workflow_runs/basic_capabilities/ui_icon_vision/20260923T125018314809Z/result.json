@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "capability": "ui_icon_vision",
+  "target_id": "soul_task_claimed",
+  "target_name": "命魂任务已领取图标",
+  "source_mode": "live_capture",
+  "source_path": "live_capture",
+  "source_artifact": "source.png",
+  "panel_state": "折叠",
+  "collapsed": true,
+  "panel_template": "right_light",
+  "panel_score": 0.841887679754519,
+  "panel_reason": "panel_collapsed",
+  "panel_evidence": [
+    "toggle matched=right_light score=0.842",
+    "decide=arrow-direction",
+    "arrow-direction=right score=0.526",
+    "right arrow means collapsed; left arrow means expanded"
+  ],
+  "icon_checked": false,
+  "icon_found": null,
+  "icon_score": null,
+  "icon_reason": null,
+  "icon_match_location": null,
+  "icon_search_roi": null,
+  "icon_evidence": null
+}
