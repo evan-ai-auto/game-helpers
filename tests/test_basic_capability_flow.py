@@ -3,7 +3,7 @@ from game_helpers.tasks.basic_capabilities import (
     SHORTCUT_DIAGNOSTIC_CAPABILITY_IDS,
     get_basic_capability,
 )
-from game_helpers.tasks.basic_capability_flow import run_basic_capability
+from game_helpers.tasks.basic_capability_flow import _shortcut_state_label, run_basic_capability
 from game_helpers.tasks.soul_shortcut_diagnostic_flow import SHORTCUT_DIAGNOSTIC_CAPABILITIES
 
 
@@ -24,5 +24,6 @@ def test_shortcut_flow_and_basic_capability_menu_share_the_same_registry():
 
 
 def test_shortcut_state_result_has_human_readable_state():
-    source = run_basic_capability.__module__
-    assert source == "game_helpers.tasks.basic_capability_flow"
+    assert _shortcut_state_label(True) == "折叠"
+    assert _shortcut_state_label(False) == "展开"
+    assert _shortcut_state_label(None) == "未知"
