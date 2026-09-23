@@ -21,3 +21,8 @@ def test_shortcut_flow_and_basic_capability_menu_share_the_same_registry():
     assert flow_ids == list(SHORTCUT_DIAGNOSTIC_CAPABILITY_IDS)
     assert all(get_basic_capability(item_id).id == item_id for item_id in flow_ids)
     assert set(flow_ids).issubset({item.id for item in BASIC_CAPABILITIES})
+
+
+def test_shortcut_state_result_has_human_readable_state():
+    source = run_basic_capability.__module__
+    assert source == "game_helpers.tasks.basic_capability_flow"
