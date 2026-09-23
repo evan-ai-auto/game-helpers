@@ -28,6 +28,14 @@ def _capture(session):
     return as_pil_image(session.capture_frame()).convert("RGB")
 
 
+def _shortcut_state_label(collapsed: bool | None) -> str:
+    if collapsed is True:
+        return "折叠"
+    if collapsed is False:
+        return "展开"
+    return "未知"
+
+
 def run_basic_capability(parent_hwnd: int, selection: CharacterSelectionResult, capability_id: str, output_dir: str | Path) -> dict[str, object]:
     """Run exactly one capability smoke test using existing implementations."""
     manager = GameViewManager(parent_hwnd, timeout=2.0)
@@ -78,13 +86,7 @@ def _run_basic_capability_session(session, capability_id: str, output_dir: str |
 
     if capability_id == "shortcut_state_vision":
         observation = detect_shortcut_panel_state(image)
-        if observation.collapsed is True:
-            state = "折叠"
-        elif observation.collapsed is False:
-            state = "展开"
-        else:
-            state = "未知"
-        return {
+        state = _shortcut_state_label(observation.collapsed)        return {
             # UNKNOWN is a valid detection result, not a guessed state.
             "ok": True,
             "capability": capability.id,
