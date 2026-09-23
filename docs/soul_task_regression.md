@@ -62,52 +62,50 @@
 |---|---|---|---|
 | （待填） |  |  |  |
 
-
-## 当前主流程引用文件
-
-当前“命魂快捷图标 Hover / 运动 / 后台输入分层验证”主流程以最小可组合子功能组合验证流；流程编排文件不应重复实现这些子功能。
-
-| 文件 | 功能 | 在主流程中的作用 |
-|---|---|---|
-| `src/game_helpers/tasks/soul_shortcut_diagnostic_flow.py` | 诊断流程编排、子类型路由、报告输出 | 主流程入口与组合层 |
-| `src/game_helpers/tasks/verification_session.py` | Host WGC 捕获后按选中 WSGAME 几何裁剪 | 为各验证流提供统一 800×600 GameView |
-| `src/game_helpers/capture/wgc.py` | Windows Graphics Capture | 获取 Host HWND 的 Frame |
-| `src/game_helpers/core/view_manager.py` | GameView/Surface 管理 | 解析并管理选中游戏视图 |
-| `src/game_helpers/tasks/background_context.py` | 后台运行上下文 | 保存/恢复前台窗口与 Surface/标签 |
-| `src/game_helpers/tasks/character_selection.py` | 角色选择与同步 | 在诊断开始时同步选中角色 |
-| `src/game_helpers/tasks/manual_coordinate.py` | 人工坐标采集 | Hover/Click 验证的人工目标点采集 |
-| `src/game_helpers/actions/background_input.py` | 后台鼠标消息 | PostMessageW Hover 与后台 Click |
-| `src/game_helpers/tasks/shortcut_panel_vision.py` | Shortcut 状态/Hotspot 视觉检测 | 一级状态与点击前后状态确认 |
-| `src/game_helpers/vision/scene_coordinate.py` | 场景名、地图坐标 ROI 与解析 | OCR / Motion 的状态证据 |
-| `src/game_helpers/vision/windows_ocr.py` | Windows.Media.Ocr 后端 | OCR 实际识别 |
-| `src/game_helpers/tasks/soul_task.py` | 800×600 基线定义 | 主流程分辨率前置约束 |
-| `src/game_helpers/tasks/soul_task_match.py` | Frame/PIL 图像转换 | 诊断图像处理输入 |
-| `src/game_helpers/tasks/background_item_panel_open_probe_visual.py` | Surface 刷新辅助 | Motion/Freshness 中的刷新尝试 |
-| `src/game_helpers/tasks/background_capture_freshness.py` | 后台覆盖新鲜度分层验证 | 子类型 7 的独立验证实现 |
-
-维护规则：
-
-1. 主流程新增、删除、替换或改变上述文件职责时，同步更新本表。
-2. 新能力优先作为最小子功能实现，再由任务类型/手动验证流组合。
-3. 验收状态属于业务人工验收结果，不因代码文件变更自动改变。
-4. 若某实现方式被后续证据推翻，保留需求名称，更新当前实现方式并记录方案历史。
-5. 暂不进行能力归核；当前只要求最小可组合子功能与主流程引用可追踪。
-
 ---
 
-## 快捷图标分层诊断任务
+## 快捷图标分层诊断
 
-新增单一任务类型「命魂快捷图标 Hover / 运动 / 后台输入分层验证」，进入后提供：
+任务类型：「命魂快捷图标 Hover / 运动 / 后台输入分层验证」。入口与验收看板见 [commands.md](commands.md)。
+
+进入后提供：
+
 1. 完整验证流程（运动 + Hover / PostMessageW / Click；不含 OCR 对照）
 2. 角色运动状态验证
 3. 800×600 OCR 多 ROI 对照验证（场景名条 + 坐标条分段 OCR）
 4. Hover 二级 ROI 隔离验证
 5. PostMessageW Hover 验证
 6. 后台 Click + Hotspot 验证
-7. 后台覆盖捕获新鲜度分层验证
+7. 后台覆盖捕获新鲜度分层验证（covered / refresh）
 
-子实验与需求的对应关系以 [`docs/commands.md`](commands.md) 顶部“需求—子实验对应关系”为唯一维护来源；本页只保留当前执行顺序，不另行维护映射表。
+子实验与需求的对应关系以 [commands.md](commands.md)「需求—子实验对应关系」为唯一维护来源；本页只保留当前执行顺序，不另行维护映射表。
 
-诊断输出独立写入 `diagnostic/workflow_runs/soul_shortcut_diagnostic/<subtype>/`，不修改生产默认坐标 `client=(14, 122)`、生产模板或现有后台点击实现。
+诊断输出独立写入 `diagnostic/workflow_runs/soul_shortcut_diagnostic/<subtype>/`（含 `background_capture_freshness/`），不修改生产默认坐标 `client=(14, 122)`、生产模板或现有后台点击实现。
 
 Windows OCR 依赖：Windows 环境通过 `windows` extra 安装 `winsdk>=1.0.0b10`。运动状态与 OCR 对照子实验均走 `scene_coordinate.read_player_location`（整图裁场景名条 / 坐标条后分段识别）；OCR 原文、解析坐标与状态会写入诊断报告。Windows OCR 当前 binding 未提供稳定的 confidence 字段，因此报告中的 `ocr_confidence=0.0` 表示“未提供”，不表示识别置信度为零。
+
+### 快捷图标诊断：当前引用文件
+
+以最小可组合子功能组合验证流；流程编排文件不应重复实现这些子功能。下表只列诊断流**直接依赖**（含子类型 7 专用实现）。
+
+| 文件 | 功能 | 在诊断中的作用 |
+|---|---|---|
+| `src/game_helpers/tasks/soul_shortcut_diagnostic_flow.py` | 诊断流程编排、子类型路由、报告输出 | 入口与组合层 |
+| `src/game_helpers/tasks/verification_session.py` | Host WGC 捕获后按选中 WSGAME 几何裁剪 | 统一 800×600 GameView |
+| `src/game_helpers/capture/wgc.py` | Windows Graphics Capture | Host Frame |
+| `src/game_helpers/core/view_manager.py` | GameView / Surface 管理 | 选中游戏视图 |
+| `src/game_helpers/tasks/background_context.py` | 后台运行上下文 | 保存/恢复前台与 Surface/标签 |
+| `src/game_helpers/tasks/character_selection.py` | 角色选择与同步 | 诊断开始时同步角色 |
+| `src/game_helpers/tasks/manual_coordinate.py` | 人工坐标采集 | Hover / Click 目标点 |
+| `src/game_helpers/actions/background_input.py` | 后台鼠标消息 | PostMessageW Hover / Click |
+| `src/game_helpers/tasks/shortcut_panel_vision.py` | Shortcut 状态 / Hotspot 视觉检测 | 一级状态与点击确认 |
+| `src/game_helpers/vision/scene_coordinate.py` | 场景名、地图坐标 ROI 与解析 | OCR / Motion 证据 |
+| `src/game_helpers/vision/windows_ocr.py` | Windows.Media.Ocr 后端 | OCR 识别 |
+| `src/game_helpers/tasks/soul_task.py` | 800×600 基线定义 | 分辨率前置约束 |
+| `src/game_helpers/tasks/soul_task_match.py` | Frame / PIL 转换 | 诊断图像输入 |
+| `src/game_helpers/tasks/background_item_panel_open_probe_visual.py` | Surface 刷新辅助 | Motion / Freshness 刷新尝试 |
+| `src/game_helpers/tasks/background_capture_freshness.py` | 后台覆盖新鲜度分层验证 | 子类型 7 |
+
+验证工具（非流程 import，人工常用）：`tools/verify_background_capture_freshness.py`。
+
+维护规则以 [commands.md](commands.md)「维护规则」为准；本表变更时同步更新，暂不要求能力归核。

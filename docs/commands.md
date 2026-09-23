@@ -1,10 +1,11 @@
 # 指令入口
 
-> 人工操作统一从本页开始。需要执行任务时，先查“任务菜单路径”，再复制入口命令。
+> 人工操作统一从本页开始。上方是**需求验收看板**；下方是可执行入口（命令 / 菜单 / 子实验 / 输出）。
+> 命令树按业务需求命名；实现方式仅作说明。验收状态只表示业务人工验收结果，不因代码变更自动改变。
 
-## 当前需求验收状态
+## 需求验收看板
 
-命令树以业务需求命名，实现方式仅作为说明。状态只表示业务人工验收状态：
+### 状态定义
 
 - **已验收通过**：业务人工验收通过；临时人工验收通过也视为通过。
 - **部分完成**：已有实现或局部验证，但尚未完成业务人工验收。
@@ -15,19 +16,42 @@
 
 ### 命魂快捷图标需求树
 
-| ID | 状态 | 需求 | 当前实现方式 |
-|---|---|---|---|
-| R1 | 阻塞 | Shortcut 功能能够完整闭环 | 完整诊断流程；当前被 R7 阻塞 |
-| R2 | 部分完成（未过点） | 能够可靠识别角色是否移动 | Playfield 图像差分 + OCR + RightEdge |
-| R3 | 部分完成（未过点） | 能够可靠识别场景与地图坐标 | 800×600 多 ROI + Windows.Media.Ocr + 字符纠错 |
-| R4 | 部分完成 | 鼠标悬停能够触发并识别 Shortcut 二级状态 | 真实鼠标 Hover + 二级 ROI 隔离 |
-| R5 | 部分完成 | 后台消息能够触发并识别 Shortcut 悬停状态 | PostMessageW Hover |
-| R6 | 部分完成 | 后台点击能够触发并确认 Shortcut 状态变化 | Background Click + Hotspot |
-| R7 | 验收失败 | 窗口被覆盖时仍能获得持续刷新的游戏画面 | WGC Host/WSGAME Crop + Surface 切换 + RedrawWindow |
+| ID | 状态 | 需求 | 当前实现方式 | 备注 |
+|---|---|---|---|---|
+| R1 | 阻塞 | Shortcut 功能能够完整闭环 | 完整诊断流程 | 被 R7 验收失败挡住 |
+| R2 | 部分完成 | 能够可靠识别角色是否移动 | Playfield 图像差分 + OCR + RightEdge | 未过点：窗口被覆盖时主画面常判「画面未刷新」 |
+| R3 | 部分完成 | 能够可靠识别场景与地图坐标 | 800×600 多 ROI + Windows.Media.Ocr + 字符纠错 | 未过点：开顶 `4` / CJK「四」漏读或错位、缺 `X` 标签、场景名右侧 UI 碎片、`9`/`0` 易被当成 `X` |
+| R4 | 部分完成 | 鼠标悬停能够触发并识别 Shortcut 二级状态 | 真实鼠标 Hover + 二级 ROI 隔离 | |
+| R5 | 部分完成 | 后台消息能够触发并识别 Shortcut 悬停状态 | PostMessageW Hover | |
+| R6 | 部分完成 | 后台点击能够触发并确认 Shortcut 状态变化 | Background Click + Hotspot | |
+| R7 | 验收失败 | 窗口被覆盖时仍能获得持续刷新的游戏画面 | WGC Host/WSGAME Crop + Surface 切换 + RedrawWindow | 子实验 E7；证据见 `background_capture_freshness/` |
 
 > **需求—子实验对应关系（本表为单一维护来源）**：R1 ← E1、E2、E4、E5、E6；R2 ← E2；R3 ← E3；R4 ← E4；R5 ← E5；R6 ← E6；R7 ← E7。需求名称与 R 编号保持稳定；子实验实现方式可变更时，只更新本表及对应子实验说明。
 
-> 验收状态不会因为代码文件变更自动改变；只有业务人工验收结果或后续证据才能推动状态变化。若已验收结论被后续证据推翻，应记录方案/结论变化，而不是静默覆盖历史。
+```text
+任务流程
+├── 命魂相关任务
+├── 命魂快捷图标 Hover / 运动 / 后台输入分层验证
+│   ├── [阻塞] Shortcut 功能能够完整闭环
+│   ├── [部分完成] 能够可靠识别角色是否移动
+│   ├── [部分完成] 能够可靠识别场景与地图坐标
+│   ├── [部分完成] 鼠标悬停能够触发并识别 Shortcut 二级状态
+│   ├── [部分完成] 后台消息能够触发并识别 Shortcut 悬停状态
+│   ├── [部分完成] 后台点击能够触发并确认 Shortcut 状态变化
+│   └── [验收失败] 窗口被覆盖时仍能获得持续刷新的游戏画面
+└── 道具栏检测与切换
+```
+
+> 子实验名称是人工入口；上表需求才是验收对象。实现方式被推翻或替换时，优先改「当前实现方式 / 备注」，不随意改需求名称。若已验收结论被后续证据推翻，应记录方案/结论变化，而不是静默覆盖历史。
+
+### 维护规则
+
+1. **需求与实现分离**：`状态 - 需求名称` + `实现：当前方式`；需求回答「要证明什么」，实现回答「现在怎么证明」。
+2. **最小可组合子功能**：子功能文件可被多任务/验证流复用；流程文件只做编排组合。
+3. **引用清单**：快捷图标诊断涉及的文件新增、删除、替换或职责变化时，同步更新 [soul_task_regression.md](soul_task_regression.md) 的「快捷图标诊断：当前引用文件」。
+4. 验收状态仅由业务人工验收结果或后续证据推动。
+
+---
 
 ## 1. 通用任务入口
 
@@ -131,7 +155,10 @@ diagnostic/workflow_runs/soul_shortcut_diagnostic/
 ├── ocr_roi_compare/
 ├── hover/
 ├── postmessage_hover/
-└── click_hotspot/
+├── click_hotspot/
+└── background_capture_freshness/
+    ├── covered/
+    └── refresh/
 ```
 
 ### 角色运动状态验证
@@ -206,7 +233,7 @@ python -m pip install -e ".[windows]"
 - [docs/verification.md](verification.md)：逐项复验步骤与通过标准
 - [docs/maintain.md](maintain.md)：资产和流程维护
 - [docs/capabilities.md](capabilities.md)：已验证可复用能力
-- [docs/soul_task_regression.md](soul_task_regression.md)：命魂回归与诊断矩阵
+- [docs/soul_task_regression.md](soul_task_regression.md)：命魂领取回归 + 快捷图标诊断引用清单
 - [docs/agent-coding.md](agent-coding.md)：Agent 编码约定
 
 ## 7. 新增任务时的文档要求
@@ -220,5 +247,7 @@ python -m pip install -e ".[windows]"
 5. 输出目录
 6. 通过标准
 7. 常见失败处理
+
+需求验收状态变更时，只改本页「需求验收看板」；引用文件变更时，改 [soul_task_regression.md](soul_task_regression.md) 对应表。
 
 这样执行任务时不需要依赖聊天记录记忆命令。
