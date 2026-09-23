@@ -1,6 +1,6 @@
 from pathlib import Path
 from PIL import Image
-from game_helpers.games.menghuanxiyou.soul_task import (
+from game_helpers.tasks.soul_task import (
     SoulTaskUiProfile,
     UiPoint,
     UiRect,
