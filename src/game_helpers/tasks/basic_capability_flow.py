@@ -18,7 +18,6 @@ from .background_capture_freshness import run_background_capture_freshness
 from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
 from .verification_session import VerificationSession
-from .background_item_panel_open_probe_visual import refresh_surface_for_capture
 from .soul_shortcut_diagnostic_flow import image_diff, _refresh_capture_surface
 from .soul_task_match import as_pil_image
 from .shortcut_panel_vision import detect_shortcut_panel_state
