@@ -29,13 +29,13 @@ from .soul_task_match import as_pil_image
 from .verification_session import VerificationSession
 
 SHORTCUT_DIAGNOSTIC_SUBTYPES = (
-    ("full", "完整验证流程"),
-    ("motion", "角色运动状态验证"),
-    ("ocr_roi_compare", "800×600 OCR 多 ROI 对照验证"),
-    ("hover", "Hover 二级 ROI 隔离验证"),
-    ("postmessage_hover", "PostMessageW Hover 验证"),
-    ("click_hotspot", "后台 Click + Hotspot 验证"),
-    ("background_capture_freshness", "后台覆盖捕获新鲜度分层验证"),
+    ("full", "[阻塞] Shortcut 功能能够完整闭环"),
+    ("motion", "[部分完成] 能够可靠识别角色是否移动"),
+    ("ocr_roi_compare", "[部分完成] 能够可靠识别场景与地图坐标"),
+    ("hover", "[部分完成] 鼠标悬停能够触发并识别 Shortcut 二级状态"),
+    ("postmessage_hover", "[部分完成] 后台消息能够触发并识别 Shortcut 悬停状态"),
+    ("click_hotspot", "[部分完成] 后台点击能够触发并确认 Shortcut 状态变化"),
+    ("background_capture_freshness", "[验收失败] 窗口被覆盖时仍能获得持续刷新的游戏画面"),
 )
 
 # 800×600 playfield used for motion: skip left HUD and the right chrome strip.
