@@ -6,7 +6,8 @@ import argparse
 from ..core.window import find_window
 from .accounts import scan_game_accounts
 from .character_selection import logged_in_accounts, select_character
-from .basic_capability_flow import BASIC_CAPABILITIES, run_basic_capability
+from .basic_capabilities import BASIC_CAPABILITIES
+from .basic_capability_flow import run_basic_capability
 from .item_panel_flow import run_item_panel_detect_and_toggle
 from .soul_shortcut_diagnostic_flow import (
     SHORTCUT_DIAGNOSTIC_SUBTYPES,
