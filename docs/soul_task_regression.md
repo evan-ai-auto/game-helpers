@@ -132,3 +132,24 @@ Windows OCR 依赖：Windows 环境通过 `windows` extra 安装 `winsdk>=1.0.0b
 验证工具（非流程 import，人工常用）：`tools/verify_background_capture_freshness.py`。
 
 维护规则以 [commands.md](commands.md)「维护规则」为准；本表变更时同步更新，暂不要求能力归核。
+
+
+## 基础能力列表 Flow
+
+基础能力列表是独立的人工/开发诊断入口，用于逐项验证最小可复用能力。它通过 `basic_capability_flow.py` 作为薄适配层调用现有实现，不复制基础能力逻辑、不修改现有 Flow 的调用方式。
+
+### 单项能力清单
+
+| 能力 | 现有实现 | 测试入口 |
+|---|---|---|
+| 获取宿主窗口画面 | `capture/wgc.py:WindowsGraphicsCapture.capture` | `host_capture` |
+| 获取选中游戏画面 | `verification_session.py:VerificationSession.capture_frame` | `game_view_capture` |
+| 检查游戏画面 Surface | `verification_session.py:VerificationSession.health` | `surface_health` |
+| 读取场景与地图坐标 | `scene_coordinate.py:read_player_location` | `scene_coordinate_ocr` |
+| 识别 Shortcut 当前状态 | `shortcut_panel_vision.py:detect_shortcut_panel_state` | `shortcut_state_vision` |
+| 执行图像差分 | `soul_shortcut_diagnostic_flow.py:image_diff` | `image_diff` |
+| 执行 Surface 刷新 | `soul_shortcut_diagnostic_flow.py:_refresh_capture_surface` | `surface_refresh` |
+| 发送后台鼠标移动 | `platform/windows/input.py:BackgroundInput.mouse_move` | `background_mouse_move` |
+| 验证捕获新鲜度 | `background_capture_freshness.py:run_background_capture_freshness` | `capture_freshness` |
+
+**复用隔离规则**：基础能力菜单只调用既有实现；禁止把单项测试逻辑反向写入能力模块。现有任务 Flow 不依赖基础能力菜单，删除该菜单也不影响任何任务执行。
