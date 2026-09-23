@@ -147,6 +147,8 @@ def main() -> int:
             print("result=FAILED")
             return 1
         print(f"[基础能力] result={result}")
+        if workflow.id == "minghun_basic_capabilities" and capability_id == "shortcut_state_vision":
+            print(f"[Shortcut状态] 当前状态={result.get('state', '未知')} | 置信度={result.get('confidence', 0.0):.3f} | 原因={result.get('reason', 'unknown')}")
         print("[链路] 6/6 结果")
         print("result=PASSED")
         return 0
