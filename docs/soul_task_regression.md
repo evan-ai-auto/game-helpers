@@ -66,6 +66,29 @@
 
 ## 快捷图标分层诊断
 
+> **Flow 首屏依赖总览**：本节先列出当前 Flow 直接引用的基础实现能力；后续再说明执行顺序、验收证据与实机回归。底层实现拆分保持独立，Flow 负责组合，不要求能力归核。
+
+### 基础能力依赖（首屏）
+
+| 基础能力 | 实现文件 | 核心函数/入口 | Flow 用途 |
+|---|---|---|---|
+| Host WGC 捕获 | `src/game_helpers/capture/wgc.py` | `WindowsGraphicsCapture.capture` | 获取宿主窗口画面 |
+| WSGAME 裁剪 | `src/game_helpers/tasks/verification_session.py` | `VerificationSession.capture_frame` | 从 Host Frame 取得选中 800×600 GameView |
+| GameView / Surface 管理 | `src/game_helpers/core/view_manager.py` | `GameViewManager` | 选择目标游戏视图并支持 Surface 切换 |
+| 后台运行上下文 | `src/game_helpers/tasks/background_context.py` | `BackgroundRunGuard` | 保存/恢复前台窗口、Surface 与标签 |
+| 角色选择同步 | `src/game_helpers/tasks/character_selection.py` | `sync_selected_character` | 诊断开始时同步目标角色 |
+| 人工坐标采集 | `src/game_helpers/tasks/manual_coordinate.py` | `collect_client_coordinate` | Hover / Click 目标点采集 |
+| 后台鼠标输入 | `src/game_helpers/actions/background_input.py` | `BackgroundInput` | PostMessageW Hover / Background Click |
+| Shortcut 状态 / Hotspot 视觉检测 | `src/game_helpers/tasks/shortcut_panel_vision.py` | `detect_shortcut_panel_state` | 一级状态与点击后状态确认 |
+| 场景 / 地图坐标 OCR | `src/game_helpers/vision/scene_coordinate.py` | `read_player_location` | OCR 与 Motion 的场景坐标证据 |
+| Windows OCR 后端 | `src/game_helpers/vision/windows_ocr.py` | `WindowsNativeOCRBackend` | 执行 Windows.Media.Ocr 识别 |
+| 800×600 基线 | `src/game_helpers/tasks/soul_task.py` | `SOUL_TASK_BASELINE_SIZE` | 诊断前置分辨率约束 |
+| Frame / PIL 转换 | `src/game_helpers/tasks/soul_task_match.py` | `as_pil_image` | 图像差分、ROI 与截图处理 |
+| Surface 刷新辅助 | `src/game_helpers/tasks/background_item_panel_open_probe_visual.py` | `refresh_surface_for_capture` | Motion / Freshness 刷新尝试 |
+| 覆盖捕获新鲜度 | `src/game_helpers/tasks/background_capture_freshness.py` | `run_background_capture_freshness` | E7：covered / refresh 分层验证 |
+
+### Flow 入口与执行说明
+
 任务类型：「命魂快捷图标 Hover / 运动 / 后台输入分层验证」。入口与验收看板见 [commands.md](commands.md)。
 
 进入后提供：
@@ -86,7 +109,7 @@ Windows OCR 依赖：Windows 环境通过 `windows` extra 安装 `winsdk>=1.0.0b
 
 ### 快捷图标诊断：当前引用文件
 
-以最小可组合子功能组合验证流；流程编排文件不应重复实现这些子功能。下表只列诊断流**直接依赖**（含子类型 7 专用实现）。
+以最小可组合子功能组合验证流；流程编排文件不应重复实现这些子功能。下表保留完整直接依赖清单，首屏摘要见上方「基础能力依赖（首屏）」。（含子类型 7 专用实现）。
 
 | 文件 | 功能 | 在诊断中的作用 |
 |---|---|---|
