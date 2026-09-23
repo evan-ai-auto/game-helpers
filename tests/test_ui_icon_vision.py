@@ -84,3 +84,24 @@ def test_expanded_panel_runs_icon_match(monkeypatch):
     assert result.icon is not None
     assert result.icon.found is True
     assert result.icon.score == pytest.approx(0.91)
+
+
+def test_unknown_panel_skips_icon_match(monkeypatch):
+    panel = SimpleNamespace(
+        collapsed=None,
+        matched_template=None,
+        match_score=0.0,
+        reason=SimpleNamespace(value="unknown"),
+        evidence=("unknown",),
+        match_location=None,
+        confidence=0.0,
+        second_template=None,
+        second_score=None,
+    )
+    monkeypatch.setattr(vision, "detect_shortcut_panel_state", lambda _image: panel)
+    monkeypatch.setattr(vision, "detect_icon_in_image", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("icon match must not run")))
+
+    result = vision.detect_ui_icon_with_shortcut_gate(Image.new("RGB", (80, 80)))
+    assert result.panel_state == "未知"
+    assert result.icon_checked is False
+    assert result.icon is None

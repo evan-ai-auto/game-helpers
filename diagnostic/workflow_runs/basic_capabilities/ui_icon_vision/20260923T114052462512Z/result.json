@@ -4,7 +4,7 @@
   "target_id": "soul_task_claimed",
   "target_name": "命魂任务已领取图标",
   "source_mode": "file",
-  "source_path": "E:\\work\\dev_workspace\\my_windows\\game-helpers\\diagnostic\\workflow_runs\\basic_capabilities\\shortcut_state_vision\\20260923T101949618846Z\\capture.png",
+  "source_path": "diagnostic/workflow_runs/basic_capabilities/shortcut_state_vision/20260923T101949618846Z/capture.png",
   "panel_state": "展开",
   "collapsed": false,
   "panel_template": "left_light",
@@ -36,5 +36,8 @@
     "score=0.859",
     "threshold=0.780",
     "roi=[0, 0, 272, 252]"
-  ]
+  ],
+  "source_artifact": "source.png",
+  "business_validation": "PASSED",
+  "business_validation_reason": "Shortcut 已展开且目标图标匹配成功"
 }

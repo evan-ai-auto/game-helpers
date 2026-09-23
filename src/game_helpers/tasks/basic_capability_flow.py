@@ -53,6 +53,17 @@ def _write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
 
+def _record_source_path(source_path: Path) -> str:
+    """Record source paths without leaking machine-specific absolute paths."""
+    path = Path(source_path)
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        return f"<external>/{path.name}"
+
+
 def run_basic_capability(
     parent_hwnd: int,
     selection: CharacterSelectionResult,
@@ -178,7 +189,7 @@ def _run_basic_capability_session(
             if not source_path.is_file():
                 raise RuntimeError(f"检测图源不存在: {source_path}")
             source_image = Image.open(source_path).convert("RGB")
-            recorded_source = str(source_path)
+            recorded_source = _record_source_path(source_path)
         elif source_mode == "live_capture":
             if image is None:
                 raise RuntimeError("ui_icon_vision live_capture 模式缺少实时截图")
@@ -233,6 +244,15 @@ def _run_basic_capability_session(
                     "icon_evidence": list(icon.evidence),
                 }
             )
+        if not gated.icon_checked:
+            payload["business_validation"] = "SKIPPED"
+            payload["business_validation_reason"] = f"Shortcut 状态为{gated.panel_state}，本次未执行图标匹配"
+        elif gated.icon is not None and gated.icon.found:
+            payload["business_validation"] = "PASSED"
+            payload["business_validation_reason"] = "Shortcut 已展开且目标图标匹配成功"
+        else:
+            payload["business_validation"] = "FAILED"
+            payload["business_validation_reason"] = "Shortcut 已展开，但目标图标未匹配成功"
         return payload
 
     if capability_id == "image_diff":
