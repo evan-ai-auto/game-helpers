@@ -33,6 +33,8 @@ BASIC_CAPABILITIES = (
     BasicCapability("surface_refresh", "执行 Surface 刷新", "调用现有 Surface 切换/RedrawWindow 刷新能力。", "tasks.soul_shortcut_diagnostic_flow:_refresh_capture_surface"),
     BasicCapability("background_mouse_move", "发送后台鼠标移动", "仅发送 WM_MOUSEMOVE，不执行点击。", "actions.background_input:BackgroundInput.mouse_move"),
     BasicCapability("capture_freshness", "暂未验证通过 验证捕获新鲜度", "验证 Host/WSGAME/Playfield/RightEdge 分层新鲜度。", "tasks.background_capture_freshness:run_background_capture_freshness"),
+    BasicCapability("demon_repellent_incense", "摄妖香相关", "基础能力占位：后续补充摄妖香检查、使用与结果验证。", "tasks.basic_capability_flow:placeholder"),
+    BasicCapability("find_npc_and_interact", "寻找指定 NPC 角色并交互", "基础能力占位：后续补充 NPC 定位、对话与选项交互。", "tasks.basic_capability_flow:placeholder"),
 )
 
 
