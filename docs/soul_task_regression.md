@@ -66,7 +66,7 @@
 
 ## 快捷图标分层诊断
 
-> **Flow 首屏依赖总览**：本节先列出当前 Flow 直接引用的基础实现能力；后续再说明执行顺序、验收证据与实机回归。底层实现拆分保持独立，Flow 负责组合，不要求能力归核。
+> **Flow 首屏依赖总览**：本节先列出当前 Flow 引用的基础能力；能力 ID、用户名称和当前实现绑定统一维护在 `basic_capabilities.py`。后续再说明执行顺序、验收证据与实机回归。底层实现拆分保持独立，Flow 负责组合，不要求能力归核。
 
 ### 基础能力依赖（首屏）
 
@@ -152,4 +152,4 @@ Windows OCR 依赖：Windows 环境通过 `windows` extra 安装 `winsdk>=1.0.0b
 | 发送后台鼠标移动 | `platform/windows/input.py:BackgroundInput.mouse_move` | `background_mouse_move` |
 | 验证捕获新鲜度 | `background_capture_freshness.py:run_background_capture_freshness` | `capture_freshness` |
 
-**复用隔离规则**：基础能力菜单只调用既有实现；禁止把单项测试逻辑反向写入能力模块。现有任务 Flow 不依赖基础能力菜单，删除该菜单也不影响任何任务执行。
+**复用隔离规则**：能力注册表只描述能力契约和当前实现绑定，不承载测试编排；基础能力菜单与任务 Flow 共用注册表，但任务 Flow 不依赖菜单入口。删除基础能力菜单不会影响任何任务执行；替换底层实现时优先更新注册表绑定并执行受影响 Flow 的重新验收。
