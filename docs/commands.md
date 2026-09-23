@@ -295,7 +295,7 @@ diagnostic/workflow_runs/basic_capabilities/
 └── capture_freshness/
 ```
 
-这些运行证据默认由 `.gitignore` 忽略，保留在本机用于人工复盘和后续视觉算法调试，不进入生产配置。
+这些运行证据允许提交到 Git，用于人工复盘、问题定位和后续视觉算法回归；它们不属于生产配置。
 
 
 能力注册表：`src/game_helpers/tasks/basic_capabilities.py`。命魂 Shortcut Flow 通过 `SHORTCUT_DIAGNOSTIC_CAPABILITY_IDS` 声明其基础能力依赖；单项测试菜单直接使用同一注册表，因此“Flow 实际依赖什么”与“菜单测试什么”不会形成两套能力清单。
