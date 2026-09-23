@@ -172,6 +172,7 @@ def run_item_panel_detect_and_toggle(
     require_baseline: bool = True,
     toggle_timeout: float = 8.0,
     coord_source: CoordSource | str = "auto",
+    target_selector=None,
 ) -> ItemPanelFlowResult:
     """Detect item-panel open/closed, then toggle to the opposite state."""
     requested = parse_coord_source(str(coord_source))
@@ -212,6 +213,24 @@ def run_item_panel_detect_and_toggle(
         print("[道具栏] 后台检测当前状态…")
         before = _observe(session, profile, output_path=out / f"before-character-{selection.view_index}.png")
         target_open = not before.open
+        if target_selector is not None:
+            selected_target = target_selector(before)
+            if selected_target is None:
+                return ItemPanelFlowResult(
+                    ok=True,
+                    before=before,
+                    after=None,
+                    toggled=False,
+                    toggle_verified=False,
+                    message="用户返回道具栏相关菜单。",
+                    foreground_unchanged=True,
+                    restored_surface=True,
+                    restored_tab=True,
+                    click_client=None,
+                    coord_source_requested=requested,
+                    resolution_key=resolution_key,
+                )
+            target_open = bool(selected_target)
         print(f"item_panel_before={_status_text(before.open)}")
         print(f"item_panel_before_status={before.status}")
         print(f"item_panel_before_confidence={before.confidence:.4f}")
