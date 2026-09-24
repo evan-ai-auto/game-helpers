@@ -28,6 +28,7 @@ from .soul_task_match import as_pil_image
 from .shortcut_panel_vision import SHORTCUT_PANEL_TOGGLE_REGION, detect_shortcut_panel_state
 from .ui_icon_targets import DEFAULT_ICON_TARGET_ID
 from .ui_icon_vision import detect_ui_icon_with_shortcut_gate
+from .shortcut_icon_slots import write_shortcut_icon_slot_artifacts
 from .item_panel_flow import run_item_panel_detect_and_toggle
 from .incense_capability_flow import run_demon_repellent_incense
 
@@ -290,7 +291,9 @@ def _run_basic_capability_session(
         if gated.icon is not None:
             icon = gated.icon
             left, top, right, bottom = icon.search_roi
-            source_image.crop((left, top, right, bottom)).save(output / "icon-search-roi.png")
+            list_band = source_image.crop((left, top, right, bottom))
+            list_band.save(output / "icon-search-roi.png")
+            slot_obs = write_shortcut_icon_slot_artifacts(source_image, output)
             payload.update(
                 {
                     "icon_found": icon.found,
@@ -298,6 +301,22 @@ def _run_basic_capability_session(
                     "icon_reason": icon.reason,
                     "icon_match_location": list(icon.match_location) if icon.match_location else None,
                     "icon_search_roi": list(icon.search_roi),
+                    "icon_slot_count": len(slot_obs),
+                    "icon_slots_dir": "shortcut-icon-slots",
+                    "icon_slots": [
+                        {
+                            "index": item.index,
+                            "row": item.row,
+                            "col": item.col,
+                            "client_rect": list(item.client_rect),
+                            "seed_rect": list(item.seed_rect),
+                            "center": list(item.center),
+                            "best_target_id": item.best_target_id,
+                            "best_score": item.best_score,
+                            "artifact": f"shortcut-icon-slots/{item.artifact_name}",
+                        }
+                        for item in slot_obs
+                    ],
                     "icon_evidence": list(icon.evidence),
                 }
             )

@@ -1,0 +1,190 @@
+{
+  "ok": true,
+  "capability": "ui_icon_vision",
+  "target_id": "soul_task_claimed",
+  "target_name": "命魂任务已领取图标",
+  "source_mode": "live_capture",
+  "source_path": "live_capture",
+  "source_artifact": "source.png",
+  "panel_state": "展开",
+  "collapsed": false,
+  "panel_template": "left_light",
+  "panel_score": 0.8248416377048866,
+  "panel_reason": "panel_expanded",
+  "panel_evidence": [
+    "toggle matched=left_light score=0.825",
+    "decide=arrow-direction",
+    "arrow-direction=left score=-0.700",
+    "arrow-rejected=disagree",
+    "right arrow means collapsed; left arrow means expanded"
+  ],
+  "icon_checked": true,
+  "icon_found": true,
+  "icon_score": 0.8462203145027161,
+  "icon_reason": "icon_found",
+  "icon_match_location": [
+    64,
+    144
+  ],
+  "icon_search_roi": [
+    4,
+    80,
+    200,
+    250
+  ],
+  "icon_evidence": [
+    "target=soul_task_claimed",
+    "template=E:\\work\\dev_workspace\\my_windows\\game-helpers\\data\\assets\\ui\\soul_task_claimed_icon.json",
+    "score=0.846",
+    "threshold=0.780",
+    "roi=[4, 80, 200, 250]"
+  ],
+  "icon_slot_count": 6,
+  "icon_slots_dir": "shortcut-icon-slots",
+  "icon_slots": [
+    {
+      "index": 1,
+      "row": 1,
+      "col": 1,
+      "client_rect": [
+        32,
+        105,
+        64,
+        137
+      ],
+      "seed_rect": [
+        34,
+        99,
+        66,
+        131
+      ],
+      "center": [
+        48,
+        121
+      ],
+      "best_target_id": null,
+      "best_score": 0.39803844690322876,
+      "artifact": "shortcut-icon-slots/slot-01-r1c1.png"
+    },
+    {
+      "index": 2,
+      "row": 1,
+      "col": 2,
+      "client_rect": [
+        67,
+        104,
+        99,
+        136
+      ],
+      "seed_rect": [
+        65,
+        99,
+        97,
+        131
+      ],
+      "center": [
+        83,
+        120
+      ],
+      "best_target_id": null,
+      "best_score": 0.44999822974205017,
+      "artifact": "shortcut-icon-slots/slot-02-r1c2.png"
+    },
+    {
+      "index": 3,
+      "row": 1,
+      "col": 3,
+      "client_rect": [
+        96,
+        102,
+        128,
+        134
+      ],
+      "seed_rect": [
+        96,
+        99,
+        128,
+        131
+      ],
+      "center": [
+        112,
+        118
+      ],
+      "best_target_id": null,
+      "best_score": 0.36017584800720215,
+      "artifact": "shortcut-icon-slots/slot-03-r1c3.png"
+    },
+    {
+      "index": 4,
+      "row": 2,
+      "col": 1,
+      "client_rect": [
+        28,
+        142,
+        60,
+        174
+      ],
+      "seed_rect": [
+        34,
+        142,
+        66,
+        174
+      ],
+      "center": [
+        44,
+        158
+      ],
+      "best_target_id": null,
+      "best_score": 0.3300231695175171,
+      "artifact": "shortcut-icon-slots/slot-04-r2c1.png"
+    },
+    {
+      "index": 5,
+      "row": 2,
+      "col": 2,
+      "client_rect": [
+        61,
+        142,
+        93,
+        174
+      ],
+      "seed_rect": [
+        65,
+        142,
+        97,
+        174
+      ],
+      "center": [
+        77,
+        158
+      ],
+      "best_target_id": "soul_task_claimed",
+      "best_score": 0.8462203145027161,
+      "artifact": "shortcut-icon-slots/slot-05-r2c2.png"
+    },
+    {
+      "index": 6,
+      "row": 2,
+      "col": 3,
+      "client_rect": [
+        96,
+        138,
+        128,
+        170
+      ],
+      "seed_rect": [
+        96,
+        142,
+        128,
+        174
+      ],
+      "center": [
+        112,
+        154
+      ],
+      "best_target_id": null,
+      "best_score": 0.27990686893463135,
+      "artifact": "shortcut-icon-slots/slot-06-r2c3.png"
+    }
+  ]
+}

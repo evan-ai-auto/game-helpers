@@ -105,3 +105,68 @@ def test_unknown_panel_skips_icon_match(monkeypatch):
     assert result.panel_state == "未知"
     assert result.icon_checked is False
     assert result.icon is None
+
+
+def test_claimed_icon_search_region_is_expanded_icon_list_band():
+    """1,1,6 searches the Shortcut icon-list band, not the old top-left HUD rect."""
+    from game_helpers.tasks.soul_task_models import SHORTCUT_EXPANDED_ICON_LIST_REGION
+
+    target = resolve_icon_target()
+    assert target.region == SHORTCUT_EXPANDED_ICON_LIST_REGION
+    box = target.region.pixel(800, 600)
+    assert box == (4, 80, 200, 250)
+    # Historical success match top-left ~(67,145) with 29x30 template must fit.
+    assert 4 <= 67 and 67 + 29 <= 200
+    assert 80 <= 145 and 145 + 30 <= 250
+    # First-row icons (梦/新) sit near y≈90–120; top must include padding above them.
+    assert box[1] <= 85
+
+
+def test_historical_success_source_still_finds_claimed_icon():
+    from pathlib import Path
+
+    path = Path(
+        "diagnostic/workflow_runs/basic_capabilities/ui_icon_vision/"
+        "20260923T131614902143Z/source.png"
+    )
+    if not path.is_file():
+        pytest.skip("historical success source missing")
+    image = Image.open(path).convert("RGB")
+    expected_roi = resolve_icon_target().region.pixel(image.width, image.height)
+    observation = vision.detect_icon_in_image(image, target=DEFAULT_ICON_TARGET_ID)
+    assert observation.found is True
+    assert observation.score >= 0.78
+    assert observation.search_roi == expected_roi
+    assert observation.match_location is not None
+    assert observation.match_location[0] == pytest.approx(67, abs=2)
+    assert observation.match_location[1] == pytest.approx(145, abs=2)
+
+
+def test_shortcut_icon_slots_are_enumerated_and_written(tmp_path):
+    from game_helpers.tasks.shortcut_icon_slots import (
+        SHORTCUT_ICON_SLOT_COLS,
+        SHORTCUT_ICON_SLOT_ROWS,
+        write_shortcut_icon_slot_artifacts,
+    )
+
+    image = Image.new("RGB", (800, 600), color=(30, 40, 50))
+    slots = write_shortcut_icon_slot_artifacts(image, tmp_path)
+    assert len(slots) == SHORTCUT_ICON_SLOT_COLS * SHORTCUT_ICON_SLOT_ROWS
+    slots_dir = tmp_path / "shortcut-icon-slots"
+    assert (slots_dir / "slots.json").is_file()
+    for item in slots:
+        assert (slots_dir / item.artifact_name).is_file()
+        assert item.row >= 1 and item.col >= 1
+        left, top, right, bottom = item.client_rect
+        assert right > left and bottom > top
+        assert item.seed_rect is not None
+
+
+def test_shortcut_slot_grid_covers_historical_claimed_icon():
+    from game_helpers.tasks.shortcut_icon_slots import iter_shortcut_icon_slot_rects
+
+    # Historical claimed-icon match top-left ~(67,145) should fall in r2c2 seed.
+    rects = {(row, col): rect for row, col, rect, _ in iter_shortcut_icon_slot_rects()}
+    left, top, right, bottom = rects[(2, 2)]
+    assert left <= 67 < right
+    assert top <= 145 < bottom

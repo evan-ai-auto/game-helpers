@@ -25,6 +25,7 @@ ICON_DETECT_TARGETS: tuple[IconDetectTarget, ...] = (
         id=DEFAULT_ICON_TARGET_ID,
         name="命魂任务已领取图标",
         template_path=DEFAULT_SOUL_TASK_UI.template_path,
+        # Match only inside the expanded Shortcut icon-list band (not full top-left HUD).
         region=DEFAULT_SOUL_TASK_UI.claimed_icon_region,
         matcher="claimed_json",
         match_threshold=DEFAULT_SOUL_TASK_UI.match_threshold,

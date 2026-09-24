@@ -75,12 +75,23 @@ SOUL_TASK_BASELINE_SIZE = (800, 600)
 # (or the calibrated value in fixed_coordinates.json when present).
 DEFAULT_SHORTCUT_PANEL_CLICK = (14, 122)
 
+# Expanded Shortcut floating-icon cluster under 指引/邮件/日历 (800×600).
+# Anchored from live captures where row1 (梦/新) sits near y≈90–120 and row2
+# (coin / 命魂 / 華) near y≈140–180. Keep padding so the first row is not clipped.
+# Recalibrate if client layout drifts.
+SHORTCUT_EXPANDED_ICON_LIST_REGION = UiRect(
+    4 / 800,
+    80 / 600,
+    200 / 800,
+    250 / 600,
+)
+
 DEFAULT_SOUL_TASK_UI = SoulTaskUiProfile(
     # Fallback pixel for probes that still read task_entry_toggle; main flow uses
     # DEFAULT_SHORTCUT_PANEL_CLICK / fixed_coordinates.json instead of vision centers.
     task_entry_toggle=UiPoint(14 / 800, 122 / 600),
     task_panel_icon=UiPoint(0.10, 0.10),
-    claimed_icon_region=UiRect(0.0, 0.0, 0.34, 0.42),
+    claimed_icon_region=SHORTCUT_EXPANDED_ICON_LIST_REGION,
     collapsed_toggle_region=UiRect(8 / 800, 82 / 600, 52 / 800, 128 / 600),
 )
 

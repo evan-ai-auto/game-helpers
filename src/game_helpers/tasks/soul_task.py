@@ -14,6 +14,7 @@ from .soul_task_detect import (
 from .soul_task_models import (
     DEFAULT_SHORTCUT_PANEL_CLICK,
     DEFAULT_SOUL_TASK_UI,
+    SHORTCUT_EXPANDED_ICON_LIST_REGION,
     SOUL_TASK_BASELINE_SIZE,
     SoulTaskDetectionReason,
     SoulTaskObservation,
@@ -27,6 +28,7 @@ from .soul_task_models import (
 __all__ = [
     "DEFAULT_SHORTCUT_PANEL_CLICK",
     "DEFAULT_SOUL_TASK_UI",
+    "SHORTCUT_EXPANDED_ICON_LIST_REGION",
     "SOUL_TASK_BASELINE_SIZE",
     "SoulTaskDetectionReason",
     "SoulTaskObservation",

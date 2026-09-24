@@ -8,6 +8,7 @@ from PIL import Image
 from ..capture.models import Frame
 from .soul_task import (
     DEFAULT_SOUL_TASK_UI,
+    SHORTCUT_EXPANDED_ICON_LIST_REGION,
     SoulTaskPanelObservation,
     SoulTaskUiProfile,
     UiRect,
@@ -41,6 +42,7 @@ def detect_shortcut_panel_state(
 
 
 __all__ = [
+    "SHORTCUT_EXPANDED_ICON_LIST_REGION",
     "SHORTCUT_PANEL_TOGGLE_REGION",
     "detect_shortcut_panel_state",
 ]

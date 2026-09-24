@@ -296,7 +296,7 @@ python -m pip install -e ".[windows]"
 - `capture.png`：本次基础能力测试使用的游戏画面（多数能力）
 - `result.json`：本次结构化测试结果
 - Shortcut 状态识别额外保存 `shortcut-toggle-roi.png`：实际识别 ROI 原图
-- UI 图标检测**不写**无关的 `capture.png`：只保存实际检测图 `source.png`，以及 `shortcut-toggle-roi.png`；展开匹配时再保存 `icon-search-roi.png`
+- UI 图标检测**不写**无关的 `capture.png`：只保存实际检测图 `source.png`，以及 `shortcut-toggle-roi.png`；展开匹配时保存 `icon-search-roi.png`（列表搜索带），并在 `shortcut-icon-slots/` 下输出每个小图标切片与 `slots.json`（数量/位置/可选目标匹配），便于人工核对与后续多图标扩展
 - 道具栏相关额外保存 `before-character-*.png` / `after-character-*.png`：切换前后截图；同样写入时间戳 `<run-id>/` 下的 `result.json` 与 `run.json`，不覆盖历史证据
 
 目录示例：
