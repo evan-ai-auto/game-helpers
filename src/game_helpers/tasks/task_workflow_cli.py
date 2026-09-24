@@ -165,6 +165,8 @@ def main() -> int:
             print("result=FAILED")
             return 1
         print(f"[基础能力] result={result}")
+        if result.get("artifact_dir"):
+            print(f"[基础能力] artifact_dir={result.get('artifact_dir')}")
         if capability_id in {"dao_ju_lan", "demon_repellent_incense"} and result.get("error") == "cancelled":
             print("[链路] 6/6 结果")
             print("result=SKIPPED")
@@ -177,7 +179,15 @@ def main() -> int:
                 f"| found={result.get('icon_found')} | score={result.get('icon_score')}"
             )
             print(f"[图标检测] icon_found={result.get('icon_found')}")
+        if capability_id == "dao_ju_lan":
+            print(
+                f"[道具栏] before={result.get('before')} | after={result.get('after')} "
+                f"| click={result.get('click_client')} | coord={result.get('coord_source_used')}"
+            )
         print("[链路] 6/6 结果")
+        if result.get("ok") is False:
+            print("result=FAILED")
+            return 1
         print("result=PASSED")
         return 0
 

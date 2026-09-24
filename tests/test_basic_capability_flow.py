@@ -10,6 +10,7 @@ from game_helpers.tasks.basic_capability_flow import (
     run_basic_capability,
 )
 from game_helpers.tasks.soul_shortcut_diagnostic_flow import SHORTCUT_DIAGNOSTIC_CAPABILITIES
+from pathlib import Path
 
 
 def test_basic_capabilities_are_unique_and_independently_named():
@@ -91,18 +92,31 @@ def test_dao_ju_lan_menu_maps_open_and_close(monkeypatch):
     assert _choose_dao_ju_lan_target(Before()) is None
 
 
-def test_dao_ju_lan_delegates_to_existing_item_panel_flow(monkeypatch):
+def test_dao_ju_lan_delegates_to_existing_item_panel_flow(monkeypatch, tmp_path):
     captured = {}
 
     class FakeResult:
         def __init__(self):
             self.ok = True
-            self.capability = "dao_ju_lan"
+            self.before = None
+            self.after = None
+            self.toggled = True
+            self.toggle_verified = True
+            self.message = "ok"
+            self.foreground_unchanged = True
+            self.restored_surface = True
+            self.restored_tab = True
+            self.click_client = (469, 565)
+            self.error = None
 
     def fake_flow(parent_hwnd, selection, **kwargs):
         captured["parent_hwnd"] = parent_hwnd
         captured["selection"] = selection
+        captured["output_dir"] = kwargs["output_dir"]
         captured["target_selector"] = kwargs["target_selector"]
+        # Simulate flow writing evidence into the timestamped run dir.
+        Path(kwargs["output_dir"]).mkdir(parents=True, exist_ok=True)
+        (Path(kwargs["output_dir"]) / "before-character-1.png").write_bytes(b"x")
         return FakeResult()
 
     monkeypatch.setattr(
@@ -110,8 +124,15 @@ def test_dao_ju_lan_delegates_to_existing_item_panel_flow(monkeypatch):
         fake_flow,
     )
     selection = object()
-    result = run_basic_capability(123, selection, "dao_ju_lan", "/tmp")
+    result = run_basic_capability(123, selection, "dao_ju_lan", tmp_path)
     assert result["ok"] is True
+    assert result["capability"] == "dao_ju_lan"
+    assert "artifact_dir" in result
+    run_dir = Path(result["artifact_dir"])
+    assert run_dir.parent == tmp_path
+    assert captured["output_dir"] == run_dir
+    assert (run_dir / "result.json").is_file()
+    assert (run_dir / "run.json").is_file()
     assert captured["parent_hwnd"] == 123
     assert captured["selection"] is selection
     assert callable(captured["target_selector"])

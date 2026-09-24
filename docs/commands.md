@@ -297,6 +297,7 @@ python -m pip install -e ".[windows]"
 - `result.json`：本次结构化测试结果
 - Shortcut 状态识别额外保存 `shortcut-toggle-roi.png`：实际识别 ROI 原图
 - UI 图标检测**不写**无关的 `capture.png`：只保存实际检测图 `source.png`，以及 `shortcut-toggle-roi.png`；展开匹配时再保存 `icon-search-roi.png`
+- 道具栏相关额外保存 `before-character-*.png` / `after-character-*.png`：切换前后截图；同样写入时间戳 `<run-id>/` 下的 `result.json` 与 `run.json`，不覆盖历史证据
 
 目录示例：
 

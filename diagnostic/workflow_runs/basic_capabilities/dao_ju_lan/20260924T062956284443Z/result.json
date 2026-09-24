@@ -1,0 +1,35 @@
+{
+  "ok": false,
+  "before": {
+    "open": false,
+    "status": "not_detected",
+    "confidence": 0.2597880959510803,
+    "detected": false,
+    "origin": null,
+    "screenshot_path": "diagnostic\\workflow_runs\\basic_capabilities\\dao_ju_lan\\20260924T062956284443Z\\before-character-1.png"
+  },
+  "after": {
+    "open": false,
+    "status": "not_detected",
+    "confidence": 0.2597880959510803,
+    "detected": false,
+    "origin": null,
+    "screenshot_path": "diagnostic\\workflow_runs\\basic_capabilities\\dao_ju_lan\\20260924T062956284443Z\\after-character-1.png"
+  },
+  "toggled": true,
+  "toggle_verified": false,
+  "message": "道具栏流程失败：RuntimeError: 期望道具栏为「打开」，检测仍为「关闭」。",
+  "foreground_unchanged": true,
+  "restored_surface": true,
+  "restored_tab": true,
+  "click_client": [
+    469,
+    565
+  ],
+  "icon_match_score": null,
+  "coord_source_requested": "auto",
+  "coord_source_used": "stored_click",
+  "resolution_key": "800x600",
+  "error": "RuntimeError: 期望道具栏为「打开」，检测仍为「关闭」。",
+  "capability": "dao_ju_lan"
+}

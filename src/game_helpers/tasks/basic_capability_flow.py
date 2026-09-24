@@ -7,6 +7,7 @@ same functions unchanged.
 from __future__ import annotations
 
 import json
+from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -85,6 +86,37 @@ def _choose_dao_ju_lan_target(before) -> bool | None:
     return None
 
 
+def _item_panel_result_payload(flow_result) -> dict[str, object]:
+    """Normalize item-panel flow result for result.json / CLI printing."""
+    if is_dataclass(flow_result) and not isinstance(flow_result, type):
+        payload: dict[str, object] = asdict(flow_result)
+    else:
+        payload = dict(getattr(flow_result, "__dict__", {}))
+    payload.setdefault("capability", "dao_ju_lan")
+    return payload
+
+
+def _persist_basic_capability_run(
+    capability,
+    run_dir: Path,
+    result: dict[str, object],
+) -> dict[str, object]:
+    _write_json(run_dir / "result.json", result)
+    artifacts = sorted(path.name for path in run_dir.iterdir())
+    _write_json(
+        run_dir / "run.json",
+        {
+            "capability": capability.id,
+            "name": capability.name,
+            "description": capability.description,
+            "implementation": capability.implementation,
+            "artifacts": artifacts,
+        },
+    )
+    print(f"[基础能力] artifact_dir={run_dir}")
+    return {**result, "artifact_dir": str(run_dir)}
+
+
 def run_basic_capability(
     parent_hwnd: int,
     selection: CharacterSelectionResult,
@@ -98,12 +130,15 @@ def run_basic_capability(
     """Run exactly one capability smoke test using existing implementations."""
     capability = get_basic_capability(capability_id)
     if capability_id == "dao_ju_lan":
-        return run_item_panel_detect_and_toggle(
+        run_dir = _new_run_dir(output_dir)
+        flow_result = run_item_panel_detect_and_toggle(
             parent_hwnd,
             selection,
-            output_dir=output_dir,
+            output_dir=run_dir,
             target_selector=_choose_dao_ju_lan_target,
-        ).__dict__
+        )
+        result = _item_panel_result_payload(flow_result)
+        return _persist_basic_capability_run(capability, run_dir, result)
     if capability_id == "demon_repellent_incense":
         return run_demon_repellent_incense(parent_hwnd, selection, output_dir)
     manager = GameViewManager(parent_hwnd, timeout=2.0)
@@ -134,15 +169,7 @@ def run_basic_capability(
             ui_icon_source_mode=ui_icon_source_mode,
             ui_icon_source_path=ui_icon_source_path,
         )
-        _write_json(run_dir / "result.json", result)
-        _write_json(run_dir / "run.json", {
-            "capability": capability.id,
-            "name": capability.name,
-            "description": capability.description,
-            "implementation": capability.implementation,
-            "artifacts": sorted(p.name for p in run_dir.iterdir()),
-        })
-        return {**result, "artifact_dir": str(run_dir)}
+        return _persist_basic_capability_run(capability, run_dir, result)
     finally:
         guard.finish()
 
