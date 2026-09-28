@@ -1,0 +1,38 @@
+{
+  "ok": true,
+  "before": {
+    "open": false,
+    "status": "not_detected",
+    "confidence": 0.2292027324438095,
+    "detected": false,
+    "origin": null,
+    "screenshot_path": "diagnostic\\workflow_runs\\basic_capabilities\\dao_ju_lan\\20260928T102407667570Z\\before-character-1.png"
+  },
+  "after": {
+    "open": true,
+    "status": "detected",
+    "confidence": 0.9385332465171814,
+    "detected": true,
+    "origin": [
+      279,
+      477
+    ],
+    "screenshot_path": "diagnostic\\workflow_runs\\basic_capabilities\\dao_ju_lan\\20260928T102407667570Z\\after-character-1.png"
+  },
+  "toggled": true,
+  "toggle_verified": true,
+  "message": "道具栏状态检测与反向切换通过：关闭 → 打开。",
+  "foreground_unchanged": true,
+  "restored_surface": true,
+  "restored_tab": true,
+  "click_client": [
+    456,
+    568
+  ],
+  "icon_match_score": null,
+  "coord_source_requested": "auto",
+  "coord_source_used": "stored_click",
+  "resolution_key": "800x600",
+  "error": null,
+  "capability": "dao_ju_lan"
+}

@@ -1,0 +1,11 @@
+{
+  "capability": "dao_ju_lan",
+  "name": "道具栏相关",
+  "description": "检测道具栏打开/关闭状态，并根据用户选择执行打开或关闭。",
+  "implementation": "tasks.item_panel_flow:run_item_panel_detect_and_toggle",
+  "artifacts": [
+    "after-character-1.png",
+    "before-character-1.png",
+    "result.json"
+  ]
+}
