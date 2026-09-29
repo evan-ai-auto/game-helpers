@@ -61,18 +61,45 @@ def test_slot_index_from_match_row2_col3():
 
 
 def test_incense_submenu_options():
-    assert [item[0] for item in INCENSE_SUBTASKS] == ["full", "usage", "inventory"]
+    assert [item[0] for item in INCENSE_SUBTASKS] == ["full", "usage", "hover", "inventory"]
     assert INCENSE_SUBTASKS[0][1] == "完整流程"
 
 
 def test_choose_incense_subtask_menu(monkeypatch):
-    answers = iter(["1", "2", "3", "0", "9"])
+    answers = iter(["1", "2", "3", "4", "0", "9"])
     monkeypatch.setattr("builtins.input", lambda _prompt: next(answers))
     assert choose_incense_subtask() == "full"
     assert choose_incense_subtask() == "usage"
+    assert choose_incense_subtask() == "hover"
     assert choose_incense_subtask() == "inventory"
     assert choose_incense_subtask() is None
     assert choose_incense_subtask() is None
+
+
+def test_hover_transport_dispatches_expected_mouse_message():
+    from game_helpers.tasks.incense_status_vision import _hover_transport
+
+    class FakeDriver:
+        def __init__(self):
+            self.calls = []
+
+        def mouse_move(self, x, y):
+            self.calls.append(("postmessage", x, y))
+
+        def mouse_move_sync(self, x, y):
+            self.calls.append(("sendmessage", x, y))
+
+    driver = FakeDriver()
+    _hover_transport(driver, strategy="postmessage", x=654, y=121)
+    _hover_transport(driver, strategy="sendmessage", x=654, y=121)
+    assert driver.calls == [("postmessage", 654, 121), ("sendmessage", 654, 121)]
+
+
+def test_hover_diagnostic_settle_sequence_is_ordered():
+    from game_helpers.tasks.incense_status_vision import HOVER_DIAGNOSTIC_SETTLE_SECONDS
+
+    assert HOVER_DIAGNOSTIC_SETTLE_SECONDS == (0.20, 0.45, 0.90)
+    assert HOVER_DIAGNOSTIC_SETTLE_SECONDS == tuple(sorted(HOVER_DIAGNOSTIC_SETTLE_SECONDS))
 
 
 def test_right_strip_expanded_uses_top_band_arrow():

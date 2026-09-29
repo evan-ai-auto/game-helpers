@@ -33,6 +33,8 @@ HOVER_TARGET_HALF = 24
 TOOLTIP_OCR_WIDTH = 180
 TOOLTIP_OCR_HEIGHT = 56
 TOOLTIP_OCR_LEFT = 20
+HOVER_DIAGNOSTIC_SETTLE_SECONDS = (0.20, 0.45, 0.90)
+HOVER_EXIT_OFFSET = 60
 
 
 @dataclass(frozen=True)
@@ -202,6 +204,117 @@ def _ocr_tooltip(image: Image.Image, hover: tuple[int, int]) -> str:
         backend = WindowsNativeOCRBackend()
     lines = backend.read(image, region=region)
     return " ".join(item.text for item in lines)
+
+
+
+def _hover_transport(
+    input_driver: BackgroundInput,
+    *,
+    strategy: str,
+    x: int,
+    y: int,
+) -> None:
+    if strategy == "postmessage":
+        input_driver.mouse_move(x, y)
+    elif strategy == "sendmessage":
+        input_driver.mouse_move_sync(x, y)
+    else:
+        raise ValueError(f"unknown hover transport: {strategy}")
+
+
+def run_incense_hover_diagnostic(
+    session: VerificationSession,
+    output_dir: str | Path,
+    *,
+    settle_seconds: tuple[float, ...] = HOVER_DIAGNOSTIC_SETTLE_SECONDS,
+) -> dict[str, object]:
+    """Compare WM_MOUSEMOVE transports and dwell times for tooltip display."""
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    image = as_pil_image(session.capture_frame()).convert("RGB")
+    image.save(output / "capture.png")
+
+    panel = detect_right_strip_collapsed(image)
+    if panel.collapsed is not False:
+        return {
+            "ok": False,
+            "reason": "panel_not_expanded",
+            "panel_collapsed": panel.collapsed,
+            "panel_evidence": list(panel.evidence),
+        }
+
+    found, score, hover, reason, clock_box, threshold, clock_evidence = _match_clock(image)
+    if not found or hover is None:
+        return {
+            "ok": False,
+            "reason": reason,
+            "clock_found": False,
+            "clock_score": score,
+            "clock_search_roi": list(clock_box),
+            "clock_threshold": threshold,
+            "clock_evidence": list(clock_evidence),
+        }
+
+    driver = BackgroundInput(session.selected.hwnd)
+    outside = (max(0, hover[0] - HOVER_EXIT_OFFSET), hover[1])
+    results: list[dict[str, object]] = []
+
+    for strategy in ("postmessage", "sendmessage"):
+        strategy_dir = output / strategy
+        strategy_dir.mkdir(parents=True, exist_ok=True)
+        for dwell in settle_seconds:
+            trial = strategy_dir / f"dwell-{dwell:.2f}s"
+            trial.mkdir(parents=True, exist_ok=True)
+            _hover_transport(driver, strategy=strategy, x=outside[0], y=outside[1])
+            time.sleep(0.15)
+            before = as_pil_image(session.capture_frame()).convert("RGB")
+            before.save(trial / "before.png")
+            _hover_transport(driver, strategy=strategy, x=hover[0], y=hover[1])
+            time.sleep(float(dwell))
+            after = as_pil_image(session.capture_frame()).convert("RGB")
+            after.save(trial / "after.png")
+
+            tip_box = tooltip_ocr_box(hover, width=after.width, height=after.height)
+            before_tip = np.asarray(before.crop(tip_box), dtype=np.int16)
+            after_tip = np.asarray(after.crop(tip_box), dtype=np.int16)
+            delta = float(np.abs(after_tip - before_tip).mean())
+            after.crop(tip_box).save(trial / "tooltip-roi.png")
+            try:
+                tooltip_text = _ocr_tooltip(after, hover)
+                ocr_error = None
+            except RuntimeError as exc:
+                tooltip_text = ""
+                ocr_error = str(exc)
+
+            results.append({
+                "strategy": strategy,
+                "dwell_seconds": float(dwell),
+                "hover_point": list(hover),
+                "exit_point": list(outside),
+                "tooltip_roi": list(tip_box),
+                "tooltip_pixel_delta_mean": round(delta, 3),
+                "tooltip_text": tooltip_text,
+                "ocr_error": ocr_error,
+                "tooltip_changed": delta >= 1.0,
+            })
+
+    visible = [item for item in results if item["tooltip_changed"] or item["tooltip_text"]]
+    return {
+        "ok": bool(visible),
+        "panel_collapsed": panel.collapsed,
+        "clock_found": True,
+        "clock_score": score,
+        "clock_location": list(hover),
+        "clock_search_roi": list(clock_box),
+        "clock_threshold": threshold,
+        "trials": results,
+        "evidence": [
+            "diagnostic=hover-transport-and-dwell",
+            "strategies=postmessage,sendmessage",
+            f"settle_seconds={list(settle_seconds)}",
+            f"tooltip_visible_trials={len(visible)}",
+        ],
+    }
 
 
 def detect_incense_usage(
@@ -459,6 +572,7 @@ __all__ = [
     "RIGHT_TOGGLE_REGION",
     "detect_incense_usage",
     "detect_right_strip_collapsed",
+    "run_incense_hover_diagnostic",
     "hover_target_box",
     "parse_incense_tooltip",
     "tooltip_looks_like_task_tracker",

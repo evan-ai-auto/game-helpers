@@ -10,12 +10,13 @@ from ..core.view_manager import GameViewManager
 from .background_context import BackgroundRunGuard
 from .character_selection import CharacterSelectionResult, sync_selected_character
 from .incense_inventory_scan import IncenseInventoryObservation, scan_incense_in_inventory
-from .incense_status_vision import IncenseUsageObservation, detect_incense_usage
+from .incense_status_vision import IncenseUsageObservation, detect_incense_usage, run_incense_hover_diagnostic
 from .verification_session import VerificationSession
 
 INCENSE_SUBTASKS = (
     ("full", "完整流程", "先识别使用态；未使用则开道具栏并检索摄妖香栏位"),
     ("usage", "使用状态识别", "右侧条折叠/展开 → 悬停闹钟图标 → OCR tooltip"),
+    ("hover", "Hover 触发诊断", "验证 WM_MOUSEMOVE 触发路径、停留时间与 tooltip 展示；保存前后画面和 OCR 证据"),
     ("inventory", "道具栏摄妖香检索", "依赖「未使用」结论；打开道具栏后模板扫格"),
 )
 
@@ -232,7 +233,17 @@ def run_demon_repellent_incense(
     output = _new_run_dir(output_dir)
     try:
         sync_selected_character(parent_hwnd, selection)
-        if chosen == "usage":
+        if chosen == "hover":
+            hover_payload = run_incense_hover_diagnostic(session, output / "hover")
+            result = {
+                "ok": bool(hover_payload.get("ok")),
+                "capability": "demon_repellent_incense",
+                "subtask": chosen,
+                "hover_diagnostic": hover_payload,
+                "artifact_dir": str(output),
+                "message": "Hover 触发诊断完成。",
+            }
+        elif chosen == "usage":
             usage_payload, usage_obs = run_incense_usage(session, output)
             ok = usage_obs.usage in {"unused", "active"}
             result = {
