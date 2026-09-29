@@ -30,6 +30,12 @@ class IncenseUsageObservation:
     usage: str  # unused | active | unknown | asset_missing | panel_collapsed | panel_unknown
     remaining_minutes: int | None
     panel_collapsed: bool | None
+    panel_template: str | None
+    panel_score: float
+    panel_confidence: float
+    panel_reason: str
+    panel_match_location: tuple[int, int] | None
+    panel_search_roi: tuple[int, int, int, int]
     clock_found: bool
     clock_score: float
     clock_location: tuple[int, int] | None
@@ -156,6 +162,12 @@ def detect_incense_usage(
             usage="panel_unknown",
             remaining_minutes=None,
             panel_collapsed=None,
+            panel_template=panel.matched_template,
+            panel_score=panel.match_score,
+            panel_confidence=panel.confidence,
+            panel_reason=getattr(panel.reason, "value", str(panel.reason)),
+            panel_match_location=panel.match_location,
+            panel_search_roi=toggle_box,
             clock_found=False,
             clock_score=0.0,
             clock_location=None,
@@ -171,6 +183,12 @@ def detect_incense_usage(
             usage="panel_collapsed",
             remaining_minutes=None,
             panel_collapsed=True,
+            panel_template=panel.matched_template,
+            panel_score=panel.match_score,
+            panel_confidence=panel.confidence,
+            panel_reason=getattr(panel.reason, "value", str(panel.reason)),
+            panel_match_location=panel.match_location,
+            panel_search_roi=toggle_box,
             clock_found=False,
             clock_score=0.0,
             clock_location=None,
@@ -197,6 +215,12 @@ def detect_incense_usage(
             usage="asset_missing",
             remaining_minutes=None,
             panel_collapsed=False,
+            panel_template=panel.matched_template,
+            panel_score=panel.match_score,
+            panel_confidence=panel.confidence,
+            panel_reason=getattr(panel.reason, "value", str(panel.reason)),
+            panel_match_location=panel.match_location,
+            panel_search_roi=toggle_box,
             clock_found=False,
             clock_score=0.0,
             clock_location=None,
@@ -225,6 +249,12 @@ def detect_incense_usage(
             usage="unknown",
             remaining_minutes=None,
             panel_collapsed=False,
+            panel_template=panel.matched_template,
+            panel_score=panel.match_score,
+            panel_confidence=panel.confidence,
+            panel_reason=getattr(panel.reason, "value", str(panel.reason)),
+            panel_match_location=panel.match_location,
+            panel_search_roi=toggle_box,
             clock_found=False,
             clock_score=score,
             clock_location=None,
@@ -267,8 +297,13 @@ def detect_incense_usage(
             usage="unknown",
             remaining_minutes=None,
             panel_collapsed=False,
+            panel_template=panel.matched_template,
+            panel_score=panel.match_score,
+            panel_confidence=panel.confidence,
+            panel_reason=getattr(panel.reason, "value", str(panel.reason)),
+            panel_match_location=panel.match_location,
+            panel_search_roi=toggle_box,
             clock_found=True,
-            clock_score=score,
             clock_location=hover,
             clock_reason=clock_reason,
             clock_search_roi=clock_box,
@@ -284,8 +319,13 @@ def detect_incense_usage(
         usage=usage,
         remaining_minutes=minutes,
         panel_collapsed=False,
+        panel_template=panel.matched_template,
+        panel_score=panel.match_score,
+        panel_confidence=panel.confidence,
+        panel_reason=getattr(panel.reason, "value", str(panel.reason)),
+        panel_match_location=panel.match_location,
+        panel_search_roi=toggle_box,
         clock_found=True,
-        clock_score=score,
         clock_location=hover,
         clock_reason=clock_reason,
         clock_search_roi=clock_box,
