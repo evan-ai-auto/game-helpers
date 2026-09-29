@@ -76,8 +76,10 @@ def test_choose_incense_subtask_menu(monkeypatch):
     assert choose_incense_subtask() is None
 
 
-def test_hover_transport_dispatches_expected_mouse_message():
-    from game_helpers.tasks.incense_status_vision import _hover_transport
+def test_hover_transport_dispatches_expected_mouse_message(monkeypatch):
+    import ctypes
+
+    from game_helpers.tasks import incense_status_vision as vision
 
     class FakeDriver:
         def __init__(self):
@@ -89,17 +91,136 @@ def test_hover_transport_dispatches_expected_mouse_message():
         def mouse_move_sync(self, x, y):
             self.calls.append(("sendmessage", x, y))
 
+    class FakeSession:
+        class selected:
+            hwnd = 42
+
+    screen_calls = []
+    cursor_calls = []
+
+    monkeypatch.setattr(
+        "game_helpers.tasks.manual_coordinate.client_to_screen",
+        lambda hwnd, x, y: screen_calls.append((hwnd, x, y)) or (1000 + x, 200 + y),
+    )
+    monkeypatch.setattr(
+        "game_helpers.tasks.manual_coordinate.cursor_screen_pos",
+        lambda: (1654, 321),
+    )
+    monkeypatch.setattr(
+        "game_helpers.tasks.manual_coordinate.screen_to_client",
+        lambda hwnd, x, y: (654, 121),
+    )
+    monkeypatch.setattr(
+        ctypes.windll.user32,
+        "SetCursorPos",
+        lambda x, y: cursor_calls.append((x, y)) or 1,
+    )
+    monkeypatch.setattr(vision.time, "sleep", lambda _seconds: None)
+
     driver = FakeDriver()
-    _hover_transport(driver, strategy="postmessage", x=654, y=121)
-    _hover_transport(driver, strategy="sendmessage", x=654, y=121)
-    assert driver.calls == [("postmessage", 654, 121), ("sendmessage", 654, 121)]
+    vision._hover_transport(driver, strategy="postmessage", x=654, y=121)
+    vision._hover_transport(driver, strategy="sendmessage", x=654, y=121)
+    vision._hover_transport(
+        driver, strategy="setcursor", x=654, y=121, session=FakeSession()
+    )
+    vision._hover_transport(
+        driver, strategy="setcursor_postmessage", x=654, y=121, session=FakeSession()
+    )
+    assert driver.calls == [
+        ("postmessage", 654, 121),
+        ("sendmessage", 654, 121),
+        ("postmessage", 654, 121),
+    ]
+    assert screen_calls == [(42, 654, 121), (42, 654, 121)]
+    assert cursor_calls == [(1654, 321), (1654, 321)]
 
 
-def test_hover_diagnostic_settle_sequence_is_ordered():
-    from game_helpers.tasks.incense_status_vision import HOVER_DIAGNOSTIC_SETTLE_SECONDS
+def test_match_clock_hover_uses_template_hotspot_not_bbox_center():
+    from game_helpers.tasks.incense_status_vision import CLOCK_HOVER_IN_TEMPLATE
 
-    assert HOVER_DIAGNOSTIC_SETTLE_SECONDS == (0.20, 0.45, 0.90)
-    assert HOVER_DIAGNOSTIC_SETTLE_SECONDS == tuple(sorted(HOVER_DIAGNOSTIC_SETTLE_SECONDS))
+    path = INCENSE_RUNS / "20260929T163316022195Z" / "hover" / "capture.png"
+    image = Image.open(path).convert("RGB")
+    found, _score, hover, _reason, _box, _thr, evidence = _match_clock(image)
+    assert found and hover is not None
+    match_tl = None
+    match_box = None
+    for item in evidence:
+        if item.startswith("match_top_left="):
+            match_tl = tuple(int(v) for v in item.split("=", 1)[1].strip("[]").split(","))
+        if item.startswith("match_box="):
+            match_box = tuple(int(v) for v in item.split("=", 1)[1].strip("[]").split(","))
+    assert match_tl is not None and match_box is not None
+    expected = (
+        match_tl[0] + CLOCK_HOVER_IN_TEMPLATE[0],
+        match_tl[1] + CLOCK_HOVER_IN_TEMPLATE[1],
+    )
+    assert hover == expected
+    geom_center = (
+        (match_box[0] + match_box[2]) // 2,
+        (match_box[1] + match_box[3]) // 2,
+    )
+    assert hover != geom_center
+    assert hover[0] < geom_center[0]
+    assert hover[1] <= geom_center[1]
+
+
+def test_capture_to_input_nudge_aims_left_up_of_vision():
+    """175428: visible tip~(666,137) vs dial@(654,121) → aim left+up (-16,-16)."""
+    from game_helpers.tasks.incense_status_vision import (
+        CLOCK_CAPTURE_TO_INPUT_NUDGE,
+        CLOCK_HOVER_IN_TEMPLATE,
+        _vision_hover_to_input,
+    )
+
+    assert CLOCK_HOVER_IN_TEMPLATE == (12, 12)
+    assert CLOCK_CAPTURE_TO_INPUT_NUDGE == (-16, -16)
+    vision = (654, 121)
+    aimed = _vision_hover_to_input(vision, width=800, height=600)
+    assert aimed == (638, 105)
+
+
+def test_hover_diagnostic_offsets_include_human_preferred_relative():
+    from game_helpers.tasks.incense_status_vision import HOVER_DIAGNOSTIC_OFFSETS
+
+    assert HOVER_DIAGNOSTIC_OFFSETS[0] == (0, 0)
+    assert (2, 2) in HOVER_DIAGNOSTIC_OFFSETS
+    assert (-2, -2) in HOVER_DIAGNOSTIC_OFFSETS
+
+
+def test_parse_incense_tooltip_accepts_yu_minutes():
+    usage, minutes = parse_incense_tooltip("余38分钟")
+    assert usage == "active"
+    assert minutes == 38
+
+
+def test_tooltip_looks_like_incense_for_time_reminder_title():
+    from game_helpers.tasks.incense_status_vision import tooltip_looks_like_incense
+
+    assert tooltip_looks_like_incense("时间提醒")
+    assert tooltip_looks_like_incense("时间提醒 余38分钟")
+
+
+def test_hover_diagnostic_strategies_include_setcursor_hybrid():
+    from game_helpers.tasks.incense_status_vision import (
+        DEFAULT_HOVER_STRATEGY,
+        HOVER_DIAGNOSTIC_SETTLE_SECONDS,
+        HOVER_DIAGNOSTIC_STRATEGIES,
+    )
+
+    # Locked verification matrix (discovery sweep retired).
+    assert HOVER_DIAGNOSTIC_SETTLE_SECONDS == (0.90,)
+    assert HOVER_DIAGNOSTIC_STRATEGIES == ("setcursor_postmessage",)
+    assert DEFAULT_HOVER_STRATEGY == "setcursor_postmessage"
+
+
+def test_tooltip_looks_like_incense_rejects_task_tracker_and_empty():
+    from game_helpers.tasks.incense_status_vision import tooltip_looks_like_incense
+
+    assert tooltip_looks_like_incense("暂无时间提醒信息")
+    assert tooltip_looks_like_incense("剩余 87 分")
+    assert not tooltip_looks_like_incense("")
+    assert not tooltip_looks_like_incense("任务追踪 宠环")
+    assert not tooltip_looks_like_incense("186伤害符")
 
 
 def test_right_strip_expanded_uses_top_band_arrow():
@@ -167,13 +288,26 @@ def test_hover_target_box_is_small_around_clock_center():
     assert box[3] - box[1] == 48
 
 
-def test_tooltip_ocr_box_is_narrow_band_above_clock():
+def test_tooltip_ocr_box_is_tall_band_from_dial_downward():
     box = tooltip_ocr_box((654, 121), width=800, height=600)
     left, top, right, bottom = box
-    assert right - left == 180
-    assert bottom - top == 56
-    assert bottom <= 121  # stays above hover center
-    assert top < bottom
+    assert right - left == 320
+    assert bottom - top == 64
+    assert top <= 121
+    assert bottom >= 121
+    assert left >= 480
+    assert (right - left) > (bottom - top)  # X is the long axis
+
+
+def test_tooltip_ocr_box_below_is_under_clock():
+    from game_helpers.tasks.incense_status_vision import tooltip_ocr_box_below
+
+    box = tooltip_ocr_box_below((654, 121), width=800, height=600)
+    left, top, right, bottom = box
+    assert top >= 121
+    assert left >= 480
+    assert right - left == 320
+    assert bottom - top == 64
 
 
 def test_hover_evidence_artifacts_cover_clock_on_search_roi(tmp_path):
@@ -190,8 +324,10 @@ def test_hover_evidence_artifacts_cover_clock_on_search_roi(tmp_path):
     annotated = Image.open(tmp_path / "hover-on-search-roi.png")
     assert annotated.size == (search_box[2] - search_box[0], search_box[3] - search_box[1])
     tip = tooltip_ocr_box(hover, width=image.width, height=image.height)
-    assert tip[3] - tip[1] <= 60
-    assert tip[2] - tip[0] <= 200
+    assert tip[3] - tip[1] == 64
+    assert tip[2] - tip[0] == 320
+    assert tip[0] >= 480
+    assert tip[3] >= hover[1] - 8
     # Hover stays inside the clock search band used for matching.
     assert search_box[0] <= hover[0] <= search_box[2]
     assert search_box[1] <= hover[1] <= search_box[3]

@@ -16,7 +16,7 @@ from .verification_session import VerificationSession
 INCENSE_SUBTASKS = (
     ("full", "完整流程", "先识别使用态；未使用则开道具栏并检索摄妖香栏位"),
     ("usage", "使用状态识别", "右侧条折叠/展开 → 悬停闹钟图标 → OCR tooltip"),
-    ("hover", "Hover 触发诊断", "验证 WM_MOUSEMOVE 触发路径、停留时间与 tooltip 展示；保存前后画面和 OCR 证据"),
+    ("hover", "Hover 触发诊断", "对比 post/send/setcursor/setcursor_postmessage；以 tip OCR 判定成功，像素差仅作参考"),
     ("inventory", "道具栏摄妖香检索", "依赖「未使用」结论；打开道具栏后模板扫格"),
 )
 

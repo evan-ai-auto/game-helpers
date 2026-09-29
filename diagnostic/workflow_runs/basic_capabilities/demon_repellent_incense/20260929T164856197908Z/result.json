@@ -1,0 +1,202 @@
+{
+  "ok": true,
+  "capability": "demon_repellent_incense",
+  "subtask": "hover",
+  "hover_diagnostic": {
+    "ok": true,
+    "panel_collapsed": false,
+    "clock_found": true,
+    "clock_score": 0.9432458503573549,
+    "clock_location": [
+      653,
+      120
+    ],
+    "input_point": [
+      649,
+      115
+    ],
+    "capture_to_input_nudge": [
+      -4,
+      -5
+    ],
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "trials": [
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          653,
+          120
+        ],
+        "input_point": [
+          649,
+          115
+        ],
+        "exit_point": [
+          509,
+          115
+        ],
+        "cursor_client_after_move": [
+          649,
+          115
+        ],
+        "tooltip_roi": [
+          600,
+          107,
+          760,
+          235
+        ],
+        "tooltip_pixel_delta_mean": 16.221,
+        "tooltip_text": "0 任 务 踪 1 〕 却 〕 畴 刂 答 题 时 ， 三 蟶 11n1 111 过 到 签 到 答 颗 卉 或 适 日 剩 余 32 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          2,
+          0
+        ],
+        "hover_point": [
+          655,
+          120
+        ],
+        "input_point": [
+          651,
+          115
+        ],
+        "exit_point": [
+          509,
+          115
+        ],
+        "cursor_client_after_move": [
+          651,
+          115
+        ],
+        "tooltip_roi": [
+          600,
+          107,
+          760,
+          235
+        ],
+        "tooltip_pixel_delta_mean": 19.28,
+        "tooltip_text": "11111 11111 三 到 笞 题 时 提 雏 t1111 11111 签 到 答 - 适 动 日 剩 余 32 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          4
+        ],
+        "hover_point": [
+          653,
+          124
+        ],
+        "input_point": [
+          649,
+          119
+        ],
+        "exit_point": [
+          509,
+          115
+        ],
+        "cursor_client_after_move": [
+          649,
+          119
+        ],
+        "tooltip_roi": [
+          600,
+          111,
+          760,
+          239
+        ],
+        "tooltip_pixel_delta_mean": 8.381,
+        "tooltip_text": "任 务 踪 如 宠 环 11111 1 签 到 答 顿",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          -2,
+          2
+        ],
+        "hover_point": [
+          651,
+          122
+        ],
+        "input_point": [
+          647,
+          117
+        ],
+        "exit_point": [
+          509,
+          115
+        ],
+        "cursor_client_after_move": [
+          647,
+          117
+        ],
+        "tooltip_roi": [
+          600,
+          109,
+          760,
+          237
+        ],
+        "tooltip_pixel_delta_mean": 9.346,
+        "tooltip_text": "11111 卜 11111 1 ！ 签 到 题",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      }
+    ],
+    "winning_strategies": [
+      "setcursor_postmessage"
+    ],
+    "pixel_delta_only_strategies": [
+      "setcursor_postmessage"
+    ],
+    "evidence": [
+      "diagnostic=hover-locked-verification",
+      "strategies=['setcursor_postmessage']",
+      "settle_seconds=[0.9]",
+      "hover_offsets=[[0, 0], [2, 0], [0, 4], [-2, 2]]",
+      "capture_to_input_nudge=[-4, -5]",
+      "vision_hover=[653, 120]",
+      "input_point=[649, 115]",
+      "tip_ocr_ok_trials=2",
+      "pixel_delta_without_tip_trials=2",
+      "winning_strategies=['setcursor_postmessage']",
+      "artifacts=keep all locked-matrix trial dirs",
+      "note=163316: mid clock/gear+low → nudge=(-4,-5); tip ROI down+2x height"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260929T164856197908Z",
+  "message": "Hover 触发诊断完成。"
+}

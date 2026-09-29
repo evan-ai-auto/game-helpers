@@ -12,7 +12,9 @@
   "runtime_template_path": "data/assets/ui/resolutions/800x600/incense_clock_icon.png",
   "threshold": 0.78,
   "search_roi": [620, 90, 800, 145],
+  "hover_in_template": [12, 12],
+  "capture_to_input_nudge": [-16, -16],
   "verification_status": "pending",
   "verified_resolutions": [],
-  "verification_notes": "2026-09-29：search_roi 从 [700,60,800,280] 收紧为标题栏带 [620,90,800,145]，避免任务正文假阳性（见 20260929T085821665034Z）。真机悬停+OCR 通过后再 verified。"
+  "verification_notes": "2026-09-30 175428：可见光标尖端~(666,137) 相对表盘(654,121) 右偏+下偏 → nudge=(-16,-16) 使尖端落回表盘；勿用 SetCursorPos 标注点判方向。"
 }

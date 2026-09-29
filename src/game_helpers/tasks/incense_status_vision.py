@@ -23,18 +23,43 @@ RIGHT_TOGGLE_REGION = UiRect(760 / 800, 90 / 600, 800 / 800, 220 / 600)
 # 任务追踪标题栏闹钟约在 (641,109)；旧 ROI [700,60,800,280] 偏右且过深，会落到任务正文假阳性。
 CLOCK_SEARCH_REGION = UiRect(620 / 800, 90 / 600, 800 / 800, 145 / 600)
 CLOCK_TEMPLATE_PATH = "data/assets/ui/resolutions/800x600/incense_clock_icon.png"
+# Template is 26×25; dial hotspot inside match box (not raw bbox center).
+# 171235 hotspot: red@(12,12) already on dial center.
+CLOCK_HOVER_IN_TEMPLATE = (12, 12)
+# Capture-frame hover → input client.
+# 175428: SetCursorPos@(650,121) but visible tip~(666,137) vs dial@(654,121)
+# → tip right+16/down+16 of aim; move aim left+up so tip lands on dial.
+CLOCK_CAPTURE_TO_INPUT_NUDGE = (-16, -16)
 UNUSED_TOOLTIP_TEXT = "暂无时间提醒信息"
-REMAINING_PATTERN = re.compile(r"(?:剩余)?\s*(\d+)\s*分")
+REMAINING_PATTERN = re.compile(r"(?:剩余|余)\s*(\d+)\s*分")
 # OCR landed on 任务追踪 body instead of incense tooltip.
 TASK_TRACKER_OCR_MARKERS = ("任务追踪", "宠环", "签到答题", "任务积分")
 # Evidence crop around the PostMessage hover target (clock center).
 HOVER_TARGET_HALF = 24
-# Tip OCR: narrow band above/left of the clock, not the whole task panel.
-TOOLTIP_OCR_WIDTH = 180
-TOOLTIP_OCR_HEIGHT = 56
-TOOLTIP_OCR_LEFT = 20
-HOVER_DIAGNOSTIC_SETTLE_SECONDS = (0.20, 0.45, 0.90)
-HOVER_EXIT_OFFSET = 60
+# Tip OCR: keep band near the clock; left edge must stay on/near the right strip
+# (20260929T123820: ROI left=545 bled into 长安城 stalls → false tip pixel deltas).
+# 173118: tip ROI must be horizontal — width 160×2, height stay original 64.
+TOOLTIP_OCR_WIDTH = 320
+TOOLTIP_OCR_HEIGHT = 64
+TOOLTIP_OCR_LEFT = 8
+TOOLTIP_OCR_MIN_LEFT = 480
+# Discovery sweep retired: locked transport+dwell only (no post/send/setcursor matrix).
+# Always keep these few trial image dirs (pass or fail) for review.
+HOVER_DIAGNOSTIC_SETTLE_SECONDS = (0.90,)
+DEFAULT_HOVER_SETTLE_SECONDS = 0.90
+# Exit far enough left of the right strip so enter-hover is unambiguous.
+HOVER_EXIT_OFFSET = 140
+# 1,1,12,3: message-only never tips; locked winner is SetCursorPos+PostMessage.
+HOVER_DIAGNOSTIC_STRATEGIES = ("setcursor_postmessage",)
+DEFAULT_HOVER_STRATEGY = "setcursor_postmessage"
+INCENSE_TIP_MARKERS = ("暂无时间提醒", "剩余", "摄妖香", "时间提醒")
+# Fine offsets around tip-corrected aim (visible tip ≠ SetCursorPos).
+HOVER_DIAGNOSTIC_OFFSETS = (
+    (0, 0),
+    (2, 2),
+    (-2, -2),
+    (0, -2),
+)
 
 
 @dataclass(frozen=True)
@@ -75,6 +100,9 @@ def parse_incense_tooltip(text: str) -> tuple[str, int | None]:
         digits = re.findall(r"\d+", normalized)
         if digits:
             return "active", int(digits[0])
+    # Tip title alone (154224 white tip); remaining may be OCR'd from left band.
+    if "时间提醒" in normalized and "暂无" not in normalized:
+        return "unknown", None
     return "unknown", None
 
 
@@ -82,6 +110,17 @@ def tooltip_looks_like_task_tracker(text: str) -> bool:
     """True when OCR captured 任务追踪 chrome instead of an incense hover tip."""
     normalized = "".join(text.split())
     return any(marker in normalized for marker in TASK_TRACKER_OCR_MARKERS)
+
+
+def tooltip_looks_like_incense(text: str) -> bool:
+    """True when OCR looks like an incense tip (not task-tracker chrome)."""
+    usage, _minutes = parse_incense_tooltip(text)
+    if usage in ("unused", "active"):
+        return True
+    normalized = "".join(text.split())
+    if tooltip_looks_like_task_tracker(normalized):
+        return False
+    return any(marker in normalized for marker in INCENSE_TIP_MARKERS)
 
 
 def detect_right_strip_collapsed(image: Image.Image | Frame):
@@ -105,7 +144,11 @@ def detect_right_strip_collapsed(image: Image.Image | Frame):
 def _match_clock(
     image: Image.Image,
 ) -> tuple[bool, float, tuple[int, int] | None, str, tuple[int, int, int, int], float, tuple[str, ...]]:
-    """Match the clock using the same evidence contract as UI icon vision."""
+    """Match the clock using the same evidence contract as UI icon vision.
+
+    Returns hover at the clock-face hot zone inside the match box (not raw bbox
+    center — that sat between the clock and the gear in 20260929T132004).
+    """
     template_path = resolve_template_path(CLOCK_TEMPLATE_PATH)
     threshold = 0.78
     left, top, right, bottom = CLOCK_SEARCH_REGION.pixel(image.width, image.height)
@@ -122,21 +165,31 @@ def _match_clock(
     found = location is not None and score >= threshold
     best_location = (left + location[0], top + location[1]) if location else None
     reason = "icon_found" if found else "icon_not_found"
+    hot_x, hot_y = CLOCK_HOVER_IN_TEMPLATE
     evidence = (
         "target=demon_repellent_incense.clock",
         f"template={template_path}",
         f"score={score:.3f}",
         f"threshold={threshold:.3f}",
         f"roi={list(roi_box)}",
+        f"hover_in_template={list(CLOCK_HOVER_IN_TEMPLATE)}",
     )
     if not found or best_location is None:
         return (False, max(0.0, float(score)), None, reason, roi_box, threshold, evidence)
     absolute = best_location
-    center = (
-        absolute[0] + template_rgb.shape[1] // 2,
-        absolute[1] + template_rgb.shape[0] // 2,
+    template_w = int(template_rgb.shape[1])
+    template_h = int(template_rgb.shape[0])
+    hover = (
+        absolute[0] + min(max(0, hot_x), max(0, template_w - 1)),
+        absolute[1] + min(max(0, hot_y), max(0, template_h - 1)),
     )
-    return (True, max(0.0, float(score)), center, reason, roi_box, threshold, evidence)
+    evidence = evidence + (
+        f"match_top_left={list(absolute)}",
+        f"match_box={[absolute[0], absolute[1], absolute[0] + template_w, absolute[1] + template_h]}",
+        f"hover_point={list(hover)}",
+        "note=hover uses clock-face hotspot in template, not bbox center",
+    )
+    return (True, max(0.0, float(score)), hover, reason, roi_box, threshold, evidence)
 
 
 def _clamp_box(
@@ -160,15 +213,42 @@ def hover_target_box(
 def tooltip_ocr_box(
     hover: tuple[int, int], *, width: int, height: int
 ) -> tuple[int, int, int, int]:
-    """Narrow band above/left of the clock for incense tip OCR."""
+    """Wide tip OCR band near the dial (horizontal stretch).
+
+    173118: tip ROI must be wider on X (160→320), height stays 64 — not a tall strip.
+    Left edge stays on/near the right strip to limit playfield bleed.
+    """
     hx, hy = hover
-    left = hx - TOOLTIP_OCR_LEFT - TOOLTIP_OCR_WIDTH // 2
+    left = hx - TOOLTIP_OCR_WIDTH // 2 - TOOLTIP_OCR_LEFT
+    left = max(TOOLTIP_OCR_MIN_LEFT, min(left, width - TOOLTIP_OCR_WIDTH))
     right = left + TOOLTIP_OCR_WIDTH
-    bottom = hy - 4
-    top = bottom - TOOLTIP_OCR_HEIGHT
-    if top < 0:
-        top = 0
-        bottom = min(height, TOOLTIP_OCR_HEIGHT)
+    top = max(0, hy - 8)
+    bottom = top + TOOLTIP_OCR_HEIGHT
+    return _clamp_box(left, top, right, bottom, width=width, height=height)
+
+
+def tooltip_ocr_box_below(
+    hover: tuple[int, int], *, width: int, height: int
+) -> tuple[int, int, int, int]:
+    """Secondary tip band just under the dial (same wide × short window)."""
+    hx, hy = hover
+    left = hx - TOOLTIP_OCR_WIDTH // 2
+    left = max(TOOLTIP_OCR_MIN_LEFT, min(left, width - TOOLTIP_OCR_WIDTH))
+    right = left + TOOLTIP_OCR_WIDTH
+    top = hy + 2
+    bottom = top + TOOLTIP_OCR_HEIGHT
+    return _clamp_box(left, top, right, bottom, width=width, height=height)
+
+
+def tooltip_ocr_box_left(
+    hover: tuple[int, int], *, width: int, height: int
+) -> tuple[int, int, int, int]:
+    """Left tip band for「余N分钟」/「剩余N分」(154224 dark tip left of clock)."""
+    hx, hy = hover
+    right = max(8, hx - 4)
+    left = max(0, right - 120)
+    top = max(0, hy - 28)
+    bottom = min(height, hy + 28)
     return _clamp_box(left, top, right, bottom, width=width, height=height)
 
 
@@ -196,15 +276,55 @@ def _save_hover_on_search_roi(
 def _ocr_tooltip(image: Image.Image, hover: tuple[int, int]) -> str:
     from ..vision.windows_ocr import WindowsNativeOCRBackend
 
-    left, top, right, bottom = tooltip_ocr_box(hover, width=image.width, height=image.height)
-    region = Rect(left, top, right, bottom)
     try:
         backend = WindowsNativeOCRBackend(language="zh-Hans-CN")
     except RuntimeError:
         backend = WindowsNativeOCRBackend()
-    lines = backend.read(image, region=region)
-    return " ".join(item.text for item in lines)
 
+    candidates: list[str] = []
+    for box in (
+        tooltip_ocr_box(hover, width=image.width, height=image.height),
+        tooltip_ocr_box_below(hover, width=image.width, height=image.height),
+        tooltip_ocr_box_left(hover, width=image.width, height=image.height),
+    ):
+        lines = backend.read(image, region=Rect(*box))
+        text = " ".join(item.text for item in lines).strip()
+        if text:
+            candidates.append(text)
+    if not candidates:
+        return ""
+    # Merge bands so「时间提醒」+「余N分钟」can parse as active together (154224).
+    merged = " ".join(candidates)
+    usage, _minutes = parse_incense_tooltip(merged)
+    if usage in ("unused", "active") or tooltip_looks_like_incense(merged):
+        if not tooltip_looks_like_task_tracker(merged) or usage in ("unused", "active"):
+            return merged
+    for text in candidates:
+        usage, _minutes = parse_incense_tooltip(text)
+        if usage in ("unused", "active"):
+            return text
+    for text in candidates:
+        if tooltip_looks_like_incense(text):
+            return text
+    for text in candidates:
+        if not tooltip_looks_like_task_tracker(text):
+            return text
+    return candidates[0]
+
+
+def _vision_hover_to_input(
+    hover: tuple[int, int],
+    *,
+    width: int,
+    height: int,
+) -> tuple[int, int]:
+    """Map capture-frame hover mark to the client point used for mouse input."""
+    x = int(hover[0]) + int(CLOCK_CAPTURE_TO_INPUT_NUDGE[0])
+    y = int(hover[1]) + int(CLOCK_CAPTURE_TO_INPUT_NUDGE[1])
+    return (
+        max(0, min(width - 1, x)),
+        max(0, min(height - 1, y)),
+    )
 
 
 def _hover_transport(
@@ -213,13 +333,117 @@ def _hover_transport(
     strategy: str,
     x: int,
     y: int,
+    session: VerificationSession | None = None,
 ) -> None:
     if strategy == "postmessage":
         input_driver.mouse_move(x, y)
-    elif strategy == "sendmessage":
+        return
+    if strategy == "sendmessage":
         input_driver.mouse_move_sync(x, y)
-    else:
-        raise ValueError(f"unknown hover transport: {strategy}")
+        return
+    if strategy == "setcursor":
+        if session is None:
+            raise ValueError("setcursor hover requires VerificationSession")
+        _set_cursor_to_client(session, x, y)
+        return
+    if strategy == "setcursor_postmessage":
+        # Real cursor first, then WM_MOUSEMOVE so games that ignore either alone still tip.
+        _hover_transport(
+            input_driver, strategy="setcursor", x=x, y=y, session=session
+        )
+        input_driver.mouse_move(x, y)
+        return
+    raise ValueError(f"unknown hover transport: {strategy}")
+
+
+def _set_cursor_to_client(session: VerificationSession, x: int, y: int) -> tuple[int, int]:
+    """Move the OS cursor to WSGAME client (x,y); re-assert if focus nudges it."""
+    from .manual_coordinate import client_to_screen, cursor_screen_pos, screen_to_client
+
+    import ctypes
+
+    target_screen = client_to_screen(session.selected.hwnd, int(x), int(y))
+    if not ctypes.windll.user32.SetCursorPos(int(target_screen[0]), int(target_screen[1])):
+        raise ctypes.WinError()
+    time.sleep(0.02)
+    actual_client = screen_to_client(session.selected.hwnd, *cursor_screen_pos())
+    if abs(actual_client[0] - int(x)) > 2 or abs(actual_client[1] - int(y)) > 2:
+        if not ctypes.windll.user32.SetCursorPos(int(target_screen[0]), int(target_screen[1])):
+            raise ctypes.WinError()
+        time.sleep(0.02)
+        actual_client = screen_to_client(session.selected.hwnd, *cursor_screen_pos())
+    return actual_client
+
+
+def _save_hover_hotspot_evidence(
+    image: Image.Image,
+    *,
+    hover: tuple[int, int],
+    match_evidence: tuple[str, ...],
+    path: Path,
+    input_point: tuple[int, int] | None = None,
+) -> None:
+    """Annotate match box + vision mark (+ optional input aim) for review.
+
+    Red = vision hover (template dial hotspot). Cyan = input aim after nudge.
+    """
+    from PIL import ImageDraw
+
+    annotated = image.convert("RGB").copy()
+    draw = ImageDraw.Draw(annotated)
+    match_box = None
+    for item in match_evidence:
+        if item.startswith("match_box="):
+            raw = item.split("=", 1)[1].strip()
+            try:
+                match_box = tuple(int(v) for v in raw.strip("[]").split(","))
+            except ValueError:
+                match_box = None
+    if match_box and len(match_box) == 4:
+        draw.rectangle(list(match_box), outline=(0, 255, 0), width=2)
+        # Dial geometric center of match box (review reference).
+        cx = (match_box[0] + match_box[2]) // 2
+        cy = (match_box[1] + match_box[3]) // 2
+        draw.ellipse((cx - 3, cy - 3, cx + 3, cy + 3), outline=(255, 255, 0), width=1)
+    hx, hy = hover
+    draw.ellipse((hx - 5, hy - 5, hx + 5, hy + 5), outline=(255, 0, 0), width=2)
+    draw.line((hx - 8, hy, hx + 8, hy), fill=(255, 0, 0), width=1)
+    draw.line((hx, hy - 8, hx, hy + 8), fill=(255, 0, 0), width=1)
+    if input_point is not None and input_point != hover:
+        ix, iy = input_point
+        draw.ellipse((ix - 5, iy - 5, ix + 5, iy + 5), outline=(0, 255, 255), width=2)
+        draw.line((ix - 8, iy, ix + 8, iy), fill=(0, 255, 255), width=1)
+        draw.line((ix, iy - 8, ix, iy + 8), fill=(0, 255, 255), width=1)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    annotated.save(path)
+
+
+def _strategy_needs_foreground(strategy: str) -> bool:
+    return strategy in {"setcursor", "setcursor_postmessage"}
+
+
+def _with_temporary_game_foreground(session: VerificationSession, action: Callable[[], None]) -> None:
+    """Raise game briefly for SetCursorPos hover, then restore prior foreground/cursor."""
+    from .background_context import foreground_hwnd
+    from .manual_coordinate import cursor_screen_pos, set_foreground
+
+    import ctypes
+
+    previous_fg = foreground_hwnd()
+    previous_cursor = cursor_screen_pos()
+    try:
+        set_foreground(session.parent_hwnd)
+        action()
+    finally:
+        try:
+            ctypes.windll.user32.SetCursorPos(int(previous_cursor[0]), int(previous_cursor[1]))
+        except Exception:
+            pass
+        if previous_fg and foreground_hwnd() != previous_fg:
+            try:
+                set_foreground(previous_fg)
+            except Exception:
+                pass
 
 
 def run_incense_hover_diagnostic(
@@ -227,8 +451,14 @@ def run_incense_hover_diagnostic(
     output_dir: str | Path,
     *,
     settle_seconds: tuple[float, ...] = HOVER_DIAGNOSTIC_SETTLE_SECONDS,
+    strategies: tuple[str, ...] = HOVER_DIAGNOSTIC_STRATEGIES,
+    hover_offsets: tuple[tuple[int, int], ...] = HOVER_DIAGNOSTIC_OFFSETS,
 ) -> dict[str, object]:
-    """Compare WM_MOUSEMOVE transports and dwell times for tooltip display."""
+    """Verify locked hover path; keep every trial image dir for review.
+
+    Discovery (message-only / setcursor / multi-dwell grid) is retired.
+    Default matrix is setcursor_postmessage @ 0.90s with small dial offsets.
+    """
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     image = as_pil_image(session.capture_frame()).convert("RGB")
@@ -255,64 +485,180 @@ def run_incense_hover_diagnostic(
             "clock_evidence": list(clock_evidence),
         }
 
+    base_input = _vision_hover_to_input(hover, width=image.width, height=image.height)
+    _save_hover_hotspot_evidence(
+        image,
+        hover=hover,
+        match_evidence=clock_evidence,
+        path=output / "hover-hotspot.png",
+        input_point=base_input,
+    )
+
     driver = BackgroundInput(session.selected.hwnd)
-    outside = (max(0, hover[0] - HOVER_EXIT_OFFSET), hover[1])
+    outside = (max(0, base_input[0] - HOVER_EXIT_OFFSET), base_input[1])
     results: list[dict[str, object]] = []
 
-    for strategy in ("postmessage", "sendmessage"):
+    for strategy in strategies:
         strategy_dir = output / strategy
         strategy_dir.mkdir(parents=True, exist_ok=True)
+        # Message-only: center only. Cursor strategies: all configured offsets.
         for dwell in settle_seconds:
-            trial = strategy_dir / f"dwell-{dwell:.2f}s"
-            trial.mkdir(parents=True, exist_ok=True)
-            _hover_transport(driver, strategy=strategy, x=outside[0], y=outside[1])
-            time.sleep(0.15)
-            before = as_pil_image(session.capture_frame()).convert("RGB")
-            before.save(trial / "before.png")
-            _hover_transport(driver, strategy=strategy, x=hover[0], y=hover[1])
-            time.sleep(float(dwell))
-            after = as_pil_image(session.capture_frame()).convert("RGB")
-            after.save(trial / "after.png")
+            if strategy in {"postmessage", "sendmessage"}:
+                offsets: tuple[tuple[int, int], ...] = ((0, 0),)
+            else:
+                offsets = hover_offsets
+            for ox, oy in offsets:
+                vision_target = (
+                    max(0, min(image.width - 1, hover[0] + ox)),
+                    max(0, min(image.height - 1, hover[1] + oy)),
+                )
+                input_target = (
+                    max(0, min(image.width - 1, base_input[0] + ox)),
+                    max(0, min(image.height - 1, base_input[1] + oy)),
+                )
+                label = f"dwell-{dwell:.2f}s"
+                if (ox, oy) != (0, 0):
+                    label = f"{label}_off-{ox:+d}_{oy:+d}"
+                trial = strategy_dir / label
+                trial.mkdir(parents=True, exist_ok=True)
 
-            tip_box = tooltip_ocr_box(hover, width=after.width, height=after.height)
-            before_tip = np.asarray(before.crop(tip_box), dtype=np.int16)
-            after_tip = np.asarray(after.crop(tip_box), dtype=np.int16)
-            delta = float(np.abs(after_tip - before_tip).mean())
-            after.crop(tip_box).save(trial / "tooltip-roi.png")
-            try:
-                tooltip_text = _ocr_tooltip(after, hover)
-                ocr_error = None
-            except RuntimeError as exc:
-                tooltip_text = ""
-                ocr_error = str(exc)
+                def _run_trial(
+                    input_xy: tuple[int, int] = input_target,
+                    tip_xy: tuple[int, int] = input_target,
+                ) -> tuple[Image.Image, Image.Image, float, str, str | None, list[int] | None]:
+                    _hover_transport(
+                        driver,
+                        strategy=strategy,
+                        x=outside[0],
+                        y=outside[1],
+                        session=session,
+                    )
+                    time.sleep(0.15)
+                    before_frame = as_pil_image(session.capture_frame()).convert("RGB")
+                    before_frame.save(trial / "before.png")
+                    _hover_transport(
+                        driver,
+                        strategy=strategy,
+                        x=input_xy[0],
+                        y=input_xy[1],
+                        session=session,
+                    )
+                    cursor_after: list[int] | None = None
+                    if _strategy_needs_foreground(strategy):
+                        from .manual_coordinate import cursor_screen_pos, screen_to_client
 
-            results.append({
-                "strategy": strategy,
-                "dwell_seconds": float(dwell),
-                "hover_point": list(hover),
-                "exit_point": list(outside),
-                "tooltip_roi": list(tip_box),
-                "tooltip_pixel_delta_mean": round(delta, 3),
-                "tooltip_text": tooltip_text,
-                "ocr_error": ocr_error,
-                "tooltip_changed": delta >= 1.0,
-            })
+                        try:
+                            cursor_after = list(
+                                screen_to_client(
+                                    session.selected.hwnd, *cursor_screen_pos()
+                                )
+                            )
+                        except Exception:
+                            cursor_after = None
+                    time.sleep(float(dwell))
+                    after_frame = as_pil_image(session.capture_frame()).convert("RGB")
+                    after_frame.save(trial / "after.png")
+                    tip = tooltip_ocr_box(
+                        tip_xy, width=after_frame.width, height=after_frame.height
+                    )
+                    before_tip = np.asarray(before_frame.crop(tip), dtype=np.int16)
+                    after_tip = np.asarray(after_frame.crop(tip), dtype=np.int16)
+                    tip_delta = float(np.abs(after_tip - before_tip).mean())
+                    after_frame.crop(tip).save(trial / "tooltip-roi.png")
+                    below = tooltip_ocr_box_below(
+                        tip_xy, width=after_frame.width, height=after_frame.height
+                    )
+                    after_frame.crop(below).save(trial / "tooltip-roi-below.png")
+                    try:
+                        text = _ocr_tooltip(after_frame, tip_xy)
+                        err = None
+                    except RuntimeError as exc:
+                        text = ""
+                        err = str(exc)
+                    return after_frame, before_frame, tip_delta, text, err, cursor_after
 
-    visible = [item for item in results if item["tooltip_changed"] or item["tooltip_text"]]
+                if _strategy_needs_foreground(strategy):
+                    held: list[
+                        tuple[
+                            Image.Image,
+                            Image.Image,
+                            float,
+                            str,
+                            str | None,
+                            list[int] | None,
+                        ]
+                    ] = []
+
+                    def _fg_trial() -> None:
+                        held.append(_run_trial())
+
+                    _with_temporary_game_foreground(session, _fg_trial)
+                    _after, _before, delta, tooltip_text, ocr_error, cursor_client_after = held[0]
+                else:
+                    (
+                        _after,
+                        _before,
+                        delta,
+                        tooltip_text,
+                        ocr_error,
+                        cursor_client_after,
+                    ) = _run_trial()
+
+                tip_box = list(
+                    tooltip_ocr_box(
+                        input_target, width=_after.width, height=_after.height
+                    )
+                )
+                tip_ocr_ok = tooltip_looks_like_incense(tooltip_text)
+                results.append({
+                    "strategy": strategy,
+                    "dwell_seconds": float(dwell),
+                    "hover_offset": [ox, oy],
+                    "hover_point": list(vision_target),
+                    "input_point": list(input_target),
+                    "exit_point": list(outside),
+                    "cursor_client_after_move": cursor_client_after,
+                    "tooltip_roi": tip_box,
+                    "tooltip_pixel_delta_mean": round(delta, 3),
+                    "tooltip_text": tooltip_text,
+                    "ocr_error": ocr_error,
+                    "tooltip_changed": delta >= 1.0,
+                    "tip_ocr_ok": tip_ocr_ok,
+                    "pixel_delta_without_tip": bool(delta >= 1.0 and not tip_ocr_ok),
+                    "artifacts_kept": True,
+                })
+
+    tip_hits = [item for item in results if item["tip_ocr_ok"]]
+    pixel_only = [item for item in results if item["pixel_delta_without_tip"]]
+    winners = sorted({str(item["strategy"]) for item in tip_hits})
     return {
-        "ok": bool(visible),
+        "ok": bool(tip_hits),
         "panel_collapsed": panel.collapsed,
         "clock_found": True,
         "clock_score": score,
         "clock_location": list(hover),
+        "input_point": list(base_input),
+        "capture_to_input_nudge": list(CLOCK_CAPTURE_TO_INPUT_NUDGE),
         "clock_search_roi": list(clock_box),
         "clock_threshold": threshold,
         "trials": results,
+        "winning_strategies": winners,
+        "pixel_delta_only_strategies": sorted(
+            {str(item["strategy"]) for item in pixel_only}
+        ),
         "evidence": [
-            "diagnostic=hover-transport-and-dwell",
-            "strategies=postmessage,sendmessage",
+            "diagnostic=hover-locked-verification",
+            f"strategies={list(strategies)}",
             f"settle_seconds={list(settle_seconds)}",
-            f"tooltip_visible_trials={len(visible)}",
+            f"hover_offsets={[list(item) for item in hover_offsets]}",
+            f"capture_to_input_nudge={list(CLOCK_CAPTURE_TO_INPUT_NUDGE)}",
+            f"vision_hover={list(hover)}",
+            f"input_point={list(base_input)}",
+            f"tip_ocr_ok_trials={len(tip_hits)}",
+            f"pixel_delta_without_tip_trials={len(pixel_only)}",
+            f"winning_strategies={winners}",
+            "artifacts=keep all locked-matrix trial dirs",
+            "note=175428: visible tip right/down of dial → nudge=(-16,-16) left+up for tip",
         ],
     }
 
@@ -321,7 +667,7 @@ def detect_incense_usage(
     session: VerificationSession,
     output_dir: str | Path,
     *,
-    hover_settle_seconds: float = 0.45,
+    hover_settle_seconds: float = DEFAULT_HOVER_SETTLE_SECONDS,
     progress: Callable[[str], None] | None = None,
 ) -> IncenseUsageObservation:
     """Capture and verify the full pre-hover visual chain, then hover and OCR."""
@@ -485,32 +831,69 @@ def detect_incense_usage(
         hover=hover,
         path=output / "hover-on-search-roi.png",
     )
+    input_point = _vision_hover_to_input(hover, width=image.width, height=image.height)
     evidence.append(f"hover_point={hover}")
+    evidence.append(f"input_point={input_point}")
+    evidence.append(f"capture_to_input_nudge={list(CLOCK_CAPTURE_TO_INPUT_NUDGE)}")
     evidence.append(f"hover_target_roi={list(hover_box)}")
-    log(f"[4/5] 已保存悬停证据：hover-target-roi.png / hover-on-search-roi.png；目标={hover}")
+    _save_hover_hotspot_evidence(
+        image,
+        hover=hover,
+        match_evidence=clock_evidence,
+        path=output / "hover-hotspot.png",
+        input_point=input_point,
+    )
+    log(
+        f"[4/5] 已保存悬停证据：hover-target-roi / hover-on-search-roi / hover-hotspot；"
+        f"vision={hover} input={input_point}"
+    )
 
-    # Only after panel + clock verification passes do we issue mouse movement.
-    BackgroundInput(session.selected.hwnd).mouse_move(*hover)
-    log(f"[4/5] PASS 已执行鼠标移动，等待 tooltip 稳定 {hover_settle_seconds:.2f}s")
-    time.sleep(hover_settle_seconds)
+    # Message-only hover never spawned tip (20260929T122753); use real cursor.
+    driver = BackgroundInput(session.selected.hwnd)
+    evidence.append(f"hover_strategy={DEFAULT_HOVER_STRATEGY}")
+
+    def _hover_then_capture() -> Image.Image:
+        _hover_transport(
+            driver,
+            strategy=DEFAULT_HOVER_STRATEGY,
+            x=input_point[0],
+            y=input_point[1],
+            session=session,
+        )
+        log(
+            f"[4/5] PASS 已执行悬停({DEFAULT_HOVER_STRATEGY}) input={input_point}，"
+            f"等待 tooltip 稳定 {hover_settle_seconds:.2f}s"
+        )
+        time.sleep(hover_settle_seconds)
+        return as_pil_image(session.capture_frame()).convert("RGB")
+
     log("[5/5] START 捕获悬停后全屏画面，并裁剪 tip OCR 窄带")
-    hovered = as_pil_image(session.capture_frame()).convert("RGB")
+    if _strategy_needs_foreground(DEFAULT_HOVER_STRATEGY):
+        captured: list[Image.Image] = []
+
+        def _setcursor_hover() -> None:
+            captured.append(_hover_then_capture())
+
+        _with_temporary_game_foreground(session, _setcursor_hover)
+        hovered = captured[0]
+    else:
+        hovered = _hover_then_capture()
     hovered.save(output / "hovered-capture.png")
     _save_hover_on_search_roi(
         hovered,
         search_box=(0, 0, hovered.width, hovered.height),
-        hover=hover,
+        hover=input_point,
         path=output / "hovered-capture-marked.png",
     )
     evidence.append("hovered_capture=hovered-capture.png")
     evidence.append("hovered_capture_marked=hovered-capture-marked.png")
-    tip_box = tooltip_ocr_box(hover, width=hovered.width, height=hovered.height)
+    tip_box = tooltip_ocr_box(input_point, width=hovered.width, height=hovered.height)
     hovered.crop(tip_box).save(output / "tooltip-roi.png")
     evidence.append(f"tooltip_ocr_roi={list(tip_box)}")
     log("[5/5] 已保存 hovered-capture.png / hovered-capture-marked.png；进入 tip OCR")
 
     try:
-        tooltip_text = _ocr_tooltip(hovered, hover)
+        tooltip_text = _ocr_tooltip(hovered, input_point)
     except RuntimeError as exc:
         log(f"[5/5] BLOCKED OCR 不可用：{exc}")
         return IncenseUsageObservation(
@@ -566,8 +949,13 @@ def detect_incense_usage(
 
 
 __all__ = [
+    "CLOCK_CAPTURE_TO_INPUT_NUDGE",
+    "CLOCK_HOVER_IN_TEMPLATE",
     "CLOCK_SEARCH_REGION",
     "CLOCK_TEMPLATE_PATH",
+    "DEFAULT_HOVER_STRATEGY",
+    "DEFAULT_HOVER_SETTLE_SECONDS",
+    "HOVER_DIAGNOSTIC_STRATEGIES",
     "IncenseUsageObservation",
     "RIGHT_TOGGLE_REGION",
     "detect_incense_usage",
@@ -575,6 +963,9 @@ __all__ = [
     "run_incense_hover_diagnostic",
     "hover_target_box",
     "parse_incense_tooltip",
+    "tooltip_looks_like_incense",
     "tooltip_looks_like_task_tracker",
     "tooltip_ocr_box",
+    "tooltip_ocr_box_below",
+    "tooltip_ocr_box_left",
 ]
