@@ -72,7 +72,12 @@ def detect_right_strip_collapsed(image: Image.Image | Frame):
         DEFAULT_SOUL_TASK_UI,
         collapsed_toggle_region=RIGHT_TOGGLE_REGION,
     )
-    return detect_soul_task_panel_collapsed(image, profile=profile, right_arrow_collapsed=False, arrow_direction_min_abs_score=0.45)
+    return detect_soul_task_panel_collapsed(
+        image,
+        profile=profile,
+        right_arrow_collapsed=False,
+        arrow_direction_min_abs_score=0.45,
+    )
 
 
 def _match_clock(
