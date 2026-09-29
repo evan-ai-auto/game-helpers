@@ -5,6 +5,7 @@ import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 from PIL import Image
@@ -141,16 +142,26 @@ def detect_incense_usage(
     output_dir: str | Path,
     *,
     hover_settle_seconds: float = 0.45,
+    progress: Callable[[str], None] | None = None,
 ) -> IncenseUsageObservation:
     """Capture and verify the full pre-hover visual chain, then hover and OCR."""
+    def log(message: str) -> None:
+        if progress is not None:
+            progress(message)
+
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
+    log("[1/5] START 捕获当前画面")
     image = as_pil_image(session.capture_frame()).convert("RGB")
     image.save(output / "capture.png")
+    log("[1/5] PASS 已保存 capture.png；进入右侧条状态识别")
 
     toggle_box = RIGHT_TOGGLE_REGION.pixel(image.width, image.height)
     image.crop(toggle_box).save(output / "right-toggle-roi.png")
+    log("[2/5] START 识别右侧条折叠/展开状态（12,2：右=展开，左=折叠）")
     panel = detect_right_strip_collapsed(image)
+    panel_state = "expanded" if panel.collapsed is False else "collapsed" if panel.collapsed is True else "unknown"
+    log(f"[2/5] RESULT state={panel_state} template={panel.matched_template} score={panel.match_score:.3f} confidence={panel.confidence:.3f} reason={getattr(panel.reason, 'value', str(panel.reason))}")
     evidence = [
         f"panel_collapsed={panel.collapsed}",
         f"panel_template={panel.matched_template}",
@@ -163,6 +174,7 @@ def detect_incense_usage(
 
     empty_roi = toggle_box
     if panel.collapsed is None:
+        log("[2/5] BLOCKED 无法确认右侧条状态；流程停止，未进入闹钟检测")
         return IncenseUsageObservation(
             usage="panel_unknown",
             remaining_minutes=None,
@@ -184,6 +196,7 @@ def detect_incense_usage(
             evidence=tuple(evidence + ["pre_hover_verification=FAIL", "右侧条折叠/展开状态未知"]),
         )
     if panel.collapsed is True:
+        log("[2/5] BLOCKED 当前为折叠态；流程停止，不执行闹钟检测/鼠标移动")
         return IncenseUsageObservation(
             usage="panel_collapsed",
             remaining_minutes=None,
@@ -205,6 +218,7 @@ def detect_incense_usage(
             evidence=tuple(evidence + ["pre_hover_verification=BLOCKED", "右侧条为折叠态，未进入闹钟检测"]),
         )
 
+    log("[3/5] START 在已展开右侧条中检测闹钟图标")
     try:
         (
             found,
@@ -245,11 +259,13 @@ def detect_incense_usage(
         )
 
     image.crop(clock_box).save(output / "clock-search-roi.png")
+    log(f"[3/5] RESULT clock_found={found} score={score:.3f} threshold={clock_threshold:.3f} reason={clock_reason}")
     evidence.extend(clock_evidence)
     evidence.append(f"clock_reason={clock_reason}")
     evidence.append(f"pre_hover_verification={'PASS' if found and hover else 'FAIL'}")
 
     if not found or hover is None:
+        log("[3/5] BLOCKED 未确认闹钟图标；流程停止，不执行鼠标移动")
         return IncenseUsageObservation(
             usage="unknown",
             remaining_minutes=None,
@@ -271,6 +287,7 @@ def detect_incense_usage(
             evidence=tuple(evidence + ["未匹配到闹钟图标"]),
         )
 
+    log(f"[4/5] START 闹钟验证通过；准备鼠标移动到 hover_point={hover}")
     # Diagnostic artifact only: the match neighborhood is saved before any input.
     cw = max(16, (clock_box[2] - clock_box[0]) // 4)
     ch = max(16, (clock_box[3] - clock_box[1]) // 4)
@@ -284,7 +301,9 @@ def detect_incense_usage(
 
     # Only after panel + clock verification passes do we issue mouse movement.
     BackgroundInput(session.selected.hwnd).mouse_move(*hover)
+    log(f"[4/5] PASS 已执行鼠标移动，等待 tooltip 稳定 {hover_settle_seconds:.2f}s")
     time.sleep(hover_settle_seconds)
+    log("[5/5] START 捕获 tooltip 并执行 OCR")
     hovered = as_pil_image(session.capture_frame()).convert("RGB")
     pad_x, pad_y = 120, 80
     tip_box = (
@@ -298,6 +317,7 @@ def detect_incense_usage(
     try:
         tooltip_text = _ocr_tooltip(hovered, hover)
     except RuntimeError as exc:
+        log(f"[5/5] BLOCKED OCR 不可用：{exc}")
         return IncenseUsageObservation(
             usage="unknown",
             remaining_minutes=None,
@@ -319,6 +339,7 @@ def detect_incense_usage(
         )
 
     usage, minutes = parse_incense_tooltip(tooltip_text)
+    log(f"[5/5] RESULT usage={usage} remaining_minutes={minutes} tooltip={tooltip_text!r}")
     evidence.append(f"tooltip={tooltip_text!r}")
     return IncenseUsageObservation(
         usage=usage,
