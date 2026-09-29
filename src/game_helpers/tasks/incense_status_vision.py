@@ -131,7 +131,7 @@ def detect_incense_usage(
     *,
     hover_settle_seconds: float = 0.45,
 ) -> IncenseUsageObservation:
-    """Capture, resolve right-strip state, hover clock, OCR tooltip."""
+    """Capture and verify the full pre-hover visual chain, then hover and OCR."""
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     image = as_pil_image(session.capture_frame()).convert("RGB")
@@ -144,66 +144,99 @@ def detect_incense_usage(
         f"panel_collapsed={panel.collapsed}",
         f"panel_template={panel.matched_template}",
         f"panel_score={panel.match_score:.3f}",
+        f"panel_confidence={panel.confidence:.3f}",
+        f"panel_reason={getattr(panel.reason, 'value', str(panel.reason))}",
+        f"panel_match_location={panel.match_location}",
         *list(panel.evidence),
     ]
 
+    empty_roi = toggle_box
     if panel.collapsed is None:
         return IncenseUsageObservation(
-            "panel_unknown",
-            None,
-            None,
-            False,
-            0.0,
-            None,
-            None,
-            "",
-            tuple(evidence + ["右侧条折叠/展开状态未知"]),
+            usage="panel_unknown",
+            remaining_minutes=None,
+            panel_collapsed=None,
+            clock_found=False,
+            clock_score=0.0,
+            clock_location=None,
+            clock_reason="panel_unknown",
+            clock_search_roi=empty_roi,
+            clock_threshold=0.0,
+            hover_point=None,
+            tooltip_text="",
+            evidence=tuple(evidence + ["pre_hover_verification=FAIL", "右侧条折叠/展开状态未知"]),
         )
     if panel.collapsed is True:
         return IncenseUsageObservation(
-            "panel_collapsed",
-            None,
-            True,
-            False,
-            0.0,
-            None,
-            None,
-            "",
-            tuple(evidence + ["右侧条为折叠态，未悬停闹钟"]),
+            usage="panel_collapsed",
+            remaining_minutes=None,
+            panel_collapsed=True,
+            clock_found=False,
+            clock_score=0.0,
+            clock_location=None,
+            clock_reason="panel_blocked",
+            clock_search_roi=empty_roi,
+            clock_threshold=0.0,
+            hover_point=None,
+            tooltip_text="",
+            evidence=tuple(evidence + ["pre_hover_verification=BLOCKED", "右侧条为折叠态，未进入闹钟检测"]),
         )
 
     try:
-        found, score, hover, clock_reason, clock_box, clock_threshold, clock_evidence = _match_clock(image)
+        (
+            found,
+            score,
+            hover,
+            clock_reason,
+            clock_box,
+            clock_threshold,
+            clock_evidence,
+        ) = _match_clock(image)
     except FileNotFoundError as exc:
         return IncenseUsageObservation(
-            "asset_missing",
-            None,
-            False,
-            False,
-            0.0,
-            None,
-            None,
-            "",
-            tuple(evidence + [f"闹钟模板缺失: {exc}", f"请提供 {CLOCK_TEMPLATE_PATH}"]),
+            usage="asset_missing",
+            remaining_minutes=None,
+            panel_collapsed=False,
+            clock_found=False,
+            clock_score=0.0,
+            clock_location=None,
+            clock_reason="template_missing",
+            clock_search_roi=CLOCK_SEARCH_REGION.pixel(image.width, image.height),
+            clock_threshold=0.78,
+            hover_point=None,
+            tooltip_text="",
+            evidence=tuple(
+                evidence
+                + [
+                    "pre_hover_verification=FAIL",
+                    f"闹钟模板缺失: {exc}",
+                    f"请提供 {CLOCK_TEMPLATE_PATH}",
+                ]
+            ),
         )
 
     image.crop(clock_box).save(output / "clock-search-roi.png")
     evidence.extend(clock_evidence)
     evidence.append(f"clock_reason={clock_reason}")
+    evidence.append(f"pre_hover_verification={'PASS' if found and hover else 'FAIL'}")
+
     if not found or hover is None:
         return IncenseUsageObservation(
-            "unknown",
-            None,
-            False,
-            False,
-            score,
-            None,
-            None,
-            "",
-            tuple(evidence + ["未匹配到闹钟图标"]),
+            usage="unknown",
+            remaining_minutes=None,
+            panel_collapsed=False,
+            clock_found=False,
+            clock_score=score,
+            clock_location=None,
+            clock_reason=clock_reason,
+            clock_search_roi=clock_box,
+            clock_threshold=clock_threshold,
+            hover_point=None,
+            tooltip_text="",
+            evidence=tuple(evidence + ["未匹配到闹钟图标"]),
         )
 
-    # Approximate clock crop around match for evidence.
+    # Diagnostic artifact only: the match neighborhood is saved before any input.
     cw = max(16, (clock_box[2] - clock_box[0]) // 4)
     ch = max(16, (clock_box[3] - clock_box[1]) // 4)
     clock_crop = (
@@ -214,6 +247,7 @@ def detect_incense_usage(
     )
     image.crop(clock_crop).save(output / "clock-roi.png")
 
+    # Only after panel + clock verification passes do we issue mouse movement.
     BackgroundInput(session.selected.hwnd).mouse_move(*hover)
     time.sleep(hover_settle_seconds)
     hovered = as_pil_image(session.capture_frame()).convert("RGB")
@@ -230,15 +264,18 @@ def detect_incense_usage(
         tooltip_text = _ocr_tooltip(hovered, hover)
     except RuntimeError as exc:
         return IncenseUsageObservation(
-            "unknown",
-            None,
-            False,
-            True,
-            score,
-            hover,
-            hover,
-            "",
-            tuple(evidence + [f"OCR 不可用: {exc}"]),
+            usage="unknown",
+            remaining_minutes=None,
+            panel_collapsed=False,
+            clock_found=True,
+            clock_score=score,
+            clock_location=hover,
+            clock_reason=clock_reason,
+            clock_search_roi=clock_box,
+            clock_threshold=clock_threshold,
+            hover_point=hover,
+            tooltip_text="",
+            evidence=tuple(evidence + [f"OCR 不可用: {exc}"]),
         )
 
     usage, minutes = parse_incense_tooltip(tooltip_text)
