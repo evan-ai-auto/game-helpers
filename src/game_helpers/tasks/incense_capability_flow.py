@@ -90,7 +90,13 @@ def _print_usage(obs: IncenseUsageObservation) -> None:
     if obs.remaining_minutes is not None:
         print(f"[摄妖香] remaining_minutes={obs.remaining_minutes}")
     if obs.usage == "asset_missing":
-        print("[摄妖香] 阻塞：缺少闹钟图标模板，请提供后重试。")
+        print("[摄妖香] BLOCKED：缺少闹钟图标模板，请提供后重试。")
+    elif obs.usage == "panel_unknown":
+        print("[摄妖香] BLOCKED：右侧条状态未知；未继续闹钟检测。")
+    elif obs.usage == "panel_collapsed":
+        print("[摄妖香] BLOCKED：右侧条当前折叠；未继续闹钟检测/悬停。")
+    elif obs.usage == "unknown" and not obs.clock_found:
+        print("[摄妖香] BLOCKED：闹钟图标未通过验证；未执行鼠标悬停。")
     for line in obs.evidence:
         print(f"[摄妖香] {line}")
 
@@ -111,8 +117,15 @@ def run_incense_usage(
     session: VerificationSession,
     output: Path,
 ) -> tuple[dict[str, object], IncenseUsageObservation]:
-    obs = detect_incense_usage(session, output / "usage")
+    print("[摄妖香][流程] START 1,1,12,2 使用状态识别")
+    print("[摄妖香][流程] 当前阶段：capture → panel_state → clock → hover → tooltip_ocr")
+    obs = detect_incense_usage(session, output / "usage", progress=lambda line: print(f"[摄妖香] {line}"))
     _print_usage(obs)
+    print(
+        f"[摄妖香][流程] END usage={obs.usage} "
+        f"panel_collapsed={obs.panel_collapsed} clock_found={obs.clock_found} "
+        f"hover={'PASS' if obs.hover_point else 'SKIP'}"
+    )
     payload = _usage_payload(obs)
     _write_json(output / "usage" / "result.json", payload)
     return payload, obs
