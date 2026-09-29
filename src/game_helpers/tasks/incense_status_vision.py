@@ -20,10 +20,19 @@ from .verification_session import VerificationSession
 
 # Provisional 800x600 ROIs — calibrate with real right-strip captures.
 RIGHT_TOGGLE_REGION = UiRect(760 / 800, 90 / 600, 800 / 800, 220 / 600)
-CLOCK_SEARCH_REGION = UiRect(700 / 800, 60 / 600, 800 / 800, 280 / 600)
+# 任务追踪标题栏闹钟约在 (641,109)；旧 ROI [700,60,800,280] 偏右且过深，会落到任务正文假阳性。
+CLOCK_SEARCH_REGION = UiRect(620 / 800, 90 / 600, 800 / 800, 145 / 600)
 CLOCK_TEMPLATE_PATH = "data/assets/ui/resolutions/800x600/incense_clock_icon.png"
 UNUSED_TOOLTIP_TEXT = "暂无时间提醒信息"
 REMAINING_PATTERN = re.compile(r"(?:剩余)?\s*(\d+)\s*分")
+# OCR landed on 任务追踪 body instead of incense tooltip.
+TASK_TRACKER_OCR_MARKERS = ("任务追踪", "宠环", "签到答题", "任务积分")
+# Evidence crop around the PostMessage hover target (clock center).
+HOVER_TARGET_HALF = 24
+# Tip OCR: narrow band above/left of the clock, not the whole task panel.
+TOOLTIP_OCR_WIDTH = 180
+TOOLTIP_OCR_HEIGHT = 56
+TOOLTIP_OCR_LEFT = 20
 
 
 @dataclass(frozen=True)
@@ -53,6 +62,8 @@ def parse_incense_tooltip(text: str) -> tuple[str, int | None]:
     normalized = "".join(text.split())
     if not normalized:
         return "unknown", None
+    if any(marker in normalized for marker in TASK_TRACKER_OCR_MARKERS):
+        return "unknown", None
     if UNUSED_TOOLTIP_TEXT.replace(" ", "") in normalized or "暂无时间提醒" in normalized:
         return "unused", None
     match = REMAINING_PATTERN.search(normalized)
@@ -63,6 +74,12 @@ def parse_incense_tooltip(text: str) -> tuple[str, int | None]:
         if digits:
             return "active", int(digits[0])
     return "unknown", None
+
+
+def tooltip_looks_like_task_tracker(text: str) -> bool:
+    """True when OCR captured 任务追踪 chrome instead of an incense hover tip."""
+    normalized = "".join(text.split())
+    return any(marker in normalized for marker in TASK_TRACKER_OCR_MARKERS)
 
 
 def detect_right_strip_collapsed(image: Image.Image | Frame):
@@ -120,17 +137,65 @@ def _match_clock(
     return (True, max(0.0, float(score)), center, reason, roi_box, threshold, evidence)
 
 
+def _clamp_box(
+    left: int, top: int, right: int, bottom: int, *, width: int, height: int
+) -> tuple[int, int, int, int]:
+    left = max(0, min(left, width - 1))
+    top = max(0, min(top, height - 1))
+    right = max(left + 1, min(right, width))
+    bottom = max(top + 1, min(bottom, height))
+    return left, top, right, bottom
+
+
+def hover_target_box(
+    hover: tuple[int, int], *, width: int, height: int, half: int = HOVER_TARGET_HALF
+) -> tuple[int, int, int, int]:
+    """Client-pixel box around the PostMessage hover target (clock center)."""
+    hx, hy = hover
+    return _clamp_box(hx - half, hy - half, hx + half, hy + half, width=width, height=height)
+
+
+def tooltip_ocr_box(
+    hover: tuple[int, int], *, width: int, height: int
+) -> tuple[int, int, int, int]:
+    """Narrow band above/left of the clock for incense tip OCR."""
+    hx, hy = hover
+    left = hx - TOOLTIP_OCR_LEFT - TOOLTIP_OCR_WIDTH // 2
+    right = left + TOOLTIP_OCR_WIDTH
+    bottom = hy - 4
+    top = bottom - TOOLTIP_OCR_HEIGHT
+    if top < 0:
+        top = 0
+        bottom = min(height, TOOLTIP_OCR_HEIGHT)
+    return _clamp_box(left, top, right, bottom, width=width, height=height)
+
+
+def _save_hover_on_search_roi(
+    image: Image.Image,
+    *,
+    search_box: tuple[int, int, int, int],
+    hover: tuple[int, int],
+    path: Path,
+) -> None:
+    """Annotate clock-search ROI with the hover crosshair for manual review."""
+    from PIL import ImageDraw
+
+    crop = image.crop(search_box).convert("RGB")
+    draw = ImageDraw.Draw(crop)
+    lx, ty, _, _ = search_box
+    hx, hy = hover[0] - lx, hover[1] - ty
+    draw.ellipse((hx - 6, hy - 6, hx + 6, hy + 6), outline=(255, 0, 0), width=2)
+    draw.line((hx - 10, hy, hx + 10, hy), fill=(255, 0, 0), width=1)
+    draw.line((hx, hy - 10, hx, hy + 10), fill=(255, 0, 0), width=1)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    crop.save(path)
+
+
 def _ocr_tooltip(image: Image.Image, hover: tuple[int, int]) -> str:
     from ..vision.windows_ocr import WindowsNativeOCRBackend
 
-    # Tooltip usually appears near the hovered icon; take a band around it.
-    pad_x, pad_y = 120, 80
-    region = Rect(
-        max(0, hover[0] - pad_x),
-        max(0, hover[1] - pad_y),
-        min(image.width, hover[0] + pad_x),
-        min(image.height, hover[1] + pad_y + 40),
-    )
+    left, top, right, bottom = tooltip_ocr_box(hover, width=image.width, height=image.height)
+    region = Rect(left, top, right, bottom)
     try:
         backend = WindowsNativeOCRBackend(language="zh-Hans-CN")
     except RuntimeError:
@@ -298,31 +363,28 @@ def detect_incense_usage(
         )
 
     log(f"[4/5] START 闹钟验证通过；准备鼠标移动到 hover_point={hover}")
-    # Diagnostic artifact only: the match neighborhood is saved before any input.
-    cw = max(16, (clock_box[2] - clock_box[0]) // 4)
-    ch = max(16, (clock_box[3] - clock_box[1]) // 4)
-    clock_crop = (
-        max(0, hover[0] - cw // 2),
-        max(0, hover[1] - ch // 2),
-        min(image.width, hover[0] + cw // 2),
-        min(image.height, hover[1] + ch // 2),
+    hover_box = hover_target_box(hover, width=image.width, height=image.height)
+    image.crop(hover_box).save(output / "hover-target-roi.png")
+    image.crop(hover_box).save(output / "clock-roi.png")
+    _save_hover_on_search_roi(
+        image,
+        search_box=clock_box,
+        hover=hover,
+        path=output / "hover-on-search-roi.png",
     )
-    image.crop(clock_crop).save(output / "clock-roi.png")
+    evidence.append(f"hover_point={hover}")
+    evidence.append(f"hover_target_roi={list(hover_box)}")
+    log(f"[4/5] 已保存悬停证据：hover-target-roi.png / hover-on-search-roi.png；目标={hover}")
 
     # Only after panel + clock verification passes do we issue mouse movement.
     BackgroundInput(session.selected.hwnd).mouse_move(*hover)
     log(f"[4/5] PASS 已执行鼠标移动，等待 tooltip 稳定 {hover_settle_seconds:.2f}s")
     time.sleep(hover_settle_seconds)
-    log("[5/5] START 捕获 tooltip 并执行 OCR")
+    log("[5/5] START 捕获 tooltip 并执行 OCR（窄带，非悬停范围）")
     hovered = as_pil_image(session.capture_frame()).convert("RGB")
-    pad_x, pad_y = 120, 80
-    tip_box = (
-        max(0, hover[0] - pad_x),
-        max(0, hover[1] - pad_y),
-        min(hovered.width, hover[0] + pad_x),
-        min(hovered.height, hover[1] + pad_y + 40),
-    )
+    tip_box = tooltip_ocr_box(hover, width=hovered.width, height=hovered.height)
     hovered.crop(tip_box).save(output / "tooltip-roi.png")
+    evidence.append(f"tooltip_ocr_roi={list(tip_box)}")
 
     try:
         tooltip_text = _ocr_tooltip(hovered, hover)
@@ -339,6 +401,7 @@ def detect_incense_usage(
             panel_match_location=panel.match_location,
             panel_search_roi=toggle_box,
             clock_found=True,
+            clock_score=score,
             clock_location=hover,
             clock_reason=clock_reason,
             clock_search_roi=clock_box,
@@ -354,6 +417,9 @@ def detect_incense_usage(
         f"摄妖香状态={usage}；剩余分钟={minutes if minutes is not None else '未知'}"
     )
     evidence.append(f"tooltip={tooltip_text!r}")
+    if tooltip_looks_like_task_tracker(tooltip_text):
+        evidence.append("tooltip_rejected=task_tracker_ui")
+        log("[5/5] BLOCKED OCR 命中任务追踪面板文本，判定为悬停未出 tip 或 OCR 仍偏到面板")
     return IncenseUsageObservation(
         usage=usage,
         remaining_minutes=minutes,
@@ -365,6 +431,7 @@ def detect_incense_usage(
         panel_match_location=panel.match_location,
         panel_search_roi=toggle_box,
         clock_found=True,
+        clock_score=score,
         clock_location=hover,
         clock_reason=clock_reason,
         clock_search_roi=clock_box,
@@ -376,10 +443,14 @@ def detect_incense_usage(
 
 
 __all__ = [
+    "CLOCK_SEARCH_REGION",
     "CLOCK_TEMPLATE_PATH",
     "IncenseUsageObservation",
     "RIGHT_TOGGLE_REGION",
     "detect_incense_usage",
     "detect_right_strip_collapsed",
+    "hover_target_box",
     "parse_incense_tooltip",
+    "tooltip_looks_like_task_tracker",
+    "tooltip_ocr_box",
 ]

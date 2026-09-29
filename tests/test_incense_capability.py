@@ -7,7 +7,16 @@ from PIL import Image
 
 from game_helpers.tasks.incense_capability_flow import INCENSE_SUBTASKS, choose_incense_subtask
 from game_helpers.tasks.incense_inventory_scan import ITEM_GRID_ORIGIN, slot_index_from_match
-from game_helpers.tasks.incense_status_vision import detect_right_strip_collapsed, parse_incense_tooltip
+from game_helpers.tasks.incense_status_vision import (
+    CLOCK_SEARCH_REGION,
+    _match_clock,
+    _save_hover_on_search_roi,
+    detect_right_strip_collapsed,
+    hover_target_box,
+    parse_incense_tooltip,
+    tooltip_looks_like_task_tracker,
+    tooltip_ocr_box,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 INCENSE_RUNS = ROOT / "diagnostic" / "workflow_runs" / "basic_capabilities" / "demon_repellent_incense"
@@ -95,3 +104,67 @@ def test_incense_clock_template_asset_present_and_loadable():
     assert alpha.shape == (25, 26)
     assert float(alpha.sum()) > 0.0
 
+
+def test_clock_search_roi_covers_task_tracker_header():
+    left, top, right, bottom = CLOCK_SEARCH_REGION.pixel(800, 600)
+    assert (left, top, right, bottom) == (620, 90, 800, 145)
+
+
+def test_match_clock_hits_header_not_task_body():
+    """Regression: header-band ROI must hit the 任务追踪 clock, not task body."""
+    path = INCENSE_RUNS / "20260929T092457347199Z" / "usage" / "capture.png"
+    image = Image.open(path).convert("RGB")
+    found, score, hover, reason, box, _thr, _ev = _match_clock(image)
+    assert found is True
+    assert reason == "icon_found"
+    assert box == (620, 90, 800, 145)
+    assert score >= 0.90
+    assert hover is not None
+    # True clock center ~ (654,121); reject old false hover ~(763,198).
+    assert abs(hover[0] - 654) <= 20
+    assert abs(hover[1] - 121) <= 20
+    assert hover[1] < 145
+
+
+def test_parse_rejects_task_tracker_ocr_as_incense_tooltip():
+    usage, minutes = parse_incense_tooltip("任务追踪 宠环 找到转轮王")
+    assert usage == "unknown"
+    assert minutes is None
+    assert tooltip_looks_like_task_tracker("签到答题 (0/5)")
+
+
+def test_hover_target_box_is_small_around_clock_center():
+    box = hover_target_box((654, 121), width=800, height=600)
+    assert box == (630, 97, 678, 145)
+    assert box[2] - box[0] == 48
+    assert box[3] - box[1] == 48
+
+
+def test_tooltip_ocr_box_is_narrow_band_above_clock():
+    box = tooltip_ocr_box((654, 121), width=800, height=600)
+    left, top, right, bottom = box
+    assert right - left == 180
+    assert bottom - top == 56
+    assert bottom <= 121  # stays above hover center
+    assert top < bottom
+
+
+def test_hover_evidence_artifacts_cover_clock_on_search_roi(tmp_path):
+    """Manual-review crops: hover crosshair must land on the clock in search ROI."""
+    path = INCENSE_RUNS / "20260929T092457347199Z" / "usage" / "capture.png"
+    image = Image.open(path).convert("RGB")
+    found, _score, hover, _reason, search_box, _thr, _ev = _match_clock(image)
+    assert found and hover is not None
+    target = hover_target_box(hover, width=image.width, height=image.height)
+    image.crop(target).save(tmp_path / "hover-target-roi.png")
+    _save_hover_on_search_roi(
+        image, search_box=search_box, hover=hover, path=tmp_path / "hover-on-search-roi.png"
+    )
+    annotated = Image.open(tmp_path / "hover-on-search-roi.png")
+    assert annotated.size == (search_box[2] - search_box[0], search_box[3] - search_box[1])
+    tip = tooltip_ocr_box(hover, width=image.width, height=image.height)
+    assert tip[3] - tip[1] <= 60
+    assert tip[2] - tip[0] <= 200
+    # Hover stays inside the clock search band used for matching.
+    assert search_box[0] <= hover[0] <= search_box[2]
+    assert search_box[1] <= hover[1] <= search_box[3]

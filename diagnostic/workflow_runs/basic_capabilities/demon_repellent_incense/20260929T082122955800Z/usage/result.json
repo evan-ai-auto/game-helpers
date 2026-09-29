@@ -1,0 +1,47 @@
+{
+  "usage": "panel_collapsed",
+  "remaining_minutes": null,
+  "panel_collapsed": true,
+  "panel_template": "left_light",
+  "panel_score": 0.8049871257707184,
+  "panel_confidence": 0.9024935628853592,
+  "panel_reason": "panel_collapsed",
+  "panel_match_location": [
+    780,
+    110
+  ],
+  "panel_search_roi": [
+    760,
+    90,
+    800,
+    220
+  ],
+  "clock_found": false,
+  "clock_score": 0.0,
+  "clock_location": null,
+  "clock_reason": "panel_blocked",
+  "clock_search_roi": [
+    760,
+    90,
+    800,
+    220
+  ],
+  "clock_threshold": 0.0,
+  "hover_point": null,
+  "tooltip_text": "",
+  "evidence": [
+    "panel_collapsed=True",
+    "panel_template=left_light",
+    "panel_score=0.805",
+    "panel_confidence=0.902",
+    "panel_reason=panel_collapsed",
+    "panel_match_location=(780, 110)",
+    "toggle matched=left_light score=0.805",
+    "decide=arrow-direction",
+    "arrow-direction=left score=-0.500",
+    "arrow-rejected=disagree",
+    "right arrow means expanded; left arrow means collapsed",
+    "pre_hover_verification=BLOCKED",
+    "右侧条为折叠态，未进入闹钟检测"
+  ]
+}
