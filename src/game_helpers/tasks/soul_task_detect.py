@@ -58,19 +58,38 @@ ARROW_DIRECTION_MIN_ABS_SCORE = 0.55
 ARROW_MAX_CHROMA = 35.0
 
 
-def _arrow_pointing_from_roi(roi: np.ndarray) -> tuple[str | None, float]:
+# Default band matches left-strip Shortcut toggle (arrow sits mid/lower in ROI).
+ARROW_Y_FRACTION_RANGE_DEFAULT: tuple[float, float] = (0.42, 1.0)
+# Right-strip incense toggle sits near the top of its tall ROI.
+ARROW_Y_FRACTION_RANGE_TOP: tuple[float, float] = (0.0, 0.50)
+
+
+def _arrow_pointing_from_roi(
+    roi: np.ndarray,
+    *,
+    y_fraction_range: tuple[float, float] = ARROW_Y_FRACTION_RANGE_DEFAULT,
+) -> tuple[str | None, float]:
     """Infer arrow pointing direction from bright low-chroma pixels under 指引.
 
-    Returns ``(\"right\"|\"left\"|None, score)``. Right-pointing => collapsed;
-    left-pointing => expanded. Uses tip-vs-base geometry on the largest bright
-    gray blob so colorful shortcut icons do not dominate.
+    Returns ``(\"right\"|\"left\"|None, score)``. Semantic mapping (collapsed vs
+    expanded) is applied by the caller. Uses tip-vs-base geometry on the largest
+    bright gray blob so colorful shortcut icons do not dominate.
+
+    ``y_fraction_range`` selects the vertical search band inside ``roi`` as
+    ``[y0_fraction, y1_fraction)`` of ROI height.
     """
     if roi.ndim != 3 or roi.shape[0] < 8 or roi.shape[1] < 8:
         return None, 0.0
     height, width = roi.shape[:2]
-    y0 = int(height * 0.42)
+    y0_fraction, y1_fraction = y_fraction_range
+    if not (0.0 <= y0_fraction < y1_fraction <= 1.0):
+        raise ValueError("y_fraction_range must satisfy 0 <= y0 < y1 <= 1")
+    y0 = int(height * y0_fraction)
+    y1 = max(y0 + 1, int(height * y1_fraction))
     x1 = max(12, int(width * 0.70))
-    band_rgb = roi[y0:height, 0:x1]
+    band_rgb = roi[y0:y1, 0:x1]
+    if band_rgb.size == 0 or band_rgb.shape[0] < 4 or band_rgb.shape[1] < 4:
+        return None, 0.0
     luminance = band_rgb.mean(axis=2)
     chroma = band_rgb.max(axis=2) - band_rgb.min(axis=2)
     low_chroma = chroma <= ARROW_MAX_CHROMA
@@ -116,6 +135,7 @@ def detect_soul_task_panel_collapsed(
     profile: SoulTaskUiProfile = DEFAULT_SOUL_TASK_UI,
     right_arrow_collapsed: bool = True,
     arrow_direction_min_abs_score: float = ARROW_DIRECTION_MIN_ABS_SCORE,
+    arrow_y_fraction_range: tuple[float, float] = ARROW_Y_FRACTION_RANGE_DEFAULT,
 ) -> SoulTaskPanelObservation:
     """Detect collapsed/expanded state from the real arrow assets.
 
@@ -176,7 +196,9 @@ def detect_soul_task_panel_collapsed(
     collapsed_score = best_collapsed[0]
     expanded_score = best_expanded[0]
 
-    pointing, point_score = _arrow_pointing_from_roi(roi)
+    pointing, point_score = _arrow_pointing_from_roi(
+        roi, y_fraction_range=arrow_y_fraction_range
+    )
     decide: str | None = None
     arrow_rejected: str | None = None
     chosen: tuple[float, str, bool, tuple[int, int] | None, tuple[int, int]] | None = None

@@ -1,0 +1,54 @@
+{
+  "ok": false,
+  "capability": "demon_repellent_incense",
+  "subtask": "usage",
+  "usage": {
+    "usage": "panel_collapsed",
+    "remaining_minutes": null,
+    "panel_collapsed": true,
+    "panel_template": "left_light",
+    "panel_score": 0.8098060308718213,
+    "panel_confidence": 0.9049030154359107,
+    "panel_reason": "panel_collapsed",
+    "panel_match_location": [
+      780,
+      110
+    ],
+    "panel_search_roi": [
+      760,
+      90,
+      800,
+      220
+    ],
+    "clock_found": false,
+    "clock_score": 0.0,
+    "clock_location": null,
+    "clock_reason": "panel_blocked",
+    "clock_search_roi": [
+      760,
+      90,
+      800,
+      220
+    ],
+    "clock_threshold": 0.0,
+    "hover_point": null,
+    "tooltip_text": "",
+    "evidence": [
+      "panel_collapsed=True",
+      "panel_template=left_light",
+      "panel_score=0.810",
+      "panel_confidence=0.905",
+      "panel_reason=panel_collapsed",
+      "panel_match_location=(780, 110)",
+      "toggle matched=left_light score=0.810",
+      "decide=arrow-direction",
+      "arrow-direction=left score=-0.400",
+      "arrow-rejected=disagree",
+      "right arrow means expanded; left arrow means collapsed",
+      "pre_hover_verification=BLOCKED",
+      "右侧条为折叠态，未进入闹钟检测"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260929T081837183265Z",
+  "message": "使用状态识别完成：panel_collapsed"
+}

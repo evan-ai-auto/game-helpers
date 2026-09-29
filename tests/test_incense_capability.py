@@ -1,9 +1,16 @@
 """摄妖香：tooltip 解析、格号换算与子菜单选项。"""
 from __future__ import annotations
 
+from pathlib import Path
+
+from PIL import Image
+
 from game_helpers.tasks.incense_capability_flow import INCENSE_SUBTASKS, choose_incense_subtask
 from game_helpers.tasks.incense_inventory_scan import ITEM_GRID_ORIGIN, slot_index_from_match
-from game_helpers.tasks.incense_status_vision import parse_incense_tooltip
+from game_helpers.tasks.incense_status_vision import detect_right_strip_collapsed, parse_incense_tooltip
+
+ROOT = Path(__file__).resolve().parent.parent
+INCENSE_RUNS = ROOT / "diagnostic" / "workflow_runs" / "basic_capabilities" / "demon_repellent_incense"
 
 
 def test_parse_incense_tooltip_unused():
@@ -57,3 +64,21 @@ def test_choose_incense_subtask_menu(monkeypatch):
     assert choose_incense_subtask() == "inventory"
     assert choose_incense_subtask() is None
     assert choose_incense_subtask() is None
+
+
+def test_right_strip_expanded_uses_top_band_arrow():
+    """Regression: right arrow near ROI top must decide expanded via geometry."""
+    path = INCENSE_RUNS / "20260929T080752020791Z" / "usage" / "capture.png"
+    observation = detect_right_strip_collapsed(Image.open(path))
+    assert observation.collapsed is False
+    assert any(item.startswith("decide=arrow-direction") for item in observation.evidence)
+    assert any(item.startswith("arrow-direction=right") for item in observation.evidence)
+
+
+def test_right_strip_collapsed_not_misread_as_expanded():
+    """Regression: left arrow near ROI top must not fall back to right_* template."""
+    path = INCENSE_RUNS / "20260929T080821789358Z" / "usage" / "capture.png"
+    observation = detect_right_strip_collapsed(Image.open(path))
+    assert observation.collapsed is True
+    assert any(item.startswith("decide=arrow-direction") for item in observation.evidence)
+    assert any(item.startswith("arrow-direction=left") for item in observation.evidence)

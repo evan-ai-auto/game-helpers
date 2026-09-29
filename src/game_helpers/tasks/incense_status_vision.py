@@ -14,7 +14,7 @@ from ..actions.background_input import BackgroundInput
 from ..capture.models import Frame
 from ..core.models import Rect
 from .soul_task_match import as_pil_image, load_template, masked_match, resolve_template_path
-from .soul_task_detect import detect_soul_task_panel_collapsed
+from .soul_task_detect import ARROW_Y_FRACTION_RANGE_TOP, detect_soul_task_panel_collapsed
 from .soul_task_models import DEFAULT_SOUL_TASK_UI, UiRect
 from .verification_session import VerificationSession
 
@@ -77,7 +77,9 @@ def detect_right_strip_collapsed(image: Image.Image | Frame):
         image,
         profile=profile,
         right_arrow_collapsed=False,
-        arrow_direction_min_abs_score=0.45,
+        # Top-band geometry on this strip yields |score|≈0.35–0.40; keep below soul default.
+        arrow_direction_min_abs_score=0.35,
+        arrow_y_fraction_range=ARROW_Y_FRACTION_RANGE_TOP,
     )
 
 
