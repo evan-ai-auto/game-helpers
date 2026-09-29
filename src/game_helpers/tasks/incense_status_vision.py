@@ -380,11 +380,21 @@ def detect_incense_usage(
     BackgroundInput(session.selected.hwnd).mouse_move(*hover)
     log(f"[4/5] PASS 已执行鼠标移动，等待 tooltip 稳定 {hover_settle_seconds:.2f}s")
     time.sleep(hover_settle_seconds)
-    log("[5/5] START 捕获 tooltip 并执行 OCR（窄带，非悬停范围）")
+    log("[5/5] START 捕获悬停后全屏画面，并裁剪 tip OCR 窄带")
     hovered = as_pil_image(session.capture_frame()).convert("RGB")
+    hovered.save(output / "hovered-capture.png")
+    _save_hover_on_search_roi(
+        hovered,
+        search_box=(0, 0, hovered.width, hovered.height),
+        hover=hover,
+        path=output / "hovered-capture-marked.png",
+    )
+    evidence.append("hovered_capture=hovered-capture.png")
+    evidence.append("hovered_capture_marked=hovered-capture-marked.png")
     tip_box = tooltip_ocr_box(hover, width=hovered.width, height=hovered.height)
     hovered.crop(tip_box).save(output / "tooltip-roi.png")
     evidence.append(f"tooltip_ocr_roi={list(tip_box)}")
+    log("[5/5] 已保存 hovered-capture.png / hovered-capture-marked.png；进入 tip OCR")
 
     try:
         tooltip_text = _ocr_tooltip(hovered, hover)
