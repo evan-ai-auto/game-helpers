@@ -114,6 +114,8 @@ def detect_soul_task_panel_collapsed(
     image: Image.Image | Frame,
     *,
     profile: SoulTaskUiProfile = DEFAULT_SOUL_TASK_UI,
+    right_arrow_collapsed: bool = True,
+    arrow_direction_min_abs_score: float = ARROW_DIRECTION_MIN_ABS_SCORE,
 ) -> SoulTaskPanelObservation:
     """Detect collapsed/expanded state from the real arrow assets.
 
@@ -182,14 +184,14 @@ def detect_soul_task_panel_collapsed(
 
     # After low-chroma filtering, strong geometry is trusted: polluted colorful
     # icons often still inflate the wrong template class on expanded strips.
-    if pointing is not None and abs(point_score) >= ARROW_DIRECTION_MIN_ABS_SCORE:
+    if pointing is not None and abs(point_score) >= arrow_direction_min_abs_score:
         if pointing == "right":
             chosen = best_collapsed
-            is_collapsed = True
+            is_collapsed = right_arrow_collapsed
             decide = "arrow-direction"
         else:
             chosen = best_expanded
-            is_collapsed = False
+            is_collapsed = not right_arrow_collapsed
             decide = "arrow-direction"
         template_agrees = (
             (pointing == "right" and collapsed_score >= expanded_score)
@@ -202,18 +204,21 @@ def detect_soul_task_panel_collapsed(
 
     if chosen is None:
         class_margin = collapsed_score - expanded_score
+        semantic_collapsed_score = collapsed_score if right_arrow_collapsed else expanded_score
+        semantic_expanded_score = expanded_score if right_arrow_collapsed else collapsed_score
+        semantic_margin = semantic_collapsed_score - semantic_expanded_score
         if (
-            collapsed_score >= profile.toggle_match_threshold
-            and class_margin >= profile.toggle_margin
+            semantic_collapsed_score >= profile.toggle_match_threshold
+            and semantic_margin >= profile.toggle_margin
         ):
-            chosen = best_collapsed
+            chosen = best_collapsed if right_arrow_collapsed else best_expanded
             is_collapsed = True
             decide = "template-class"
         elif (
-            expanded_score >= profile.toggle_match_threshold
-            and -class_margin >= profile.toggle_margin
+            semantic_expanded_score >= profile.toggle_match_threshold
+            and -semantic_margin >= profile.toggle_margin
         ):
-            chosen = best_expanded
+            chosen = best_expanded if right_arrow_collapsed else best_collapsed
             is_collapsed = False
             decide = "template-class"
         else:
@@ -272,7 +277,7 @@ def detect_soul_task_panel_collapsed(
             if arrow_rejected
             else ()
         ),
-        "right arrow means collapsed; left arrow means expanded",
+        ("right arrow means collapsed; left arrow means expanded" if right_arrow_collapsed else "right arrow means expanded; left arrow means collapsed"),
     )
     return SoulTaskPanelObservation(
         collapsed=is_collapsed,
