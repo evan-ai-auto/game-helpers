@@ -33,6 +33,9 @@ class IncenseUsageObservation:
     clock_found: bool
     clock_score: float
     clock_location: tuple[int, int] | None
+    clock_reason: str
+    clock_search_roi: tuple[int, int, int, int]
+    clock_threshold: float
     hover_point: tuple[int, int] | None
     tooltip_text: str
     evidence: tuple[str, ...]
@@ -66,8 +69,12 @@ def detect_right_strip_collapsed(image: Image.Image | Frame):
     return detect_soul_task_panel_collapsed(image, profile=profile)
 
 
-def _match_clock(image: Image.Image) -> tuple[bool, float, tuple[int, int] | None, tuple[int, int, int, int]]:
+def _match_clock(
+    image: Image.Image,
+) -> tuple[bool, float, tuple[int, int] | None, str, tuple[int, int, int, int], float, tuple[str, ...]]:
+    """Match the clock using the same evidence contract as UI icon vision."""
     template_path = resolve_template_path(CLOCK_TEMPLATE_PATH)
+    threshold = 0.78
     left, top, right, bottom = CLOCK_SEARCH_REGION.pixel(image.width, image.height)
     left, top = max(0, left), max(0, top)
     right, bottom = min(image.width, right), min(image.height, bottom)
@@ -75,19 +82,28 @@ def _match_clock(image: Image.Image) -> tuple[bool, float, tuple[int, int] | Non
     if not template_path.is_file():
         raise FileNotFoundError(str(template_path))
     if right <= left or bottom <= top:
-        return False, 0.0, None, roi_box
+        return (False, 0.0, None, "invalid_detection_region", roi_box, threshold, ("invalid detection region",))
     roi = np.asarray(image, dtype=np.float32)[top:bottom, left:right]
     template_rgb, alpha = load_template(template_path)
     score, location = masked_match(roi, template_rgb, alpha)
-    threshold = 0.78
-    if location is None or score < threshold:
-        return False, float(score), None, roi_box
-    absolute = (left + location[0], top + location[1])
+    found = location is not None and score >= threshold
+    best_location = (left + location[0], top + location[1]) if location else None
+    reason = "icon_found" if found else "icon_not_found"
+    evidence = (
+        "target=demon_repellent_incense.clock",
+        f"template={template_path}",
+        f"score={score:.3f}",
+        f"threshold={threshold:.3f}",
+        f"roi={list(roi_box)}",
+    )
+    if not found or best_location is None:
+        return (False, max(0.0, float(score)), None, reason, roi_box, threshold, evidence)
+    absolute = best_location
     center = (
         absolute[0] + template_rgb.shape[1] // 2,
         absolute[1] + template_rgb.shape[0] // 2,
     )
-    return True, float(score), center, roi_box
+    return (True, max(0.0, float(score)), center, reason, roi_box, threshold, evidence)
 
 
 def _ocr_tooltip(image: Image.Image, hover: tuple[int, int]) -> str:
@@ -157,7 +173,7 @@ def detect_incense_usage(
         )
 
     try:
-        found, score, hover, clock_box = _match_clock(image)
+        found, score, hover, clock_reason, clock_box, clock_threshold, clock_evidence = _match_clock(image)
     except FileNotFoundError as exc:
         return IncenseUsageObservation(
             "asset_missing",
@@ -172,7 +188,8 @@ def detect_incense_usage(
         )
 
     image.crop(clock_box).save(output / "clock-search-roi.png")
-    evidence.append(f"clock_score={score:.3f}")
+    evidence.extend(clock_evidence)
+    evidence.append(f"clock_reason={clock_reason}")
     if not found or hover is None:
         return IncenseUsageObservation(
             "unknown",
@@ -233,6 +250,9 @@ def detect_incense_usage(
         clock_found=True,
         clock_score=score,
         clock_location=hover,
+        clock_reason=clock_reason,
+        clock_search_roi=clock_box,
+        clock_threshold=clock_threshold,
         hover_point=hover,
         tooltip_text=tooltip_text,
         evidence=tuple(evidence),
