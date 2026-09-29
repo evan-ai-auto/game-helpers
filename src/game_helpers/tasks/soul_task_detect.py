@@ -119,9 +119,9 @@ def detect_soul_task_panel_collapsed(
 ) -> SoulTaskPanelObservation:
     """Detect collapsed/expanded state from the real arrow assets.
 
-    User-provided evidence defines the semantics:
-      * right-pointing arrow (light or grey) = collapsed
-      * left-pointing arrow (light) = expanded
+    The default semantics are the 1,1,6 behavior: right=collapsed,
+    left=expanded. Callers may invert the semantic mapping for scene-specific
+    flows such as 1,1,12,2.
 
     Direction of a strong low-chroma arrow blob is preferred when clear;
     template NCC remains for match location / scores and as fallback when
@@ -203,7 +203,6 @@ def detect_soul_task_panel_collapsed(
         arrow_rejected = "weak"
 
     if chosen is None:
-        class_margin = collapsed_score - expanded_score
         semantic_collapsed_score = collapsed_score if right_arrow_collapsed else expanded_score
         semantic_expanded_score = expanded_score if right_arrow_collapsed else collapsed_score
         semantic_margin = semantic_collapsed_score - semantic_expanded_score
@@ -277,7 +276,11 @@ def detect_soul_task_panel_collapsed(
             if arrow_rejected
             else ()
         ),
-        ("right arrow means collapsed; left arrow means expanded" if right_arrow_collapsed else "right arrow means expanded; left arrow means collapsed"),
+        (
+            "right arrow means collapsed; left arrow means expanded"
+            if right_arrow_collapsed
+            else "right arrow means expanded; left arrow means collapsed"
+        ),
     )
     return SoulTaskPanelObservation(
         collapsed=is_collapsed,
