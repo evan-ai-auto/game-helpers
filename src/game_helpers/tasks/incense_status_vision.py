@@ -65,14 +65,14 @@ def parse_incense_tooltip(text: str) -> tuple[str, int | None]:
 
 
 def detect_right_strip_collapsed(image: Image.Image | Frame):
-    """Reuse shortcut arrow detect with the right-strip ROI."""
+    """Detect the incense right-strip with 1,1,12,2-specific arrow semantics."""
     from dataclasses import replace
 
     profile = replace(
         DEFAULT_SOUL_TASK_UI,
         collapsed_toggle_region=RIGHT_TOGGLE_REGION,
     )
-    return detect_soul_task_panel_collapsed(image, profile=profile)
+    return detect_soul_task_panel_collapsed(image, profile=profile, right_arrow_collapsed=False, arrow_direction_min_abs_score=0.45)
 
 
 def _match_clock(
