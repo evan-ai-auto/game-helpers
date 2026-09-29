@@ -82,3 +82,16 @@ def test_right_strip_collapsed_not_misread_as_expanded():
     assert observation.collapsed is True
     assert any(item.startswith("decide=arrow-direction") for item in observation.evidence)
     assert any(item.startswith("arrow-direction=left") for item in observation.evidence)
+
+def test_incense_clock_template_asset_present_and_loadable():
+    """Regression: the supplied 800x600 clock asset is present and loadable."""
+    from game_helpers.tasks.incense_status_vision import CLOCK_TEMPLATE_PATH
+    from game_helpers.tasks.soul_task_match import load_template, resolve_template_path
+
+    path = resolve_template_path(CLOCK_TEMPLATE_PATH)
+    assert path.is_file()
+    template_rgb, alpha = load_template(path)
+    assert template_rgb.shape[:2] == (25, 26)
+    assert alpha.shape == (25, 26)
+    assert float(alpha.sum()) > 0.0
+
