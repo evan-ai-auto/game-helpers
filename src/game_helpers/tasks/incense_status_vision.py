@@ -161,7 +161,12 @@ def detect_incense_usage(
     log("[2/5] START 识别右侧条折叠/展开状态（12,2：右=展开，左=折叠）")
     panel = detect_right_strip_collapsed(image)
     panel_state = "expanded" if panel.collapsed is False else "collapsed" if panel.collapsed is True else "unknown"
-    log(f"[2/5] RESULT state={panel_state} template={panel.matched_template} score={panel.match_score:.3f} confidence={panel.confidence:.3f} reason={getattr(panel.reason, 'value', str(panel.reason))}")
+    log(
+        f"[2/5] 识别结果：右侧条={('展开' if panel.collapsed is False else '折叠' if panel.collapsed is True else '未知')}；"
+        f"方向语义=右箭头表示展开/左箭头表示折叠；"
+        f"匹配模板={panel.matched_template}；匹配分数={panel.match_score:.3f}；"
+        f"置信度={panel.confidence:.3f}；原因={getattr(panel.reason, 'value', str(panel.reason))}"
+    )
     evidence = [
         f"panel_collapsed={panel.collapsed}",
         f"panel_template={panel.matched_template}",
@@ -259,7 +264,10 @@ def detect_incense_usage(
         )
 
     image.crop(clock_box).save(output / "clock-search-roi.png")
-    log(f"[3/5] RESULT clock_found={found} score={score:.3f} threshold={clock_threshold:.3f} reason={clock_reason}")
+    log(
+        f"[3/5] 识别结果：闹钟图标={'已识别' if found else '未识别'}；"
+        f"匹配分数={score:.3f}；阈值={clock_threshold:.3f}；原因={clock_reason}"
+    )
     evidence.extend(clock_evidence)
     evidence.append(f"clock_reason={clock_reason}")
     evidence.append(f"pre_hover_verification={'PASS' if found and hover else 'FAIL'}")
@@ -339,7 +347,10 @@ def detect_incense_usage(
         )
 
     usage, minutes = parse_incense_tooltip(tooltip_text)
-    log(f"[5/5] RESULT usage={usage} remaining_minutes={minutes} tooltip={tooltip_text!r}")
+    log(
+        f"[5/5] 识别结果：tooltip OCR={tooltip_text!r}；"
+        f"摄妖香状态={usage}；剩余分钟={minutes if minutes is not None else '未知'}"
+    )
     evidence.append(f"tooltip={tooltip_text!r}")
     return IncenseUsageObservation(
         usage=usage,
