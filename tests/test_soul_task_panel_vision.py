@@ -1,6 +1,7 @@
 from pathlib import Path
 from PIL import Image
-from game_helpers.games.menghuanxiyou.soul_task import (
+from game_helpers.tasks.shortcut_panel_vision import detect_shortcut_panel_state
+from game_helpers.tasks.soul_task import (
     SoulTaskUiProfile,
     UiPoint,
     UiRect,
@@ -9,6 +10,8 @@ from game_helpers.games.menghuanxiyou.soul_task import (
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSET_DIR = ROOT / "data" / "assets" / "ui"
+LIVE_UI_ICON = ROOT / "diagnostic" / "workflow_runs" / "basic_capabilities" / "ui_icon_vision"
+LIVE_SHORTCUT = ROOT / "diagnostic" / "workflow_runs" / "basic_capabilities" / "shortcut_state_vision"
 
 
 def _profile() -> SoulTaskUiProfile:
@@ -59,3 +62,23 @@ def test_toggle_assets_have_transparent_background():
     ):
         alpha = Image.open(ASSET_DIR / name).convert("RGBA").getchannel("A")
         assert alpha.getextrema()[0] == 0
+
+
+def test_live_expanded_captures_not_misread_as_collapsed():
+    """Regression: colorful expanded strip previously polluted arrow geometry."""
+    for run_id in (
+        "20260923T124904834613Z",
+        "20260923T125018314809Z",
+        "20260923T114052462512Z",
+    ):
+        path = LIVE_UI_ICON / run_id / "source.png"
+        observation = detect_shortcut_panel_state(Image.open(path))
+        assert observation.collapsed is False, run_id
+        assert any(item.startswith("decide=arrow-direction") for item in observation.evidence)
+
+
+def test_live_collapsed_capture_still_collapsed():
+    path = LIVE_SHORTCUT / "20260923T091627924507Z" / "capture.png"
+    observation = detect_shortcut_panel_state(Image.open(path))
+    assert observation.collapsed is True
+    assert any(item.startswith("decide=arrow-direction") for item in observation.evidence)

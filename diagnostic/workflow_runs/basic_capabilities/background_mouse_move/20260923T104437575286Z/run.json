@@ -1,0 +1,10 @@
+{
+  "capability": "background_mouse_move",
+  "name": "发送后台鼠标移动",
+  "description": "仅发送 WM_MOUSEMOVE，不执行点击。",
+  "implementation": "actions.background_input:BackgroundInput.mouse_move",
+  "artifacts": [
+    "capture.png",
+    "result.json"
+  ]
+}

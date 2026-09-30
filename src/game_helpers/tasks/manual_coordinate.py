@@ -66,6 +66,13 @@ def screen_to_client(hwnd: int, screen_x: int, screen_y: int) -> tuple[int, int]
     return int(point.x), int(point.y)
 
 
+def client_to_screen(hwnd: int, client_x: int, client_y: int) -> tuple[int, int]:
+    point = POINT(int(client_x), int(client_y))
+    if not ctypes.windll.user32.ClientToScreen(int(hwnd), ctypes.byref(point)):
+        raise ctypes.WinError()
+    return int(point.x), int(point.y)
+
+
 def set_foreground(hwnd: int, *, timeout: float = 2.0) -> None:
     """Best-effort foreground handoff used only by manual-assist calibration."""
     if not hwnd:

@@ -1,0 +1,202 @@
+{
+  "ok": true,
+  "capability": "demon_repellent_incense",
+  "subtask": "hover",
+  "hover_diagnostic": {
+    "ok": true,
+    "panel_collapsed": false,
+    "clock_found": true,
+    "clock_score": 0.9702704859714882,
+    "clock_location": [
+      654,
+      121
+    ],
+    "input_point": [
+      635,
+      129
+    ],
+    "capture_to_input_nudge": [
+      -19,
+      8
+    ],
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "trials": [
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 5.501,
+        "tooltip_text": "第 30 环 ， + 务 03",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 21.891,
+        "tooltip_text": "的 余 日 5 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 40.531,
+        "tooltip_text": "刂 当 衷 第 36 环 ，",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 42.347,
+        "tooltip_text": "0 丷 的 同 i 笔 02 剩 余 日 5 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      }
+    ],
+    "winning_strategies": [
+      "setcursor_postmessage"
+    ],
+    "pixel_delta_only_strategies": [
+      "setcursor_postmessage"
+    ],
+    "evidence": [
+      "diagnostic=hover-locked-verification",
+      "strategies=['setcursor_postmessage']",
+      "settle_seconds=[0.9]",
+      "hover_offsets=[[0, 0], [0, 0], [0, 0], [0, 0]]",
+      "capture_to_input_nudge=[-19, 8]",
+      "vision_hover=[654, 121]",
+      "input_point=[635, 129]",
+      "tip_ocr_ok_trials=1",
+      "pixel_delta_without_tip_trials=3",
+      "winning_strategies=['setcursor_postmessage']",
+      "artifacts=keep all locked-matrix trial dirs",
+      "note=human X +2 right from (-21,8) → nudge=(-19,8); still (0,0)×4"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260930T084546132540Z",
+  "message": "Hover 触发诊断完成。"
+}

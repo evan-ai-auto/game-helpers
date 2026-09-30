@@ -1,0 +1,20 @@
+{
+  "usage": "panel_collapsed",
+  "remaining_minutes": null,
+  "panel_collapsed": true,
+  "clock_found": false,
+  "clock_score": 0.0,
+  "clock_location": null,
+  "hover_point": null,
+  "tooltip_text": "",
+  "evidence": [
+    "panel_collapsed=True",
+    "panel_template=right_gray",
+    "panel_score=0.832",
+    "toggle matched=right_gray score=0.832",
+    "decide=template-class",
+    "arrow-direction=unknown score=0.000",
+    "right arrow means collapsed; left arrow means expanded",
+    "右侧条为折叠态，未悬停闹钟"
+  ]
+}

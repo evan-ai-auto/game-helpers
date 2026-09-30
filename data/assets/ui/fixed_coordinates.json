@@ -19,6 +19,21 @@
         "identity": "无与伦比[将军] - 划下、？线[7324466]",
         "captured_at_utc": "2026-09-09T12:31:09.045697+00:00",
         "note": "Updated from obsolete (34, 92) to production default (14, 122). Visual match location remains separate from this click."
+      },
+      "item_panel_toggle": {
+        "client": [
+          455,
+          569
+        ],
+        "screen": [
+          490,
+          641
+        ],
+        "target_hwnd": 854160,
+        "character_name": "相思微凉ヘ",
+        "identity": "无与伦比[将军] - 相思微凉ヘ[98666698]",
+        "captured_at_utc": "2026-09-28T08:27:35.979643+00:00",
+        "note": "Aligned to item_bar_toggle.json verified click_client [455,569] after dao_ju_lan open/close PASS."
       }
     }
   }

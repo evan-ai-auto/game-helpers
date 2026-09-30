@@ -1,0 +1,12 @@
+{
+  "capability": "ui_icon_vision",
+  "name": "识别 UI 图标（依赖 Shortcut 状态）",
+  "description": "参数化检测：选择目标图标与检测图源；折叠/未知直接返回；展开则模板匹配。",
+  "implementation": "tasks.ui_icon_vision:detect_ui_icon_with_shortcut_gate",
+  "artifacts": [
+    "icon-search-roi.png",
+    "result.json",
+    "shortcut-toggle-roi.png",
+    "source.png"
+  ]
+}

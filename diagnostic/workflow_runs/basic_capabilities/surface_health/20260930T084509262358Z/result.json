@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "capability": "surface_health",
+  "ready": true,
+  "evidence": [
+    "client_size=800x600",
+    "frame_size=800x600",
+    "scale=(1.0000,1.0000)",
+    "aspect_delta=0.0000",
+    "frame_matches_client_exactly"
+  ]
+}

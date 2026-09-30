@@ -72,7 +72,12 @@ class BackgroundInput:
         return value
 
     def mouse_move(self, x: int, y: int) -> None:
+        """Post a background WM_MOUSEMOVE to the target window."""
         self._post(self.WM_MOUSEMOVE, 0, self._lparam(x, y))
+
+    def mouse_move_sync(self, x: int, y: int) -> None:
+        """Synchronously dispatch a background WM_MOUSEMOVE to the target window."""
+        self._send(self.WM_MOUSEMOVE, 0, self._lparam(x, y))
 
     def click(self, x: int, y: int) -> tuple[int, int, int]:
         """Post mouse move/down/up and return each Win32 success flag."""

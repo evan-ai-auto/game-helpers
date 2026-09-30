@@ -13,7 +13,11 @@ dependencies = ["Pillow>=10.0", "numpy>=1.26"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
-windows = ["pywin32>=306", "windows-capture>=1.5.0"]
+windows = [
+    "pywin32>=306",
+    "windows-capture>=1.5.0",
+    "winsdk>=1.0.0b10",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

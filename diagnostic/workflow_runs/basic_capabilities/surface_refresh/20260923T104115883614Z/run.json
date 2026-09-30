@@ -1,0 +1,10 @@
+{
+  "capability": "surface_refresh",
+  "name": "执行 Surface 刷新",
+  "description": "调用现有 Surface 切换/RedrawWindow 刷新能力。",
+  "implementation": "tasks.soul_shortcut_diagnostic_flow:_refresh_capture_surface",
+  "artifacts": [
+    "capture.png",
+    "result.json"
+  ]
+}

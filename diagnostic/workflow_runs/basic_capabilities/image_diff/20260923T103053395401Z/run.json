@@ -1,0 +1,10 @@
+{
+  "capability": "image_diff",
+  "name": "执行图像差分",
+  "description": "比较连续画面的像素变化。",
+  "implementation": "tasks.soul_shortcut_diagnostic_flow:image_diff",
+  "artifacts": [
+    "capture.png",
+    "result.json"
+  ]
+}

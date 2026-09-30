@@ -1,0 +1,20 @@
+{
+  "id": "ui_incense_clock_icon",
+  "name": "摄妖香闹钟图标",
+  "game": "梦幻西游",
+  "format": "png",
+  "width": 26,
+  "height": 25,
+  "mode": "RGBA",
+  "resolution": "800x600",
+  "source": "用户本次上传的闹钟图标资产。",
+  "sha256": "f054645566b99376bc2661f2efafa5cbf71673679d97395065892aed27621d81",
+  "runtime_template_path": "data/assets/ui/resolutions/800x600/incense_clock_icon.png",
+  "threshold": 0.78,
+  "search_roi": [620, 90, 800, 145],
+  "hover_in_template": [12, 12],
+  "capture_to_input_nudge": [-19, 8],
+  "verification_status": "pending",
+  "verified_resolutions": [],
+  "verification_notes": "2026-09-30：人工要求在 (-21,8) 基础上 X 右移 2px → nudge=(-19,8)，input~(635,129)；Y 不变，仍 (0,0)×4。"
+}

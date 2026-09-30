@@ -1,0 +1,47 @@
+{
+  "usage": "asset_missing",
+  "remaining_minutes": null,
+  "panel_collapsed": false,
+  "panel_template": "right_gray",
+  "panel_score": 0.8913632785572725,
+  "panel_confidence": 0.9456816392786362,
+  "panel_reason": "panel_expanded",
+  "panel_match_location": [
+    764,
+    128
+  ],
+  "panel_search_roi": [
+    760,
+    90,
+    800,
+    220
+  ],
+  "clock_found": false,
+  "clock_score": 0.0,
+  "clock_location": null,
+  "clock_reason": "template_missing",
+  "clock_search_roi": [
+    700,
+    60,
+    800,
+    280
+  ],
+  "clock_threshold": 0.78,
+  "hover_point": null,
+  "tooltip_text": "",
+  "evidence": [
+    "panel_collapsed=False",
+    "panel_template=right_gray",
+    "panel_score=0.891",
+    "panel_confidence=0.946",
+    "panel_reason=panel_expanded",
+    "panel_match_location=(764, 128)",
+    "toggle matched=right_gray score=0.891",
+    "decide=arrow-direction",
+    "arrow-direction=right score=0.722",
+    "right arrow means expanded; left arrow means collapsed",
+    "pre_hover_verification=FAIL",
+    "闹钟模板缺失: E:\\work\\dev_workspace\\my_windows\\game-helpers\\data\\assets\\ui\\resolutions\\800x600\\incense_clock_icon.png",
+    "请提供 data/assets/ui/resolutions/800x600/incense_clock_icon.png"
+  ]
+}

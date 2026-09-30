@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "capability": "image_diff",
+  "changed_pixels": 10427,
+  "ratio": 0.021722916666666668,
+  "bbox": [
+    768,
+    0,
+    800,
+    600
+  ]
+}

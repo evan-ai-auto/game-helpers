@@ -1,0 +1,200 @@
+{
+  "ok": false,
+  "capability": "demon_repellent_incense",
+  "subtask": "hover",
+  "hover_diagnostic": {
+    "ok": false,
+    "panel_collapsed": false,
+    "clock_found": true,
+    "clock_score": 0.9476721931906308,
+    "clock_location": [
+      654,
+      121
+    ],
+    "input_point": [
+      652,
+      115
+    ],
+    "capture_to_input_nudge": [
+      -2,
+      -6
+    ],
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "trials": [
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          652,
+          115
+        ],
+        "exit_point": [
+          512,
+          115
+        ],
+        "cursor_client_after_move": [
+          652,
+          115
+        ],
+        "tooltip_roi": [
+          604,
+          107,
+          684,
+          235
+        ],
+        "tooltip_pixel_delta_mean": 34.345,
+        "tooltip_text": "一 \" 宠 环 找 到 签 到 答",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          -2
+        ],
+        "hover_point": [
+          654,
+          119
+        ],
+        "input_point": [
+          652,
+          113
+        ],
+        "exit_point": [
+          512,
+          115
+        ],
+        "cursor_client_after_move": [
+          652,
+          113
+        ],
+        "tooltip_roi": [
+          604,
+          105,
+          684,
+          233
+        ],
+        "tooltip_pixel_delta_mean": 41.937,
+        "tooltip_text": "宠 环 找 到 ， 任 务 利 签 到",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          2,
+          0
+        ],
+        "hover_point": [
+          656,
+          121
+        ],
+        "input_point": [
+          654,
+          115
+        ],
+        "exit_point": [
+          512,
+          115
+        ],
+        "cursor_client_after_move": [
+          654,
+          115
+        ],
+        "tooltip_roi": [
+          606,
+          107,
+          686,
+          235
+        ],
+        "tooltip_pixel_delta_mean": 44.192,
+        "tooltip_text": "宠 环 找 到 签 到 答",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          2
+        ],
+        "hover_point": [
+          654,
+          123
+        ],
+        "input_point": [
+          652,
+          117
+        ],
+        "exit_point": [
+          512,
+          115
+        ],
+        "cursor_client_after_move": [
+          652,
+          117
+        ],
+        "tooltip_roi": [
+          604,
+          109,
+          684,
+          237
+        ],
+        "tooltip_pixel_delta_mean": 40.9,
+        "tooltip_text": "宠 环 找 到 签 到 答",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      }
+    ],
+    "winning_strategies": [],
+    "pixel_delta_only_strategies": [
+      "setcursor_postmessage"
+    ],
+    "evidence": [
+      "diagnostic=hover-locked-verification",
+      "strategies=['setcursor_postmessage']",
+      "settle_seconds=[0.9]",
+      "hover_offsets=[[0, 0], [0, -2], [2, 0], [0, 2]]",
+      "capture_to_input_nudge=[-2, -6]",
+      "vision_hover=[654, 121]",
+      "input_point=[652, 115]",
+      "tip_ocr_ok_trials=0",
+      "pixel_delta_without_tip_trials=4",
+      "winning_strategies=[]",
+      "artifacts=keep all locked-matrix trial dirs",
+      "note=172354: nudge=(-2,-6) left+up 2px; tip ROI 80x128 (Y=64*2, X not doubled)"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260929T173118317756Z",
+  "message": "Hover 触发诊断完成。"
+}

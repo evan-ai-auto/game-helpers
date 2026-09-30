@@ -1,0 +1,25 @@
+{
+  "ok": false,
+  "before": {
+    "open": false,
+    "status": "not_detected",
+    "confidence": 0.24085290729999542,
+    "detected": false,
+    "origin": null,
+    "screenshot_path": "diagnostic\\workflow_runs\\basic_capabilities\\dao_ju_lan\\20260928T103755870227Z\\before-character-1.png"
+  },
+  "after": null,
+  "toggled": false,
+  "toggle_verified": false,
+  "message": "用户返回道具栏相关菜单。",
+  "foreground_unchanged": true,
+  "restored_surface": true,
+  "restored_tab": true,
+  "click_client": null,
+  "icon_match_score": null,
+  "coord_source_requested": "auto",
+  "coord_source_used": null,
+  "resolution_key": "800x600",
+  "error": "cancelled",
+  "capability": "dao_ju_lan"
+}

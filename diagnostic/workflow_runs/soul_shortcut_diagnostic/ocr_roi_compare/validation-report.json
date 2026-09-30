@@ -1,0 +1,48 @@
+{
+  "subtype": "ocr_roi_compare",
+  "character": "相思微凉ヘ",
+  "client_size": [
+    800,
+    600
+  ],
+  "production_coordinate_changed": false,
+  "ocr_roi_compare": {
+    "screenshot": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-roi-source.png",
+    "client_size": [
+      800,
+      600
+    ],
+    "backend": "Windows.Media.Ocr",
+    "language": "zh-Hans-CN",
+    "scene_raw": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-scene-raw.png",
+    "scene_prepared": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-scene-prepared.png",
+    "coordinate_raw": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-coordinate-raw.png",
+    "coordinate_prepared": "diagnostic\\workflow_runs\\soul_shortcut_diagnostic\\ocr_roi_compare\\ocr-coordinate-prepared.png",
+    "reading": {
+      "scene_text": "朱紫皇宫",
+      "coordinate_text": "X ： 6 5 Y ： 29",
+      "scene_box": [
+        26,
+        14,
+        106,
+        34
+      ],
+      "coordinate_box": [
+        26,
+        62,
+        112,
+        80
+      ],
+      "scene_ok": true,
+      "coordinate_ok": true,
+      "formatted": "朱紫皇宫[65,29]",
+      "parsed_coordinate": [
+        "朱紫皇宫",
+        65,
+        29
+      ]
+    },
+    "production_coordinate_changed": false,
+    "production_config_changed": false
+  }
+}

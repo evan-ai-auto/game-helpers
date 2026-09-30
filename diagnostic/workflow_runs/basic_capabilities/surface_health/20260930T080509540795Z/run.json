@@ -1,0 +1,10 @@
+{
+  "capability": "surface_health",
+  "name": "检查游戏画面 Surface",
+  "description": "检查当前选中 WSGAME Surface 是否具备捕获条件。",
+  "implementation": "tasks.verification_session:VerificationSession.health",
+  "artifacts": [
+    "capture.png",
+    "result.json"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "capability": "demon_repellent_incense",
+  "name": "摄妖香相关",
+  "description": "基础能力占位：后续补充摄妖香检查、使用与结果验证。",
+  "implementation": "tasks.basic_capability_flow:placeholder",
+  "artifacts": [
+    "capture.png",
+    "result.json"
+  ]
+}

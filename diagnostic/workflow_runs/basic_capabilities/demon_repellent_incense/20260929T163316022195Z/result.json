@@ -1,0 +1,200 @@
+{
+  "ok": false,
+  "capability": "demon_repellent_incense",
+  "subtask": "hover",
+  "hover_diagnostic": {
+    "ok": false,
+    "panel_collapsed": false,
+    "clock_found": true,
+    "clock_score": 0.9631875318639419,
+    "clock_location": [
+      653,
+      120
+    ],
+    "input_point": [
+      653,
+      120
+    ],
+    "capture_to_input_nudge": [
+      0,
+      0
+    ],
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "trials": [
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          653,
+          120
+        ],
+        "input_point": [
+          653,
+          120
+        ],
+        "exit_point": [
+          513,
+          120
+        ],
+        "cursor_client_after_move": [
+          653,
+          120
+        ],
+        "tooltip_roi": [
+          600,
+          54,
+          760,
+          118
+        ],
+        "tooltip_pixel_delta_mean": 23.777,
+        "tooltip_text": "",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          -3,
+          3
+        ],
+        "hover_point": [
+          650,
+          123
+        ],
+        "input_point": [
+          650,
+          123
+        ],
+        "exit_point": [
+          513,
+          120
+        ],
+        "cursor_client_after_move": [
+          650,
+          123
+        ],
+        "tooltip_roi": [
+          600,
+          57,
+          760,
+          121
+        ],
+        "tooltip_pixel_delta_mean": 30.278,
+        "tooltip_text": "",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          3,
+          -3
+        ],
+        "hover_point": [
+          656,
+          117
+        ],
+        "input_point": [
+          656,
+          117
+        ],
+        "exit_point": [
+          513,
+          120
+        ],
+        "cursor_client_after_move": [
+          656,
+          117
+        ],
+        "tooltip_roi": [
+          600,
+          51,
+          760,
+          115
+        ],
+        "tooltip_pixel_delta_mean": 34.491,
+        "tooltip_text": "",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          -6,
+          6
+        ],
+        "hover_point": [
+          647,
+          126
+        ],
+        "input_point": [
+          647,
+          126
+        ],
+        "exit_point": [
+          513,
+          120
+        ],
+        "cursor_client_after_move": [
+          647,
+          126
+        ],
+        "tooltip_roi": [
+          600,
+          60,
+          760,
+          124
+        ],
+        "tooltip_pixel_delta_mean": 45.707,
+        "tooltip_text": "",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      }
+    ],
+    "winning_strategies": [],
+    "pixel_delta_only_strategies": [
+      "setcursor_postmessage"
+    ],
+    "evidence": [
+      "diagnostic=hover-locked-verification",
+      "strategies=['setcursor_postmessage']",
+      "settle_seconds=[0.9]",
+      "hover_offsets=[[0, 0], [-3, 3], [3, -3], [-6, 6]]",
+      "capture_to_input_nudge=[0, 0]",
+      "vision_hover=[653, 120]",
+      "input_point=[653, 120]",
+      "tip_ocr_ok_trials=0",
+      "pixel_delta_without_tip_trials=4",
+      "winning_strategies=[]",
+      "artifacts=keep all locked-matrix trial dirs",
+      "note=161600: prior nudge=(-9,+27) missed dial; aim vision hover; tip=时间提醒+余N分钟"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260929T163316022195Z",
+  "message": "Hover 触发诊断完成。"
+}

@@ -1,0 +1,11 @@
+{
+  "capability": "capture_freshness",
+  "name": "验证捕获新鲜度",
+  "description": "验证 Host/WSGAME/Playfield/RightEdge 分层新鲜度。",
+  "implementation": "tasks.background_capture_freshness:run_background_capture_freshness",
+  "artifacts": [
+    "capture.png",
+    "freshness",
+    "result.json"
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "ok": false,
+  "capability": "demon_repellent_incense",
+  "subtask": "usage",
+  "usage": {
+    "usage": "unknown",
+    "remaining_minutes": null,
+    "panel_collapsed": false,
+    "panel_template": "right_light",
+    "panel_score": 0.890930041144876,
+    "panel_confidence": 0.945465020572438,
+    "panel_reason": "panel_expanded",
+    "panel_match_location": [
+      781,
+      112
+    ],
+    "panel_search_roi": [
+      760,
+      90,
+      800,
+      220
+    ],
+    "clock_found": true,
+    "clock_score": 0.9515535429412243,
+    "clock_location": [
+      654,
+      121
+    ],
+    "clock_reason": "icon_found",
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "hover_point": [
+      654,
+      121
+    ],
+    "tooltip_text": "",
+    "evidence": [
+      "panel_collapsed=False",
+      "panel_template=right_light",
+      "panel_score=0.891",
+      "panel_confidence=0.945",
+      "panel_reason=panel_expanded",
+      "panel_match_location=(781, 112)",
+      "toggle matched=right_light score=0.891",
+      "decide=arrow-direction",
+      "arrow-direction=right score=0.375",
+      "right arrow means expanded; left arrow means collapsed",
+      "target=demon_repellent_incense.clock",
+      "template=E:\\work\\dev_workspace\\my_windows\\game-helpers\\data\\assets\\ui\\resolutions\\800x600\\incense_clock_icon.png",
+      "score=0.952",
+      "threshold=0.780",
+      "roi=[620, 90, 800, 145]",
+      "clock_reason=icon_found",
+      "pre_hover_verification=PASS",
+      "hover_point=(654, 121)",
+      "hover_target_roi=[630, 97, 678, 145]",
+      "tooltip_ocr_roi=[544, 61, 724, 117]",
+      "tooltip=''"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260929T094749724793Z",
+  "message": "使用状态识别完成：unknown"
+}

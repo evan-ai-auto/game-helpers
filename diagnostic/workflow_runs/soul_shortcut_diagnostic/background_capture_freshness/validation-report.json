@@ -1,0 +1,563 @@
+{
+  "subtype": "background_capture_freshness",
+  "character": "相思微凉ヘ",
+  "client_size": [
+    800,
+    600
+  ],
+  "production_coordinate_changed": false,
+  "background_capture_freshness": {
+    "covered": {
+      "experiment": "background_capture_freshness",
+      "refresh_before_sampling": false,
+      "refresh": null,
+      "wait_seconds": 5.0,
+      "sample_interval": 0.25,
+      "frame_count": 21,
+      "host": {
+        "frame_count": 21,
+        "changed_frame_count": 20,
+        "max_diff_ratio": 0.040313472869253804,
+        "first_change": {
+          "index": 2,
+          "elapsed_seconds": 0.359,
+          "host_diff_ratio": 0.021619523140821315,
+          "child_diff_ratio": 0.024247916666666668,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.6061979166666667
+        },
+        "last_change": {
+          "index": 21,
+          "elapsed_seconds": 5.109,
+          "host_diff_ratio": 0.04010543209326171,
+          "child_diff_ratio": 0.03047916666666667,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7619791666666667
+        },
+        "threshold": 0.0
+      },
+      "wsgame_crop": {
+        "frame_count": 21,
+        "changed_frame_count": 20,
+        "max_diff_ratio": 0.0307125,
+        "first_change": {
+          "index": 2,
+          "elapsed_seconds": 0.359,
+          "host_diff_ratio": 0.021619523140821315,
+          "child_diff_ratio": 0.024247916666666668,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.6061979166666667
+        },
+        "last_change": {
+          "index": 21,
+          "elapsed_seconds": 5.109,
+          "host_diff_ratio": 0.04010543209326171,
+          "child_diff_ratio": 0.03047916666666667,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7619791666666667
+        },
+        "threshold": 0.0
+      },
+      "playfield": {
+        "frame_count": 21,
+        "changed_frame_count": 0,
+        "max_diff_ratio": 0.0,
+        "first_change": null,
+        "last_change": null,
+        "threshold": 0.002
+      },
+      "right_edge": {
+        "frame_count": 21,
+        "changed_frame_count": 20,
+        "max_diff_ratio": 0.7678125,
+        "first_change": {
+          "index": 2,
+          "elapsed_seconds": 0.359,
+          "host_diff_ratio": 0.021619523140821315,
+          "child_diff_ratio": 0.024247916666666668,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.6061979166666667
+        },
+        "last_change": {
+          "index": 21,
+          "elapsed_seconds": 5.109,
+          "host_diff_ratio": 0.04010543209326171,
+          "child_diff_ratio": 0.03047916666666667,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7619791666666667
+        },
+        "threshold": 0.02
+      },
+      "ocr": {
+        "backend": "Windows.Media.Ocr",
+        "language": "zh-Hans-CN",
+        "first": {
+          "formatted": "朱紫国匚[137,92]",
+          "parsed_coordinate": [
+            "朱紫国匚",
+            137,
+            92
+          ]
+        },
+        "last": {
+          "formatted": "朱紫国匚[137,92]",
+          "parsed_coordinate": [
+            "朱紫国匚",
+            137,
+            92
+          ]
+        }
+      },
+      "samples": [
+        {
+          "index": 1,
+          "elapsed_seconds": 0.078,
+          "host_diff_ratio": 0.0,
+          "child_diff_ratio": 0.0,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.0
+        },
+        {
+          "index": 2,
+          "elapsed_seconds": 0.359,
+          "host_diff_ratio": 0.021619523140821315,
+          "child_diff_ratio": 0.024247916666666668,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.6061979166666667
+        },
+        {
+          "index": 3,
+          "elapsed_seconds": 0.609,
+          "host_diff_ratio": 0.023023798378767953,
+          "child_diff_ratio": 0.025822916666666668,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.6455729166666667
+        },
+        {
+          "index": 4,
+          "elapsed_seconds": 0.859,
+          "host_diff_ratio": 0.03749934987257503,
+          "child_diff_ratio": 0.02755625,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.68890625
+        },
+        {
+          "index": 5,
+          "elapsed_seconds": 1.109,
+          "host_diff_ratio": 0.03878102965324061,
+          "child_diff_ratio": 0.02899375,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.72484375
+        },
+        {
+          "index": 6,
+          "elapsed_seconds": 1.343,
+          "host_diff_ratio": 0.040031131816121675,
+          "child_diff_ratio": 0.030395833333333334,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7598958333333333
+        },
+        {
+          "index": 7,
+          "elapsed_seconds": 1.609,
+          "host_diff_ratio": 0.03981566101241558,
+          "child_diff_ratio": 0.030154166666666666,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7538541666666667
+        },
+        {
+          "index": 8,
+          "elapsed_seconds": 1.859,
+          "host_diff_ratio": 0.03990482134498362,
+          "child_diff_ratio": 0.030254166666666665,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7563541666666667
+        },
+        {
+          "index": 9,
+          "elapsed_seconds": 2.093,
+          "host_diff_ratio": 0.040313472869253804,
+          "child_diff_ratio": 0.0307125,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7678125
+        },
+        {
+          "index": 10,
+          "elapsed_seconds": 2.359,
+          "host_diff_ratio": 0.04016115730111673,
+          "child_diff_ratio": 0.03054166666666667,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7635416666666667
+        },
+        {
+          "index": 11,
+          "elapsed_seconds": 2.609,
+          "host_diff_ratio": 0.03998469414290915,
+          "child_diff_ratio": 0.03034375,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.75859375
+        },
+        {
+          "index": 12,
+          "elapsed_seconds": 2.859,
+          "host_diff_ratio": 0.04010914710711871,
+          "child_diff_ratio": 0.030483333333333335,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7620833333333333
+        },
+        {
+          "index": 13,
+          "elapsed_seconds": 3.093,
+          "host_diff_ratio": 0.039681920513563514,
+          "child_diff_ratio": 0.030004166666666665,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7501041666666667
+        },
+        {
+          "index": 14,
+          "elapsed_seconds": 3.359,
+          "host_diff_ratio": 0.04017601735654474,
+          "child_diff_ratio": 0.030558333333333333,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7639583333333333
+        },
+        {
+          "index": 15,
+          "elapsed_seconds": 3.593,
+          "host_diff_ratio": 0.03979894345005907,
+          "child_diff_ratio": 0.030135416666666668,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7533854166666667
+        },
+        {
+          "index": 16,
+          "elapsed_seconds": 3.859,
+          "host_diff_ratio": 0.04025031763368477,
+          "child_diff_ratio": 0.030641666666666668,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7660416666666666
+        },
+        {
+          "index": 17,
+          "elapsed_seconds": 4.093,
+          "host_diff_ratio": 0.03978036838077406,
+          "child_diff_ratio": 0.030114583333333333,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7528645833333333
+        },
+        {
+          "index": 18,
+          "elapsed_seconds": 4.359,
+          "host_diff_ratio": 0.03995683153898164,
+          "child_diff_ratio": 0.0303125,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7578125
+        },
+        {
+          "index": 19,
+          "elapsed_seconds": 4.593,
+          "host_diff_ratio": 0.039834236081700586,
+          "child_diff_ratio": 0.030175,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.754375
+        },
+        {
+          "index": 20,
+          "elapsed_seconds": 4.859,
+          "host_diff_ratio": 0.039852811150985594,
+          "child_diff_ratio": 0.030195833333333335,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7548958333333333
+        },
+        {
+          "index": 21,
+          "elapsed_seconds": 5.109,
+          "host_diff_ratio": 0.04010543209326171,
+          "child_diff_ratio": 0.03047916666666667,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7619791666666667
+        }
+      ],
+      "production_coordinate_changed": false,
+      "production_config_changed": false
+    },
+    "refresh": {
+      "experiment": "background_capture_freshness",
+      "refresh_before_sampling": true,
+      "refresh": {
+        "ok": true,
+        "switched": true,
+        "reason": null
+      },
+      "wait_seconds": 5.0,
+      "sample_interval": 0.25,
+      "frame_count": 21,
+      "host": {
+        "frame_count": 21,
+        "changed_frame_count": 20,
+        "max_diff_ratio": 0.027227336557965363,
+        "first_change": {
+          "index": 2,
+          "elapsed_seconds": 0.344,
+          "host_diff_ratio": 0.0237890912333103,
+          "child_diff_ratio": 0.02668125,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.66703125
+        },
+        "last_change": {
+          "index": 21,
+          "elapsed_seconds": 5.094,
+          "host_diff_ratio": 0.026631076833916592,
+          "child_diff_ratio": 0.02986875,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.74671875
+        },
+        "threshold": 0.0
+      },
+      "wsgame_crop": {
+        "frame_count": 21,
+        "changed_frame_count": 20,
+        "max_diff_ratio": 0.0305375,
+        "first_change": {
+          "index": 2,
+          "elapsed_seconds": 0.344,
+          "host_diff_ratio": 0.0237890912333103,
+          "child_diff_ratio": 0.02668125,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.66703125
+        },
+        "last_change": {
+          "index": 21,
+          "elapsed_seconds": 5.094,
+          "host_diff_ratio": 0.026631076833916592,
+          "child_diff_ratio": 0.02986875,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.74671875
+        },
+        "threshold": 0.0
+      },
+      "playfield": {
+        "frame_count": 21,
+        "changed_frame_count": 0,
+        "max_diff_ratio": 0.0,
+        "first_change": null,
+        "last_change": null,
+        "threshold": 0.002
+      },
+      "right_edge": {
+        "frame_count": 21,
+        "changed_frame_count": 20,
+        "max_diff_ratio": 0.7634375,
+        "first_change": {
+          "index": 2,
+          "elapsed_seconds": 0.344,
+          "host_diff_ratio": 0.0237890912333103,
+          "child_diff_ratio": 0.02668125,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.66703125
+        },
+        "last_change": {
+          "index": 21,
+          "elapsed_seconds": 5.094,
+          "host_diff_ratio": 0.026631076833916592,
+          "child_diff_ratio": 0.02986875,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.74671875
+        },
+        "threshold": 0.02
+      },
+      "ocr": {
+        "backend": "Windows.Media.Ocr",
+        "language": "zh-Hans-CN",
+        "first": {
+          "formatted": "朱紫国匚[137,92]",
+          "parsed_coordinate": [
+            "朱紫国匚",
+            137,
+            92
+          ]
+        },
+        "last": {
+          "formatted": "朱紫国匚[137,92]",
+          "parsed_coordinate": [
+            "朱紫国匚",
+            137,
+            92
+          ]
+        }
+      },
+      "samples": [
+        {
+          "index": 1,
+          "elapsed_seconds": 0.062,
+          "host_diff_ratio": 0.0,
+          "child_diff_ratio": 0.0,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.0
+        },
+        {
+          "index": 2,
+          "elapsed_seconds": 0.344,
+          "host_diff_ratio": 0.0237890912333103,
+          "child_diff_ratio": 0.02668125,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.66703125
+        },
+        {
+          "index": 3,
+          "elapsed_seconds": 0.609,
+          "host_diff_ratio": 0.025288099324610482,
+          "child_diff_ratio": 0.0283625,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7090625
+        },
+        {
+          "index": 4,
+          "elapsed_seconds": 0.844,
+          "host_diff_ratio": 0.02522122907518445,
+          "child_diff_ratio": 0.0282875,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7071875
+        },
+        {
+          "index": 5,
+          "elapsed_seconds": 1.094,
+          "host_diff_ratio": 0.024181025195223978,
+          "child_diff_ratio": 0.027120833333333334,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.6780208333333333
+        },
+        {
+          "index": 6,
+          "elapsed_seconds": 1.359,
+          "host_diff_ratio": 0.025011330792263854,
+          "child_diff_ratio": 0.02805208333333333,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7013020833333333
+        },
+        {
+          "index": 7,
+          "elapsed_seconds": 1.594,
+          "host_diff_ratio": 0.02563731062716864,
+          "child_diff_ratio": 0.028754166666666667,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7188541666666667
+        },
+        {
+          "index": 8,
+          "elapsed_seconds": 1.844,
+          "host_diff_ratio": 0.025694893341952164,
+          "child_diff_ratio": 0.02881875,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.72046875
+        },
+        {
+          "index": 9,
+          "elapsed_seconds": 2.109,
+          "host_diff_ratio": 0.025271381762253974,
+          "child_diff_ratio": 0.02834375,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.70859375
+        },
+        {
+          "index": 10,
+          "elapsed_seconds": 2.344,
+          "host_diff_ratio": 0.02541440979574854,
+          "child_diff_ratio": 0.028504166666666667,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7126041666666667
+        },
+        {
+          "index": 11,
+          "elapsed_seconds": 2.609,
+          "host_diff_ratio": 0.02550728514217358,
+          "child_diff_ratio": 0.028608333333333333,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7152083333333333
+        },
+        {
+          "index": 12,
+          "elapsed_seconds": 2.844,
+          "host_diff_ratio": 0.0251116361664029,
+          "child_diff_ratio": 0.028164583333333333,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7041145833333333
+        },
+        {
+          "index": 13,
+          "elapsed_seconds": 3.094,
+          "host_diff_ratio": 0.024881305307268797,
+          "child_diff_ratio": 0.02790625,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.69765625
+        },
+        {
+          "index": 14,
+          "elapsed_seconds": 3.344,
+          "host_diff_ratio": 0.024441076165214095,
+          "child_diff_ratio": 0.0274125,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.6853125
+        },
+        {
+          "index": 15,
+          "elapsed_seconds": 3.609,
+          "host_diff_ratio": 0.024567386636352155,
+          "child_diff_ratio": 0.027554166666666668,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.6888541666666667
+        },
+        {
+          "index": 16,
+          "elapsed_seconds": 3.844,
+          "host_diff_ratio": 0.025393977219535027,
+          "child_diff_ratio": 0.02848125,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.71203125
+        },
+        {
+          "index": 17,
+          "elapsed_seconds": 4.094,
+          "host_diff_ratio": 0.02628186553135843,
+          "child_diff_ratio": 0.029477083333333334,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7369270833333333
+        },
+        {
+          "index": 18,
+          "elapsed_seconds": 4.359,
+          "host_diff_ratio": 0.026954283039475738,
+          "child_diff_ratio": 0.03023125,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.75578125
+        },
+        {
+          "index": 19,
+          "elapsed_seconds": 4.609,
+          "host_diff_ratio": 0.027227336557965363,
+          "child_diff_ratio": 0.0305375,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.7634375
+        },
+        {
+          "index": 20,
+          "elapsed_seconds": 4.844,
+          "host_diff_ratio": 0.027154893787753827,
+          "child_diff_ratio": 0.03045625,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.76140625
+        },
+        {
+          "index": 21,
+          "elapsed_seconds": 5.094,
+          "host_diff_ratio": 0.026631076833916592,
+          "child_diff_ratio": 0.02986875,
+          "playfield_ratio": 0.0,
+          "right_edge_ratio": 0.74671875
+        }
+      ],
+      "production_coordinate_changed": false,
+      "production_config_changed": false
+    }
+  }
+}

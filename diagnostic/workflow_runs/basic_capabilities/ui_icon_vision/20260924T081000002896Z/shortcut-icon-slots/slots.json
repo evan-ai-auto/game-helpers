@@ -1,0 +1,178 @@
+{
+  "slot_count": 6,
+  "grid": {
+    "origin": [
+      34,
+      99
+    ],
+    "cell": [
+      31,
+      43
+    ],
+    "size": [
+      32,
+      32
+    ],
+    "cols": 3,
+    "rows": 2,
+    "refine_pad": 6
+  },
+  "slots": [
+    {
+      "index": 1,
+      "row": 1,
+      "col": 1,
+      "client_rect": [
+        32,
+        105,
+        64,
+        137
+      ],
+      "seed_rect": [
+        34,
+        99,
+        66,
+        131
+      ],
+      "center": [
+        48,
+        121
+      ],
+      "best_target_id": null,
+      "best_target_name": null,
+      "best_score": 0.39803844690322876,
+      "artifact_name": "slot-01-r1c1.png",
+      "artifact": "shortcut-icon-slots/slot-01-r1c1.png"
+    },
+    {
+      "index": 2,
+      "row": 1,
+      "col": 2,
+      "client_rect": [
+        67,
+        104,
+        99,
+        136
+      ],
+      "seed_rect": [
+        65,
+        99,
+        97,
+        131
+      ],
+      "center": [
+        83,
+        120
+      ],
+      "best_target_id": null,
+      "best_target_name": null,
+      "best_score": 0.44999822974205017,
+      "artifact_name": "slot-02-r1c2.png",
+      "artifact": "shortcut-icon-slots/slot-02-r1c2.png"
+    },
+    {
+      "index": 3,
+      "row": 1,
+      "col": 3,
+      "client_rect": [
+        96,
+        102,
+        128,
+        134
+      ],
+      "seed_rect": [
+        96,
+        99,
+        128,
+        131
+      ],
+      "center": [
+        112,
+        118
+      ],
+      "best_target_id": null,
+      "best_target_name": null,
+      "best_score": 0.36017584800720215,
+      "artifact_name": "slot-03-r1c3.png",
+      "artifact": "shortcut-icon-slots/slot-03-r1c3.png"
+    },
+    {
+      "index": 4,
+      "row": 2,
+      "col": 1,
+      "client_rect": [
+        28,
+        142,
+        60,
+        174
+      ],
+      "seed_rect": [
+        34,
+        142,
+        66,
+        174
+      ],
+      "center": [
+        44,
+        158
+      ],
+      "best_target_id": null,
+      "best_target_name": null,
+      "best_score": 0.3300231695175171,
+      "artifact_name": "slot-04-r2c1.png",
+      "artifact": "shortcut-icon-slots/slot-04-r2c1.png"
+    },
+    {
+      "index": 5,
+      "row": 2,
+      "col": 2,
+      "client_rect": [
+        61,
+        142,
+        93,
+        174
+      ],
+      "seed_rect": [
+        65,
+        142,
+        97,
+        174
+      ],
+      "center": [
+        77,
+        158
+      ],
+      "best_target_id": "soul_task_claimed",
+      "best_target_name": "命魂任务已领取图标",
+      "best_score": 0.8462203145027161,
+      "artifact_name": "slot-05-r2c2.png",
+      "artifact": "shortcut-icon-slots/slot-05-r2c2.png"
+    },
+    {
+      "index": 6,
+      "row": 2,
+      "col": 3,
+      "client_rect": [
+        96,
+        138,
+        128,
+        170
+      ],
+      "seed_rect": [
+        96,
+        142,
+        128,
+        174
+      ],
+      "center": [
+        112,
+        154
+      ],
+      "best_target_id": null,
+      "best_target_name": null,
+      "best_score": 0.27990686893463135,
+      "artifact_name": "slot-06-r2c3.png",
+      "artifact": "shortcut-icon-slots/slot-06-r2c3.png"
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "experiment": "background_capture_freshness",
+  "refresh_before_sampling": false,
+  "refresh": null,
+  "wait_seconds": 2.0,
+  "sample_interval": 0.5,
+  "frame_count": 5,
+  "host": {
+    "frame_count": 5,
+    "changed_frame_count": 4,
+    "max_diff_ratio": 0.00499855114459577,
+    "first_change": {
+      "index": 2,
+      "elapsed_seconds": 0.594,
+      "host_diff_ratio": 0.0031354716953094237,
+      "child_diff_ratio": 0.0035166666666666666,
+      "playfield_ratio": 0.0,
+      "right_edge_ratio": 0.08791666666666667
+    },
+    "last_change": {
+      "index": 5,
+      "elapsed_seconds": 2.094,
+      "host_diff_ratio": 0.0035608407819361166,
+      "child_diff_ratio": 0.00399375,
+      "playfield_ratio": 0.0,
+      "right_edge_ratio": 0.09984375
+    },
+    "threshold": 0.0
+  },
+  "wsgame_crop": {
+    "frame_count": 5,
+    "changed_frame_count": 4,
+    "max_diff_ratio": 0.00560625,
+    "first_change": {
+      "index": 2,
+      "elapsed_seconds": 0.594,
+      "host_diff_ratio": 0.0031354716953094237,
+      "child_diff_ratio": 0.0035166666666666666,
+      "playfield_ratio": 0.0,
+      "right_edge_ratio": 0.08791666666666667
+    },
+    "last_change": {
+      "index": 5,
+      "elapsed_seconds": 2.094,
+      "host_diff_ratio": 0.0035608407819361166,
+      "child_diff_ratio": 0.00399375,
+      "playfield_ratio": 0.0,
+      "right_edge_ratio": 0.09984375
+    },
+    "threshold": 0.0
+  },
+  "playfield": {
+    "frame_count": 5,
+    "changed_frame_count": 0,
+    "max_diff_ratio": 0.0,
+    "first_change": null,
+    "last_change": null,
+    "threshold": 0.002
+  },
+  "right_edge": {
+    "frame_count": 5,
+    "changed_frame_count": 4,
+    "max_diff_ratio": 0.14015625,
+    "first_change": {
+      "index": 2,
+      "elapsed_seconds": 0.594,
+      "host_diff_ratio": 0.0031354716953094237,
+      "child_diff_ratio": 0.0035166666666666666,
+      "playfield_ratio": 0.0,
+      "right_edge_ratio": 0.08791666666666667
+    },
+    "last_change": {
+      "index": 5,
+      "elapsed_seconds": 2.094,
+      "host_diff_ratio": 0.0035608407819361166,
+      "child_diff_ratio": 0.00399375,
+      "playfield_ratio": 0.0,
+      "right_edge_ratio": 0.09984375
+    },
+    "threshold": 0.02
+  },
+  "ocr": {
+    "backend": "Windows.Media.Ocr",
+    "language": "zh-Hans-CN",
+    "first": {
+      "formatted": "海底迷吕[28,36]",
+      "parsed_coordinate": [
+        "海底迷吕",
+        28,
+        36
+      ]
+    },
+    "last": {
+      "formatted": "海底迷吕[28,36]",
+      "parsed_coordinate": [
+        "海底迷吕",
+        28,
+        36
+      ]
+    }
+  },
+  "samples": [
+    {
+      "index": 1,
+      "elapsed_seconds": 0.047,
+      "host_diff_ratio": 0.0,
+      "child_diff_ratio": 0.0,
+      "playfield_ratio": 0.0,
+      "right_edge_ratio": 0.0
+    },
+    {
+      "index": 2,
+      "elapsed_seconds": 0.594,
+      "host_diff_ratio": 0.0031354716953094237,
+      "child_diff_ratio": 0.0035166666666666666,
+      "playfield_ratio": 0.0,
+      "right_edge_ratio": 0.08791666666666667
+    },
+    {
+      "index": 3,
+      "elapsed_seconds": 1.094,
+      "host_diff_ratio": 0.00499855114459577,
+      "child_diff_ratio": 0.00560625,
+      "playfield_ratio": 0.0,
+      "right_edge_ratio": 0.14015625
+    },
+    {
+      "index": 4,
+      "elapsed_seconds": 1.609,
+      "host_diff_ratio": 0.0026153697553291874,
+      "child_diff_ratio": 0.0029333333333333334,
+      "playfield_ratio": 0.0,
+      "right_edge_ratio": 0.07333333333333333
+    },
+    {
+      "index": 5,
+      "elapsed_seconds": 2.094,
+      "host_diff_ratio": 0.0035608407819361166,
+      "child_diff_ratio": 0.00399375,
+      "playfield_ratio": 0.0,
+      "right_edge_ratio": 0.09984375
+    }
+  ],
+  "production_coordinate_changed": false,
+  "production_config_changed": false
+}

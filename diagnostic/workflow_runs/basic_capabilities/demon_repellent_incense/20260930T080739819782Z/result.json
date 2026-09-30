@@ -1,0 +1,202 @@
+{
+  "ok": true,
+  "capability": "demon_repellent_incense",
+  "subtask": "hover",
+  "hover_diagnostic": {
+    "ok": true,
+    "panel_collapsed": false,
+    "clock_found": true,
+    "clock_score": 0.9607119167552275,
+    "clock_location": [
+      654,
+      121
+    ],
+    "input_point": [
+      633,
+      129
+    ],
+    "capture_to_input_nudge": [
+      -21,
+      8
+    ],
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "trials": [
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          633,
+          129
+        ],
+        "exit_point": [
+          493,
+          129
+        ],
+        "cursor_client_after_move": [
+          633,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 39.588,
+        "tooltip_text": "4",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          633,
+          129
+        ],
+        "exit_point": [
+          493,
+          129
+        ],
+        "cursor_client_after_move": [
+          633,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 40.38,
+        "tooltip_text": "0 〕 剩 半 33 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          633,
+          129
+        ],
+        "exit_point": [
+          493,
+          129
+        ],
+        "cursor_client_after_move": [
+          633,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 38.012,
+        "tooltip_text": "0 ` 剩 半 33 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          633,
+          129
+        ],
+        "exit_point": [
+          493,
+          129
+        ],
+        "cursor_client_after_move": [
+          633,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 44.065,
+        "tooltip_text": "自 引 罡 二 卜 0 ` 剩 余 33 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      }
+    ],
+    "winning_strategies": [
+      "setcursor_postmessage"
+    ],
+    "pixel_delta_only_strategies": [
+      "setcursor_postmessage"
+    ],
+    "evidence": [
+      "diagnostic=hover-locked-verification",
+      "strategies=['setcursor_postmessage']",
+      "settle_seconds=[0.9]",
+      "hover_offsets=[[0, 0], [0, 0], [0, 0], [0, 0]]",
+      "capture_to_input_nudge=[-21, 8]",
+      "vision_hover=[654, 121]",
+      "input_point=[633, 129]",
+      "tip_ocr_ok_trials=1",
+      "pixel_delta_without_tip_trials=3",
+      "winning_strategies=['setcursor_postmessage']",
+      "artifacts=keep all locked-matrix trial dirs",
+      "note=080250: human X +1 right → nudge=(-21,8); still (0,0)×4"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260930T080739819782Z",
+  "message": "Hover 触发诊断完成。"
+}

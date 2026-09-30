@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "capability": "background_mouse_move",
+  "effect": "WM_MOUSEMOVE only",
+  "client_point": [
+    400,
+    300
+  ]
+}
