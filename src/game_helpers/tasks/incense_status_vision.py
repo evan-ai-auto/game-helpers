@@ -37,11 +37,16 @@ TASK_TRACKER_OCR_MARKERS = ("任务追踪", "宠环", "签到答题", "任务积
 HOVER_TARGET_HALF = 24
 # Tip OCR: keep band near the clock; left edge must stay on/near the right strip
 # (20260929T123820: ROI left=545 bled into 长安城 stalls → false tip pixel deltas).
-# 173118: tip ROI must be horizontal — width 160×2, height stay original 64.
+# 173118: tip ROI must be horizontal — width 160×2.
+# 084546: primary tip ROI height 64→84 and top shifts up 20 (hy-8→hy-28).
+# 085641: human — shift primary tip ROI down 5px (hy-28→hy-23).
+# 100839: keep top; height +10 (84→94).
 TOOLTIP_OCR_WIDTH = 320
-TOOLTIP_OCR_HEIGHT = 64
+TOOLTIP_OCR_HEIGHT = 94
+TOOLTIP_OCR_BELOW_HEIGHT = 64
 TOOLTIP_OCR_LEFT = 8
 TOOLTIP_OCR_MIN_LEFT = 480
+TOOLTIP_OCR_TOP_ABOVE_HOVER = 23
 # Discovery sweep retired: locked transport+dwell only (no post/send/setcursor matrix).
 # Always keep these few trial image dirs (pass or fail) for review.
 HOVER_DIAGNOSTIC_SETTLE_SECONDS = (0.90,)
@@ -214,14 +219,17 @@ def tooltip_ocr_box(
 ) -> tuple[int, int, int, int]:
     """Wide tip OCR band near the dial (horizontal stretch).
 
-    173118: tip ROI must be wider on X (160→320), height stays 64 — not a tall strip.
+    173118: tip ROI must be wider on X (160→320) — not a tall strip.
+    084546: height +20 and visual top -20 vs prior hy-8 / h=64 window.
+    085641: visual top +5 (hy-28→hy-23).
+    100839: height +10 (84→94), top unchanged.
     Left edge stays on/near the right strip to limit playfield bleed.
     """
     hx, hy = hover
     left = hx - TOOLTIP_OCR_WIDTH // 2 - TOOLTIP_OCR_LEFT
     left = max(TOOLTIP_OCR_MIN_LEFT, min(left, width - TOOLTIP_OCR_WIDTH))
     right = left + TOOLTIP_OCR_WIDTH
-    top = max(0, hy - 8)
+    top = max(0, hy - TOOLTIP_OCR_TOP_ABOVE_HOVER)
     bottom = top + TOOLTIP_OCR_HEIGHT
     return _clamp_box(left, top, right, bottom, width=width, height=height)
 
@@ -235,7 +243,7 @@ def tooltip_ocr_box_below(
     left = max(TOOLTIP_OCR_MIN_LEFT, min(left, width - TOOLTIP_OCR_WIDTH))
     right = left + TOOLTIP_OCR_WIDTH
     top = hy + 2
-    bottom = top + TOOLTIP_OCR_HEIGHT
+    bottom = top + TOOLTIP_OCR_BELOW_HEIGHT
     return _clamp_box(left, top, right, bottom, width=width, height=height)
 
 
