@@ -235,6 +235,15 @@ def run_demon_repellent_incense(
         sync_selected_character(parent_hwnd, selection)
         if chosen == "hover":
             hover_payload = run_incense_hover_diagnostic(session, output / "hover")
+            for index, trial in enumerate(hover_payload.get("trials") or [], start=1):
+                if not isinstance(trial, dict):
+                    continue
+                print(
+                    f"[摄妖香][hover] trial#{index} "
+                    f"tooltip_text_left(首行)={trial.get('tooltip_text_left')!r} "
+                    f"tooltip_text={trial.get('tooltip_text')!r} "
+                    f"tip_ocr_ok={trial.get('tip_ocr_ok')}"
+                )
             result = {
                 "ok": bool(hover_payload.get("ok")),
                 "capability": "demon_repellent_incense",

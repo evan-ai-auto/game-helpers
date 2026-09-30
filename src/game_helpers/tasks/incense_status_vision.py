@@ -48,6 +48,10 @@ TOOLTIP_OCR_BELOW_HEIGHT = 64
 TOOLTIP_OCR_LEFT = 8
 TOOLTIP_OCR_MIN_LEFT = 480
 TOOLTIP_OCR_TOP_ABOVE_HOVER = 23
+# Left-half tip: OCR only the top line (dark tip bar); upscale+contrast for Windows OCR.
+TOOLTIP_LEFT_FIRST_LINE_HEIGHT = 40
+TOOLTIP_LEFT_FIRST_LINE_SCALE = 3
+TOOLTIP_LEFT_FIRST_LINE_CONTRAST = 1.8
 # Discovery sweep retired: locked transport+dwell only (no post/send/setcursor matrix).
 # Always keep these few trial image dirs (pass or fail) for review.
 HOVER_DIAGNOSTIC_SETTLE_SECONDS = (0.90,)
@@ -261,6 +265,39 @@ def tooltip_ocr_box_left(
     return _clamp_box(left, top, right, bottom, width=width, height=height)
 
 
+def tooltip_ocr_box_left_half(
+    hover: tuple[int, int], *, width: int, height: int
+) -> tuple[int, int, int, int]:
+    """Left half of the primary tip ROI (incense tip text lives here)."""
+    left, top, right, bottom = tooltip_ocr_box(hover, width=width, height=height)
+    mid = left + max(1, (right - left) // 2)
+    return _clamp_box(left, top, mid, bottom, width=width, height=height)
+
+
+def tooltip_ocr_box_left_first_line(
+    hover: tuple[int, int], *, width: int, height: int
+) -> tuple[int, int, int, int]:
+    """Top line band inside the left-half tip ROI (「暂无时间提醒信息」/剩余分钟)."""
+    left, top, right, bottom = tooltip_ocr_box_left_half(
+        hover, width=width, height=height
+    )
+    line_bottom = min(bottom, top + TOOLTIP_LEFT_FIRST_LINE_HEIGHT)
+    return _clamp_box(left, top, right, line_bottom, width=width, height=height)
+
+
+def _prepare_tip_first_line_image(crop: Image.Image) -> Image.Image:
+    """Upscale + contrast so Windows OCR can resolve the dark tip bar glyphs."""
+    from PIL import ImageEnhance
+
+    rgb = crop.convert("RGB")
+    scale = int(TOOLTIP_LEFT_FIRST_LINE_SCALE)
+    up = rgb.resize(
+        (max(1, rgb.width * scale), max(1, rgb.height * scale)),
+        Image.Resampling.LANCZOS,
+    )
+    return ImageEnhance.Contrast(up).enhance(float(TOOLTIP_LEFT_FIRST_LINE_CONTRAST))
+
+
 def _save_hover_on_search_roi(
     image: Image.Image,
     *,
@@ -282,24 +319,45 @@ def _save_hover_on_search_roi(
     crop.save(path)
 
 
-def _ocr_tooltip(image: Image.Image, hover: tuple[int, int]) -> str:
+def _ocr_backend():
     from ..vision.windows_ocr import WindowsNativeOCRBackend
 
     try:
-        backend = WindowsNativeOCRBackend(language="zh-Hans-CN")
+        return WindowsNativeOCRBackend(language="zh-Hans-CN")
     except RuntimeError:
-        backend = WindowsNativeOCRBackend()
+        return WindowsNativeOCRBackend()
 
-    candidates: list[str] = []
-    for box in (
-        tooltip_ocr_box(hover, width=image.width, height=image.height),
-        tooltip_ocr_box_below(hover, width=image.width, height=image.height),
-        tooltip_ocr_box_left(hover, width=image.width, height=image.height),
-    ):
-        lines = backend.read(image, region=Rect(*box))
-        text = " ".join(item.text for item in lines).strip()
-        if text:
-            candidates.append(text)
+
+def _ocr_read_box(backend, image: Image.Image, box: tuple[int, int, int, int]) -> str:
+    lines = backend.read(image, region=Rect(*box))
+    return " ".join(item.text for item in lines).strip()
+
+
+def _ocr_first_line_from_image(backend, image: Image.Image) -> str:
+    """Return only the top OCR line; strip trailing punctuation noise."""
+    lines = backend.read(image, region=Rect(0, 0, image.width, image.height))
+    if not lines:
+        return ""
+    text = lines[0].text.strip().rstrip("，,。．.、；;")
+    return " ".join(text.split())
+
+
+def _ocr_left_half_first_line(
+    backend,
+    image: Image.Image,
+    hover: tuple[int, int],
+) -> tuple[str, tuple[int, int, int, int], Image.Image]:
+    """OCR the topmost tip line in left-half ROI; return text, box, prepared crop."""
+    box = tooltip_ocr_box_left_first_line(
+        hover, width=image.width, height=image.height
+    )
+    crop = image.crop(box)
+    prepared = _prepare_tip_first_line_image(crop)
+    text = _ocr_first_line_from_image(backend, prepared)
+    return text, box, prepared
+
+
+def _select_tooltip_candidate(candidates: list[str]) -> str:
     if not candidates:
         return ""
     # Merge bands so「时间提醒」+「余N分钟」can parse as active together (154224).
@@ -319,6 +377,53 @@ def _ocr_tooltip(image: Image.Image, hover: tuple[int, int]) -> str:
         if not tooltip_looks_like_task_tracker(text):
             return text
     return candidates[0]
+
+
+def _ocr_tooltip_parts(image: Image.Image, hover: tuple[int, int]) -> tuple[str, str]:
+    """OCR tip bands; return (selected_text, left_half_first_line_text)."""
+    backend = _ocr_backend()
+    left_first, _left_box, _prepared = _ocr_left_half_first_line(backend, image, hover)
+    candidates: list[str] = []
+    # Prefer top line of left-half tip ROI — incense tip title/status sits there.
+    if left_first:
+        candidates.append(left_first)
+    for box in (
+        tooltip_ocr_box(hover, width=image.width, height=image.height),
+        tooltip_ocr_box_below(hover, width=image.width, height=image.height),
+        tooltip_ocr_box_left(hover, width=image.width, height=image.height),
+    ):
+        text = _ocr_read_box(backend, image, box)
+        if text and text not in candidates:
+            candidates.append(text)
+    return _select_tooltip_candidate(candidates), left_first
+
+
+def _ocr_tooltip(image: Image.Image, hover: tuple[int, int]) -> str:
+    selected, _left_half = _ocr_tooltip_parts(image, hover)
+    return selected
+
+
+def _save_left_tip_line_crops(
+    image: Image.Image,
+    hover: tuple[int, int],
+    *,
+    directory: Path,
+) -> tuple[int, int, int, int]:
+    """Save left-half / first-line / prepared crops for review; return first-line box."""
+    directory.mkdir(parents=True, exist_ok=True)
+    left_box = tooltip_ocr_box_left_half(
+        hover, width=image.width, height=image.height
+    )
+    image.crop(left_box).save(directory / "tooltip-roi-left.png")
+    line_box = tooltip_ocr_box_left_first_line(
+        hover, width=image.width, height=image.height
+    )
+    line_crop = image.crop(line_box)
+    line_crop.save(directory / "tooltip-roi-left-line1.png")
+    _prepare_tip_first_line_image(line_crop).save(
+        directory / "tooltip-roi-left-line1-prepared.png"
+    )
+    return line_box
 
 
 def _vision_hover_to_input(
@@ -574,17 +679,30 @@ def run_incense_hover_diagnostic(
                     after_tip = np.asarray(after_frame.crop(tip), dtype=np.int16)
                     tip_delta = float(np.abs(after_tip - before_tip).mean())
                     after_frame.crop(tip).save(trial / "tooltip-roi.png")
+                    line_box = _save_left_tip_line_crops(
+                        after_frame, tip_xy, directory=trial
+                    )
                     below = tooltip_ocr_box_below(
                         tip_xy, width=after_frame.width, height=after_frame.height
                     )
                     after_frame.crop(below).save(trial / "tooltip-roi-below.png")
                     try:
-                        text = _ocr_tooltip(after_frame, tip_xy)
+                        text, left_text = _ocr_tooltip_parts(after_frame, tip_xy)
                         err = None
                     except RuntimeError as exc:
                         text = ""
+                        left_text = ""
                         err = str(exc)
-                    return after_frame, before_frame, tip_delta, text, err, cursor_after
+                    return (
+                        after_frame,
+                        before_frame,
+                        tip_delta,
+                        text,
+                        left_text,
+                        list(line_box),
+                        err,
+                        cursor_after,
+                    )
 
                 if _strategy_needs_foreground(strategy):
                     held: list[
@@ -593,6 +711,8 @@ def run_incense_hover_diagnostic(
                             Image.Image,
                             float,
                             str,
+                            str,
+                            list[int],
                             str | None,
                             list[int] | None,
                         ]
@@ -602,13 +722,24 @@ def run_incense_hover_diagnostic(
                         held.append(_run_trial())
 
                     _with_temporary_game_foreground(session, _fg_trial)
-                    _after, _before, delta, tooltip_text, ocr_error, cursor_client_after = held[0]
+                    (
+                        _after,
+                        _before,
+                        delta,
+                        tooltip_text,
+                        tooltip_text_left,
+                        tooltip_roi_left_line1,
+                        ocr_error,
+                        cursor_client_after,
+                    ) = held[0]
                 else:
                     (
                         _after,
                         _before,
                         delta,
                         tooltip_text,
+                        tooltip_text_left,
+                        tooltip_roi_left_line1,
                         ocr_error,
                         cursor_client_after,
                     ) = _run_trial()
@@ -618,7 +749,16 @@ def run_incense_hover_diagnostic(
                         input_target, width=_after.width, height=_after.height
                     )
                 )
-                tip_ocr_ok = tooltip_looks_like_incense(tooltip_text)
+                left_box = list(
+                    tooltip_ocr_box_left_half(
+                        input_target, width=_after.width, height=_after.height
+                    )
+                )
+                tip_ocr_ok = tooltip_looks_like_incense(
+                    tooltip_text
+                ) or tooltip_looks_like_incense(tooltip_text_left)
+                if tip_ocr_ok and not tooltip_looks_like_incense(tooltip_text):
+                    tooltip_text = tooltip_text_left
                 results.append({
                     "strategy": strategy,
                     "dwell_seconds": float(dwell),
@@ -628,8 +768,11 @@ def run_incense_hover_diagnostic(
                     "exit_point": list(outside),
                     "cursor_client_after_move": cursor_client_after,
                     "tooltip_roi": tip_box,
+                    "tooltip_roi_left": left_box,
+                    "tooltip_roi_left_line1": tooltip_roi_left_line1,
                     "tooltip_pixel_delta_mean": round(delta, 3),
                     "tooltip_text": tooltip_text,
+                    "tooltip_text_left": tooltip_text_left,
                     "ocr_error": ocr_error,
                     "tooltip_changed": delta >= 1.0,
                     "tip_ocr_ok": tip_ocr_ok,
@@ -667,6 +810,7 @@ def run_incense_hover_diagnostic(
             f"pixel_delta_without_tip_trials={len(pixel_only)}",
             f"winning_strategies={winners}",
             "artifacts=keep all locked-matrix trial dirs",
+            "ocr=left-half tip ROI top line (40px, x3+contrast) as tooltip_text_left",
             "note=human X +2 right from (-21,8) → nudge=(-19,8); still (0,0)×4",
         ],
     }
@@ -898,11 +1042,13 @@ def detect_incense_usage(
     evidence.append("hovered_capture_marked=hovered-capture-marked.png")
     tip_box = tooltip_ocr_box(input_point, width=hovered.width, height=hovered.height)
     hovered.crop(tip_box).save(output / "tooltip-roi.png")
+    line_box = _save_left_tip_line_crops(hovered, input_point, directory=output)
     evidence.append(f"tooltip_ocr_roi={list(tip_box)}")
+    evidence.append(f"tooltip_ocr_roi_left_line1={list(line_box)}")
     log("[5/5] 已保存 hovered-capture.png / hovered-capture-marked.png；进入 tip OCR")
 
     try:
-        tooltip_text = _ocr_tooltip(hovered, input_point)
+        tooltip_text, tooltip_text_left = _ocr_tooltip_parts(hovered, input_point)
     except RuntimeError as exc:
         log(f"[5/5] BLOCKED OCR 不可用：{exc}")
         return IncenseUsageObservation(
@@ -926,6 +1072,12 @@ def detect_incense_usage(
             evidence=tuple(evidence + [f"OCR 不可用: {exc}"]),
         )
 
+    log(f"[5/5] tip ROI 左半区首行 OCR={tooltip_text_left!r}")
+    evidence.append(f"tooltip_left_line1={tooltip_text_left!r}")
+    if tooltip_looks_like_incense(tooltip_text_left) and not tooltip_looks_like_incense(
+        tooltip_text
+    ):
+        tooltip_text = tooltip_text_left
     usage, minutes = parse_incense_tooltip(tooltip_text)
     log(
         f"[5/5] 识别结果：tooltip OCR={tooltip_text!r}；"
@@ -977,4 +1129,6 @@ __all__ = [
     "tooltip_ocr_box",
     "tooltip_ocr_box_below",
     "tooltip_ocr_box_left",
+    "tooltip_ocr_box_left_half",
+    "tooltip_ocr_box_left_first_line",
 ]

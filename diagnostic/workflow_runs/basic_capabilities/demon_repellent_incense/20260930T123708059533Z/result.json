@@ -1,0 +1,200 @@
+{
+  "ok": false,
+  "capability": "demon_repellent_incense",
+  "subtask": "hover",
+  "hover_diagnostic": {
+    "ok": false,
+    "panel_collapsed": false,
+    "clock_found": true,
+    "clock_score": 0.9746224216386383,
+    "clock_location": [
+      654,
+      121
+    ],
+    "input_point": [
+      635,
+      129
+    ],
+    "capture_to_input_nudge": [
+      -19,
+      8
+    ],
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "trials": [
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 46.869,
+        "tooltip_text": "任 务 追 踪 9",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 52.961,
+        "tooltip_text": "哲 无 时 间 提 信 息 ， 任 务 踪 时 提 雏 务 积 5 0 齐 成 适 动 日 历 一 签 到 中",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 48.979,
+        "tooltip_text": "哲 无 时 间 提 信 息 ， 任 务 踪 时 提 雏 前 第 2 环 壬 务 积 5 。 0 齐 成 适 日 历 二 签 到 《",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 46.533,
+        "tooltip_text": "哲 无 时 间 提 信 息 ， 任 务 踪 时 提 雏 前 2 壬 务 5 卜 。 彐 签 到 答 顿 0 齐 成 适 动 二 签 到 中",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      }
+    ],
+    "winning_strategies": [],
+    "pixel_delta_only_strategies": [
+      "setcursor_postmessage"
+    ],
+    "evidence": [
+      "diagnostic=hover-locked-verification",
+      "strategies=['setcursor_postmessage']",
+      "settle_seconds=[0.9]",
+      "hover_offsets=[[0, 0], [0, 0], [0, 0], [0, 0]]",
+      "capture_to_input_nudge=[-19, 8]",
+      "vision_hover=[654, 121]",
+      "input_point=[635, 129]",
+      "tip_ocr_ok_trials=0",
+      "pixel_delta_without_tip_trials=4",
+      "winning_strategies=[]",
+      "artifacts=keep all locked-matrix trial dirs",
+      "note=human X +2 right from (-21,8) → nudge=(-19,8); still (0,0)×4"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260930T123708059533Z",
+  "message": "Hover 触发诊断完成。"
+}

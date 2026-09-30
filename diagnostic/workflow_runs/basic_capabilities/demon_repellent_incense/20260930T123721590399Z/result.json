@@ -1,0 +1,200 @@
+{
+  "ok": false,
+  "capability": "demon_repellent_incense",
+  "subtask": "hover",
+  "hover_diagnostic": {
+    "ok": false,
+    "panel_collapsed": false,
+    "clock_found": true,
+    "clock_score": 0.8331825106751685,
+    "clock_location": [
+      654,
+      121
+    ],
+    "input_point": [
+      635,
+      129
+    ],
+    "capture_to_input_nudge": [
+      -19,
+      8
+    ],
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "trials": [
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 32.946,
+        "tooltip_text": "间 信 息",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 34.137,
+        "tooltip_text": "间 醒 后 息",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 40.075,
+        "tooltip_text": "间 蚓 乱 息",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 34.295,
+        "tooltip_text": "无 时 间 提 酬 倌 息 宗 ？ 0 氟 。 、 式 完 恬 动 目 历 到 史 ．",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      }
+    ],
+    "winning_strategies": [],
+    "pixel_delta_only_strategies": [
+      "setcursor_postmessage"
+    ],
+    "evidence": [
+      "diagnostic=hover-locked-verification",
+      "strategies=['setcursor_postmessage']",
+      "settle_seconds=[0.9]",
+      "hover_offsets=[[0, 0], [0, 0], [0, 0], [0, 0]]",
+      "capture_to_input_nudge=[-19, 8]",
+      "vision_hover=[654, 121]",
+      "input_point=[635, 129]",
+      "tip_ocr_ok_trials=0",
+      "pixel_delta_without_tip_trials=4",
+      "winning_strategies=[]",
+      "artifacts=keep all locked-matrix trial dirs",
+      "note=human X +2 right from (-21,8) → nudge=(-19,8); still (0,0)×4"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260930T123721590399Z",
+  "message": "Hover 触发诊断完成。"
+}

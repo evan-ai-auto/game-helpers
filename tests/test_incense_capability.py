@@ -308,6 +308,33 @@ def test_tooltip_ocr_box_below_is_under_clock():
     assert bottom - top == 64
 
 
+def test_tooltip_ocr_box_left_half_is_left_of_primary_tip_roi():
+    from game_helpers.tasks.incense_status_vision import tooltip_ocr_box_left_half
+
+    tip = tooltip_ocr_box((654, 121), width=800, height=600)
+    left_half = tooltip_ocr_box_left_half((654, 121), width=800, height=600)
+    assert left_half[0] == tip[0]
+    assert left_half[1] == tip[1]
+    assert left_half[3] == tip[3]
+    assert left_half[2] == tip[0] + (tip[2] - tip[0]) // 2
+    assert left_half[2] - left_half[0] == 160
+
+
+def test_tooltip_ocr_box_left_first_line_is_top_band_of_left_half():
+    from game_helpers.tasks.incense_status_vision import (
+        TOOLTIP_LEFT_FIRST_LINE_HEIGHT,
+        tooltip_ocr_box_left_first_line,
+        tooltip_ocr_box_left_half,
+    )
+
+    left_half = tooltip_ocr_box_left_half((654, 121), width=800, height=600)
+    line = tooltip_ocr_box_left_first_line((654, 121), width=800, height=600)
+    assert line[0] == left_half[0]
+    assert line[1] == left_half[1]
+    assert line[2] == left_half[2]
+    assert line[3] - line[1] == TOOLTIP_LEFT_FIRST_LINE_HEIGHT
+
+
 def test_hover_evidence_artifacts_cover_clock_on_search_roi(tmp_path):
     """Manual-review crops: hover crosshair must land on the clock in search ROI."""
     path = INCENSE_RUNS / "20260929T092457347199Z" / "usage" / "capture.png"
