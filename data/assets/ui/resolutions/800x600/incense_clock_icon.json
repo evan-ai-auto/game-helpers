@@ -13,8 +13,8 @@
   "threshold": 0.78,
   "search_roi": [620, 90, 800, 145],
   "hover_in_template": [12, 12],
-  "capture_to_input_nudge": [-16, -16],
+  "capture_to_input_nudge": [-19, 8],
   "verification_status": "pending",
   "verified_resolutions": [],
-  "verification_notes": "2026-09-30 175428：可见光标尖端~(666,137) 相对表盘(654,121) 右偏+下偏 → nudge=(-16,-16) 使尖端落回表盘；勿用 SetCursorPos 标注点判方向。"
+  "verification_notes": "2026-09-30：人工要求在 (-21,8) 基础上 X 右移 2px → nudge=(-19,8)，input~(635,129)；Y 不变，仍 (0,0)×4。"
 }

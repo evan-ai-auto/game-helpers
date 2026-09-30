@@ -1,0 +1,200 @@
+{
+  "ok": false,
+  "capability": "demon_repellent_incense",
+  "subtask": "hover",
+  "hover_diagnostic": {
+    "ok": false,
+    "panel_collapsed": false,
+    "clock_found": true,
+    "clock_score": 0.917411766800226,
+    "clock_location": [
+      654,
+      121
+    ],
+    "input_point": [
+      632,
+      129
+    ],
+    "capture_to_input_nudge": [
+      -22,
+      8
+    ],
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "trials": [
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          632,
+          129
+        ],
+        "exit_point": [
+          492,
+          129
+        ],
+        "cursor_client_after_move": [
+          632,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 34.154,
+        "tooltip_text": "宠 环",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          632,
+          129
+        ],
+        "exit_point": [
+          492,
+          129
+        ],
+        "cursor_client_after_move": [
+          632,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 28.098,
+        "tooltip_text": "宠 环 仙 女 风 扇 ） （ 。 父 四 武 `",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          632,
+          129
+        ],
+        "exit_point": [
+          492,
+          129
+        ],
+        "cursor_client_after_move": [
+          632,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 3.437,
+        "tooltip_text": "仙 女 风 扇 。 父 70 武",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          632,
+          129
+        ],
+        "exit_point": [
+          492,
+          129
+        ],
+        "cursor_client_after_move": [
+          632,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          121,
+          800,
+          185
+        ],
+        "tooltip_pixel_delta_mean": 3.521,
+        "tooltip_text": "宠 环 仙 女 风 扇 一 0 （ 。 父 四 武",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      }
+    ],
+    "winning_strategies": [],
+    "pixel_delta_only_strategies": [
+      "setcursor_postmessage"
+    ],
+    "evidence": [
+      "diagnostic=hover-locked-verification",
+      "strategies=['setcursor_postmessage']",
+      "settle_seconds=[0.9]",
+      "hover_offsets=[[0, 0], [0, 0], [0, 0], [0, 0]]",
+      "capture_to_input_nudge=[-22, 8]",
+      "vision_hover=[654, 121]",
+      "input_point=[632, 129]",
+      "tip_ocr_ok_trials=0",
+      "pixel_delta_without_tip_trials=4",
+      "winning_strategies=[]",
+      "artifacts=keep all locked-matrix trial dirs",
+      "note=075923: human X slightly large on locked point → nudge=(-22,8); still (0,0)×4"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260930T080458961276Z",
+  "message": "Hover 触发诊断完成。"
+}

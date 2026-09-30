@@ -26,10 +26,9 @@ CLOCK_TEMPLATE_PATH = "data/assets/ui/resolutions/800x600/incense_clock_icon.png
 # Template is 26×25; dial hotspot inside match box (not raw bbox center).
 # 171235 hotspot: red@(12,12) already on dial center.
 CLOCK_HOVER_IN_TEMPLATE = (12, 12)
-# Capture-frame hover → input client.
-# 175428: SetCursorPos@(650,121) but visible tip~(666,137) vs dial@(654,121)
-# → tip right+16/down+16 of aim; move aim left+up so tip lands on dial.
-CLOCK_CAPTURE_TO_INPUT_NUDGE = (-16, -16)
+# Capture-frame hover → input client (Win32/image: origin top-left, Y down).
+# 075115 Y lock (+8). Human: X +2 right from (-21,8) → (-19,8).
+CLOCK_CAPTURE_TO_INPUT_NUDGE = (-19, 8)
 UNUSED_TOOLTIP_TEXT = "暂无时间提醒信息"
 REMAINING_PATTERN = re.compile(r"(?:剩余|余)\s*(\d+)\s*分")
 # OCR landed on 任务追踪 body instead of incense tooltip.
@@ -53,12 +52,12 @@ HOVER_EXIT_OFFSET = 140
 HOVER_DIAGNOSTIC_STRATEGIES = ("setcursor_postmessage",)
 DEFAULT_HOVER_STRATEGY = "setcursor_postmessage"
 INCENSE_TIP_MARKERS = ("暂无时间提醒", "剩余", "摄妖香", "时间提醒")
-# Fine offsets around tip-corrected aim (visible tip ≠ SetCursorPos).
+# Same point ×4: lock Y from 075115 +0_+2; X fine-tune after manual recheck.
 HOVER_DIAGNOSTIC_OFFSETS = (
     (0, 0),
-    (2, 2),
-    (-2, -2),
-    (0, -2),
+    (0, 0),
+    (0, 0),
+    (0, 0),
 )
 
 
@@ -658,7 +657,7 @@ def run_incense_hover_diagnostic(
             f"pixel_delta_without_tip_trials={len(pixel_only)}",
             f"winning_strategies={winners}",
             "artifacts=keep all locked-matrix trial dirs",
-            "note=175428: visible tip right/down of dial → nudge=(-16,-16) left+up for tip",
+            "note=human X +2 right from (-21,8) → nudge=(-19,8); still (0,0)×4",
         ],
     }
 

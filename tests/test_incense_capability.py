@@ -165,7 +165,7 @@ def test_match_clock_hover_uses_template_hotspot_not_bbox_center():
 
 
 def test_capture_to_input_nudge_aims_left_up_of_vision():
-    """175428: visible tip~(666,137) vs dial@(654,121) → aim left+up (-16,-16)."""
+    """Human: X +2 right from (-21,8) → (-19, 8); Y stays +8."""
     from game_helpers.tasks.incense_status_vision import (
         CLOCK_CAPTURE_TO_INPUT_NUDGE,
         CLOCK_HOVER_IN_TEMPLATE,
@@ -173,18 +173,16 @@ def test_capture_to_input_nudge_aims_left_up_of_vision():
     )
 
     assert CLOCK_HOVER_IN_TEMPLATE == (12, 12)
-    assert CLOCK_CAPTURE_TO_INPUT_NUDGE == (-16, -16)
+    assert CLOCK_CAPTURE_TO_INPUT_NUDGE == (-19, 8)
     vision = (654, 121)
     aimed = _vision_hover_to_input(vision, width=800, height=600)
-    assert aimed == (638, 105)
+    assert aimed == (635, 129)
 
 
 def test_hover_diagnostic_offsets_include_human_preferred_relative():
     from game_helpers.tasks.incense_status_vision import HOVER_DIAGNOSTIC_OFFSETS
 
-    assert HOVER_DIAGNOSTIC_OFFSETS[0] == (0, 0)
-    assert (2, 2) in HOVER_DIAGNOSTIC_OFFSETS
-    assert (-2, -2) in HOVER_DIAGNOSTIC_OFFSETS
+    assert HOVER_DIAGNOSTIC_OFFSETS == ((0, 0), (0, 0), (0, 0), (0, 0))
 
 
 def test_parse_incense_tooltip_accepts_yu_minutes():
