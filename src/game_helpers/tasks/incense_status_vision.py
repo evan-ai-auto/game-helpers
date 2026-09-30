@@ -27,8 +27,8 @@ CLOCK_TEMPLATE_PATH = "data/assets/ui/resolutions/800x600/incense_clock_icon.png
 # 171235 hotspot: red@(12,12) already on dial center.
 CLOCK_HOVER_IN_TEMPLATE = (12, 12)
 # Capture-frame hover → input client (Win32/image: origin top-left, Y down).
-# 075115 Y lock (+8). Human: X +2 right from (-21,8) → (-19,8).
-CLOCK_CAPTURE_TO_INPUT_NUDGE = (-19, 8)
+# 165221 human: tip left/high of dial after (-19,8) → +5 right / +5 down → (-14,13).
+CLOCK_CAPTURE_TO_INPUT_NUDGE = (-14, 13)
 UNUSED_TOOLTIP_TEXT = "暂无时间提醒信息"
 REMAINING_PATTERN = re.compile(r"(?:剩余|余)\s*(\d+)\s*分")
 # OCR landed on 任务追踪 body instead of incense tooltip.
@@ -811,7 +811,7 @@ def run_incense_hover_diagnostic(
             f"winning_strategies={winners}",
             "artifacts=keep all locked-matrix trial dirs",
             "ocr=left-half tip ROI top line (40px, x3+contrast) as tooltip_text_left",
-            "note=human X +2 right from (-21,8) → nudge=(-19,8); still (0,0)×4",
+            "note=165221: tip left/high → nudge=(-14,13) (+5 right/+5 down from -19,8)",
         ],
     }
 

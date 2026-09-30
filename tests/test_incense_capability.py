@@ -165,7 +165,7 @@ def test_match_clock_hover_uses_template_hotspot_not_bbox_center():
 
 
 def test_capture_to_input_nudge_aims_left_up_of_vision():
-    """Human: X +2 right from (-21,8) → (-19, 8); Y stays +8."""
+    """165221: +5 right/+5 down from (-19,8) → (-14, 13)."""
     from game_helpers.tasks.incense_status_vision import (
         CLOCK_CAPTURE_TO_INPUT_NUDGE,
         CLOCK_HOVER_IN_TEMPLATE,
@@ -173,10 +173,10 @@ def test_capture_to_input_nudge_aims_left_up_of_vision():
     )
 
     assert CLOCK_HOVER_IN_TEMPLATE == (12, 12)
-    assert CLOCK_CAPTURE_TO_INPUT_NUDGE == (-19, 8)
+    assert CLOCK_CAPTURE_TO_INPUT_NUDGE == (-14, 13)
     vision = (654, 121)
     aimed = _vision_hover_to_input(vision, width=800, height=600)
-    assert aimed == (635, 129)
+    assert aimed == (640, 134)
 
 
 def test_hover_diagnostic_offsets_include_human_preferred_relative():

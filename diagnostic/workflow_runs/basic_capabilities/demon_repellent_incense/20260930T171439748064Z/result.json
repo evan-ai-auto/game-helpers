@@ -1,0 +1,253 @@
+{
+  "ok": true,
+  "capability": "demon_repellent_incense",
+  "subtask": "hover",
+  "hover_diagnostic": {
+    "ok": true,
+    "panel_collapsed": false,
+    "clock_found": true,
+    "clock_score": 0.9670688816145354,
+    "clock_location": [
+      654,
+      121
+    ],
+    "input_point": [
+      640,
+      134
+    ],
+    "capture_to_input_nudge": [
+      -14,
+      13
+    ],
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "trials": [
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          640,
+          134
+        ],
+        "exit_point": [
+          500,
+          134
+        ],
+        "cursor_client_after_move": [
+          640,
+          134
+        ],
+        "tooltip_roi": [
+          480,
+          111,
+          800,
+          235
+        ],
+        "tooltip_roi_left": [
+          480,
+          111,
+          640,
+          235
+        ],
+        "tooltip_roi_left_line1": [
+          480,
+          111,
+          640,
+          151
+        ],
+        "tooltip_pixel_delta_mean": 8.896,
+        "tooltip_text": "0 ） · 剩 余 1 分 钟 0 ， 乘 刂 余 1 分 钟 时 提 雏 ） （ 父 武 器 玉 ` 完 成 壬 务 ） 22 环 ， 壬 务 识 芬 4 。 时 提 雏 ， 0 耐 宗 1 分",
+        "tooltip_text_left": "0 ） · 剩 余 1 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          640,
+          134
+        ],
+        "exit_point": [
+          500,
+          134
+        ],
+        "cursor_client_after_move": [
+          640,
+          134
+        ],
+        "tooltip_roi": [
+          480,
+          111,
+          800,
+          235
+        ],
+        "tooltip_roi_left": [
+          480,
+          111,
+          640,
+          235
+        ],
+        "tooltip_roi_left_line1": [
+          480,
+          111,
+          640,
+          151
+        ],
+        "tooltip_pixel_delta_mean": 9.184,
+        "tooltip_text": "0 ） · 剩 余 1 分 钟 0 ， 乘 刂 余 1 分 钟 时 提 雏 ） （ 父 武 器 玉 ` 完 成 壬 务 ） 22 环 ， 壬 务 识 芬 4 。 时 提 雏 ， 0 耐 宗 1 分",
+        "tooltip_text_left": "0 ） · 剩 余 1 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          640,
+          134
+        ],
+        "exit_point": [
+          500,
+          134
+        ],
+        "cursor_client_after_move": [
+          640,
+          134
+        ],
+        "tooltip_roi": [
+          480,
+          111,
+          800,
+          235
+        ],
+        "tooltip_roi_left": [
+          480,
+          111,
+          640,
+          235
+        ],
+        "tooltip_roi_left_line1": [
+          480,
+          111,
+          640,
+          151
+        ],
+        "tooltip_pixel_delta_mean": 6.013,
+        "tooltip_text": "0 ） · 剩 余 1 分 钟",
+        "tooltip_text_left": "0 ） · 剩 余 1 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          640,
+          134
+        ],
+        "exit_point": [
+          500,
+          134
+        ],
+        "cursor_client_after_move": [
+          640,
+          134
+        ],
+        "tooltip_roi": [
+          480,
+          111,
+          800,
+          235
+        ],
+        "tooltip_roi_left": [
+          480,
+          111,
+          640,
+          235
+        ],
+        "tooltip_roi_left_line1": [
+          480,
+          111,
+          640,
+          151
+        ],
+        "tooltip_pixel_delta_mean": 6.254,
+        "tooltip_text": "0 ） · 剩 余 1 分 钟",
+        "tooltip_text_left": "0 ） · 剩 余 1 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      }
+    ],
+    "winning_strategies": [
+      "setcursor_postmessage"
+    ],
+    "pixel_delta_only_strategies": [],
+    "evidence": [
+      "diagnostic=hover-locked-verification",
+      "strategies=['setcursor_postmessage']",
+      "settle_seconds=[0.9]",
+      "hover_offsets=[[0, 0], [0, 0], [0, 0], [0, 0]]",
+      "capture_to_input_nudge=[-14, 13]",
+      "vision_hover=[654, 121]",
+      "input_point=[640, 134]",
+      "tip_ocr_ok_trials=4",
+      "pixel_delta_without_tip_trials=0",
+      "winning_strategies=['setcursor_postmessage']",
+      "artifacts=keep all locked-matrix trial dirs",
+      "ocr=left-half tip ROI top line (40px, x3+contrast) as tooltip_text_left",
+      "note=165221: tip left/high → nudge=(-14,13) (+5 right/+5 down from -19,8)"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260930T171439748064Z",
+  "message": "Hover 触发诊断完成。"
+}

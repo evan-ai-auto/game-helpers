@@ -1,0 +1,255 @@
+{
+  "ok": true,
+  "capability": "demon_repellent_incense",
+  "subtask": "hover",
+  "hover_diagnostic": {
+    "ok": true,
+    "panel_collapsed": false,
+    "clock_found": true,
+    "clock_score": 0.9654962277879902,
+    "clock_location": [
+      654,
+      121
+    ],
+    "input_point": [
+      640,
+      134
+    ],
+    "capture_to_input_nudge": [
+      -14,
+      13
+    ],
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "trials": [
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          640,
+          134
+        ],
+        "exit_point": [
+          500,
+          134
+        ],
+        "cursor_client_after_move": [
+          640,
+          134
+        ],
+        "tooltip_roi": [
+          480,
+          111,
+          800,
+          235
+        ],
+        "tooltip_roi_left": [
+          480,
+          111,
+          640,
+          235
+        ],
+        "tooltip_roi_left_line1": [
+          480,
+          111,
+          640,
+          151
+        ],
+        "tooltip_pixel_delta_mean": 28.167,
+        "tooltip_text": "， 任 积 第 20 环 40",
+        "tooltip_text_left": "",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          640,
+          134
+        ],
+        "exit_point": [
+          500,
+          134
+        ],
+        "cursor_client_after_move": [
+          640,
+          134
+        ],
+        "tooltip_roi": [
+          480,
+          111,
+          800,
+          235
+        ],
+        "tooltip_roi_left": [
+          480,
+          111,
+          640,
+          235
+        ],
+        "tooltip_roi_left_line1": [
+          480,
+          111,
+          640,
+          151
+        ],
+        "tooltip_pixel_delta_mean": 32.114,
+        "tooltip_text": "0 0 、 5 分 钟 时 提 雏 找 到 第 20 环 ， 任 积 40 》 0 剩 余 5 分 钟",
+        "tooltip_text_left": "0",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          640,
+          134
+        ],
+        "exit_point": [
+          500,
+          134
+        ],
+        "cursor_client_after_move": [
+          640,
+          134
+        ],
+        "tooltip_roi": [
+          480,
+          111,
+          800,
+          235
+        ],
+        "tooltip_roi_left": [
+          480,
+          111,
+          640,
+          235
+        ],
+        "tooltip_roi_left_line1": [
+          480,
+          111,
+          640,
+          151
+        ],
+        "tooltip_pixel_delta_mean": 25.359,
+        "tooltip_text": "0 》 剩 余 5 分 钟 、 5 分 钟 目 中 三 杵 一 第 20 环 0 ， 剩 余 5 分 钟",
+        "tooltip_text_left": "0 》 剩 余 5 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          640,
+          134
+        ],
+        "exit_point": [
+          500,
+          134
+        ],
+        "cursor_client_after_move": [
+          640,
+          134
+        ],
+        "tooltip_roi": [
+          480,
+          111,
+          800,
+          235
+        ],
+        "tooltip_roi_left": [
+          480,
+          111,
+          640,
+          235
+        ],
+        "tooltip_roi_left_line1": [
+          480,
+          111,
+          640,
+          151
+        ],
+        "tooltip_pixel_delta_mean": 12.763,
+        "tooltip_text": "剩 余 5 分 钟",
+        "tooltip_text_left": "剩 余 5 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      }
+    ],
+    "winning_strategies": [
+      "setcursor_postmessage"
+    ],
+    "pixel_delta_only_strategies": [
+      "setcursor_postmessage"
+    ],
+    "evidence": [
+      "diagnostic=hover-locked-verification",
+      "strategies=['setcursor_postmessage']",
+      "settle_seconds=[0.9]",
+      "hover_offsets=[[0, 0], [0, 0], [0, 0], [0, 0]]",
+      "capture_to_input_nudge=[-14, 13]",
+      "vision_hover=[654, 121]",
+      "input_point=[640, 134]",
+      "tip_ocr_ok_trials=3",
+      "pixel_delta_without_tip_trials=1",
+      "winning_strategies=['setcursor_postmessage']",
+      "artifacts=keep all locked-matrix trial dirs",
+      "ocr=left-half tip ROI top line (40px, x3+contrast) as tooltip_text_left",
+      "note=165221: tip left/high → nudge=(-14,13) (+5 right/+5 down from -19,8)"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260930T171056740546Z",
+  "message": "Hover 触发诊断完成。"
+}
