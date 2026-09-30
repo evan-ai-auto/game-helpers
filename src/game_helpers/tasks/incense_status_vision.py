@@ -41,8 +41,9 @@ HOVER_TARGET_HALF = 24
 # 084546: primary tip ROI height 64→84 and top shifts up 20 (hy-8→hy-28).
 # 085641: human — shift primary tip ROI down 5px (hy-28→hy-23).
 # 100839: keep top; height +10 (84→94).
+# 103120: keep top; height +30 (94→124).
 TOOLTIP_OCR_WIDTH = 320
-TOOLTIP_OCR_HEIGHT = 94
+TOOLTIP_OCR_HEIGHT = 124
 TOOLTIP_OCR_BELOW_HEIGHT = 64
 TOOLTIP_OCR_LEFT = 8
 TOOLTIP_OCR_MIN_LEFT = 480
@@ -223,6 +224,7 @@ def tooltip_ocr_box(
     084546: height +20 and visual top -20 vs prior hy-8 / h=64 window.
     085641: visual top +5 (hy-28→hy-23).
     100839: height +10 (84→94), top unchanged.
+    103120: height +30 (94→124), top unchanged.
     Left edge stays on/near the right strip to limit playfield bleed.
     """
     hx, hy = hover

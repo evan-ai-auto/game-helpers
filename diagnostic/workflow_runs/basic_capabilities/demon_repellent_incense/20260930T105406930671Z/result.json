@@ -1,0 +1,202 @@
+{
+  "ok": true,
+  "capability": "demon_repellent_incense",
+  "subtask": "hover",
+  "hover_diagnostic": {
+    "ok": true,
+    "panel_collapsed": false,
+    "clock_found": true,
+    "clock_score": 0.9600241343180339,
+    "clock_location": [
+      654,
+      121
+    ],
+    "input_point": [
+      635,
+      129
+    ],
+    "capture_to_input_nudge": [
+      -19,
+      8
+    ],
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "trials": [
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 25.461,
+        "tooltip_text": "扌 《 过 风 〈 § 94 环 壬 理 分 №",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": false,
+        "pixel_delta_without_tip": true,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 51.096,
+        "tooltip_text": "， 軀 余 47 分 钟 且 94 环 汾 104 时 提 雏 § 94 环 0 〕 剩 余 41 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 58.32,
+        "tooltip_text": "， 任 务 踪 余 47 分 钟 时 提 雏 § 第 9 壬 0 积 分 154 。 鋈 ` 剩 余 41 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      },
+      {
+        "strategy": "setcursor_postmessage",
+        "dwell_seconds": 0.9,
+        "hover_offset": [
+          0,
+          0
+        ],
+        "hover_point": [
+          654,
+          121
+        ],
+        "input_point": [
+          635,
+          129
+        ],
+        "exit_point": [
+          495,
+          129
+        ],
+        "cursor_client_after_move": [
+          635,
+          129
+        ],
+        "tooltip_roi": [
+          480,
+          106,
+          800,
+          230
+        ],
+        "tooltip_pixel_delta_mean": 58.491,
+        "tooltip_text": "的 余 47 分 钟 ， 任 务 踪 时 提 雏 帮 找 过 风 〈 § 环 。 ， 壬 。 积 芬 化 4 蠢 。 签 到 时 提 雏 帮 找 过 风 〈 § 环 。 0 》 剩 余 41 分 钟",
+        "ocr_error": null,
+        "tooltip_changed": true,
+        "tip_ocr_ok": true,
+        "pixel_delta_without_tip": false,
+        "artifacts_kept": true
+      }
+    ],
+    "winning_strategies": [
+      "setcursor_postmessage"
+    ],
+    "pixel_delta_only_strategies": [
+      "setcursor_postmessage"
+    ],
+    "evidence": [
+      "diagnostic=hover-locked-verification",
+      "strategies=['setcursor_postmessage']",
+      "settle_seconds=[0.9]",
+      "hover_offsets=[[0, 0], [0, 0], [0, 0], [0, 0]]",
+      "capture_to_input_nudge=[-19, 8]",
+      "vision_hover=[654, 121]",
+      "input_point=[635, 129]",
+      "tip_ocr_ok_trials=3",
+      "pixel_delta_without_tip_trials=1",
+      "winning_strategies=['setcursor_postmessage']",
+      "artifacts=keep all locked-matrix trial dirs",
+      "note=human X +2 right from (-21,8) → nudge=(-19,8); still (0,0)×4"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20260930T105406930671Z",
+  "message": "Hover 触发诊断完成。"
+}

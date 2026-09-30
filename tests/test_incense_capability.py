@@ -290,9 +290,9 @@ def test_tooltip_ocr_box_is_tall_band_from_dial_downward():
     box = tooltip_ocr_box((654, 121), width=800, height=600)
     left, top, right, bottom = box
     assert right - left == 320
-    assert bottom - top == 94
+    assert bottom - top == 124
     assert top == 121 - 23
-    assert bottom == top + 94
+    assert bottom == top + 124
     assert left >= 480
     assert (right - left) > (bottom - top)  # X is the long axis
 
@@ -322,7 +322,7 @@ def test_hover_evidence_artifacts_cover_clock_on_search_roi(tmp_path):
     annotated = Image.open(tmp_path / "hover-on-search-roi.png")
     assert annotated.size == (search_box[2] - search_box[0], search_box[3] - search_box[1])
     tip = tooltip_ocr_box(hover, width=image.width, height=image.height)
-    assert tip[3] - tip[1] == 94
+    assert tip[3] - tip[1] == 124
     assert tip[2] - tip[0] == 320
     assert tip[0] >= 480
     assert tip[3] >= hover[1] - 23
