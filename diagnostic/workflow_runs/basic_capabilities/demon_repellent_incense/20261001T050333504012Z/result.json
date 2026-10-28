@@ -1,0 +1,81 @@
+{
+  "ok": false,
+  "capability": "demon_repellent_incense",
+  "subtask": "usage",
+  "usage": {
+    "usage": "unknown",
+    "remaining_minutes": null,
+    "panel_collapsed": false,
+    "panel_template": "right_light",
+    "panel_score": 0.8749561235016468,
+    "panel_confidence": 0.9374780617508234,
+    "panel_reason": "panel_expanded",
+    "panel_match_location": [
+      782,
+      112
+    ],
+    "panel_search_roi": [
+      760,
+      90,
+      800,
+      220
+    ],
+    "clock_found": true,
+    "clock_score": 0.9570135752360026,
+    "clock_location": [
+      654,
+      121
+    ],
+    "clock_reason": "icon_found",
+    "clock_search_roi": [
+      620,
+      90,
+      800,
+      145
+    ],
+    "clock_threshold": 0.78,
+    "hover_point": [
+      654,
+      121
+    ],
+    "tooltip_text": "第 22 环",
+    "evidence": [
+      "panel_collapsed=False",
+      "panel_template=right_light",
+      "panel_score=0.875",
+      "panel_confidence=0.937",
+      "panel_reason=panel_expanded",
+      "panel_match_location=(782, 112)",
+      "toggle matched=right_light score=0.875",
+      "decide=template-class",
+      "arrow-direction=right score=0.167",
+      "arrow-rejected=weak",
+      "right arrow means expanded; left arrow means collapsed",
+      "target=demon_repellent_incense.clock",
+      "template=E:\\work\\dev_workspace\\my_windows\\game-helpers\\data\\assets\\ui\\resolutions\\800x600\\incense_clock_icon.png",
+      "score=0.957",
+      "threshold=0.780",
+      "roi=[620, 90, 800, 145]",
+      "hover_in_template=[12, 12]",
+      "match_top_left=[642, 109]",
+      "match_box=[642, 109, 668, 134]",
+      "hover_point=[654, 121]",
+      "note=hover uses clock-face hotspot in template, not bbox center",
+      "clock_reason=icon_found",
+      "pre_hover_verification=PASS",
+      "hover_point=(654, 121)",
+      "input_point=(640, 134)",
+      "capture_to_input_nudge=[-14, 13]",
+      "hover_target_roi=[630, 97, 678, 145]",
+      "hover_strategy=setcursor_postmessage",
+      "hovered_capture=hovered-capture.png",
+      "hovered_capture_marked=hovered-capture-marked.png",
+      "tooltip_ocr_roi=[480, 111, 800, 235]",
+      "tooltip_ocr_roi_left_line1=[480, 111, 640, 151]",
+      "tooltip_left_line1=''",
+      "tooltip='第 22 环'"
+    ]
+  },
+  "artifact_dir": "diagnostic\\workflow_runs\\basic_capabilities\\demon_repellent_incense\\20261001T050333504012Z",
+  "message": "使用状态识别完成：unknown"
+}
